@@ -10,6 +10,7 @@ import json
 import sqlite3
 import os
 import io
+import csv
 from datetime import datetime
 from contextlib import contextmanager
 
@@ -19,6 +20,8 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 app = Flask(__name__)
 CORS(app)
@@ -27,13 +30,47 @@ CORS(app)
 DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
 PORT = int(os.environ.get('PORT', 5000))
 
-# ============ HTML模板（完整问卷页面）============
+# ============ 中文字体注册 ============
+def register_fonts():
+    """注册中文字体，支持PDF中文输出"""
+    font_paths = [
+        # Linux服务器常见字体路径
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/arphic/uming.ttc',
+        '/usr/share/fonts/truetype/arphic/ukai.ttc',
+        # macOS
+        '/System/Library/Fonts/PingFang.ttc',
+        # Windows
+        'C:/Windows/Fonts/simhei.ttf',
+        'C:/Windows/Fonts/simsun.ttc',
+    ]
+
+    for path in font_paths:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont('ChineseFont', path))
+                print(f"成功注册字体: {path}")
+                return True
+            except Exception as e:
+                print(f"字体注册失败 {path}: {e}")
+                continue
+
+    # 如果都找不到，使用内置Helvetica（会有问题）
+    print("警告: 未找到中文字体，PDF中文可能显示异常")
+    return False
+
+CHINESE_FONT_AVAILABLE = register_fonts()
+
+# ============ HTML模板（完整问卷页面 - 简体中文）============
 HTML_INDEX = '''<!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>7維能力測評 | Santa Chow</title>
+    <title>7维能力测评 | Santa Chow</title>
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f7fa;color:#333}
@@ -76,102 +113,102 @@ HTML_INDEX = '''<!DOCTYPE html>
 </head>
 <body>
     <div class="header">
-        <h1>🎯 7維能力測評</h1>
-        <p>由 Santa Chow 專業教練提供 | 約5分鐘完成</p>
+        <h1>🎯 7维能力测评</h1>
+        <p>由 Santa Chow 专业教练提供 | 约5分钟完成</p>
     </div>
     <div class="container">
         <div class="section" id="info-section">
-            <div class="section-title">👤 基本資訊</div>
-            <div class="form-group"><label>姓名 / Name</label><input type="text" id="userName" placeholder="選填"></div>
+            <div class="section-title">👤 基本信息</div>
+            <div class="form-group"><label>姓名 / Name</label><input type="text" id="userName" placeholder="选填"></div>
             <div class="form-group">
-                <label>目標行業 *</label>
+                <label>目标行业 *</label>
                 <select id="industry" required>
-                    <option value="">請選擇...</option>
-                    <option value="銀行/金融">銀行/金融</option><option value="投資銀行">投資銀行</option>
-                    <option value="四大審計">四大審計</option><option value="管理諮詢">管理諮詢</option>
-                    <option value="科技/互聯網">科技/互聯網</option><option value="保險">保險</option>
-                    <option value="房地產">房地產</option><option value="零售/快消">零售/快消</option>
-                    <option value="政府/公共事業">政府/公共事業</option><option value="其他">其他</option>
+                    <option value="">请选择...</option>
+                    <option value="银行/金融">银行/金融</option><option value="投资银行">投资银行</option>
+                    <option value="四大审计">四大审计</option><option value="管理咨询">管理咨询</option>
+                    <option value="科技/互联网">科技/互联网</option><option value="保险">保险</option>
+                    <option value="房地产">房地产</option><option value="零售/快消">零售/快消</option>
+                    <option value="政府/公共事业">政府/公共事业</option><option value="其他">其他</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>工作年限 *</label>
                 <select id="experience" required>
-                    <option value="">請選擇...</option>
-                    <option value="應屆生">應屆生</option><option value="1-3年">1-3年</option>
+                    <option value="">请选择...</option>
+                    <option value="应届生">应届生</option><option value="1-3年">1-3年</option>
                     <option value="3-5年">3-5年</option><option value="5-10年">5-10年</option>
                     <option value="10年以上">10年以上</option>
                 </select>
             </div>
-            <button class="btn" onclick="startQuiz()" style="width:100%">開始測評 →</button>
+            <button class="btn" onclick="startQuiz()" style="width:100%">开始测评 →</button>
         </div>
         <div class="section hidden" id="quiz-section">
             <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
             <div id="question-container"></div>
             <div class="nav-buttons">
-                <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()">← 上一題</button>
-                <button class="btn" id="nextBtn" onclick="nextQuestion()">下一題 →</button>
+                <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()">← 上一题</button>
+                <button class="btn" id="nextBtn" onclick="nextQuestion()">下一题 →</button>
             </div>
         </div>
         <div class="section hidden" id="result-section">
             <div class="result-card">
-                <h2 style="margin-bottom:10px">✨ 測評完成！</h2>
+                <h2 style="margin-bottom:10px">✨ 测评完成！</h2>
                 <p style="color:#888;margin-bottom:20px" id="result-name"></p>
                 <div id="scores-display"></div>
                 <div style="margin-top:20px">
-                    <button class="btn" onclick="downloadReport()">📄 下載PDF報告</button>
-                    <button class="btn btn-secondary" onclick="resetQuiz()" style="margin-left:10px">重新測評</button>
+                    <button class="btn" onclick="downloadReport()">📄 下载PDF报告</button>
+                    <button class="btn btn-secondary" onclick="resetQuiz()" style="margin-left:10px">重新测评</button>
                 </div>
             </div>
-            <div class="stats-panel"><h4 style="margin-bottom:10px">📊 群體對比</h4><div id="norm-comparison"></div></div>
+            <div class="stats-panel"><h4 style="margin-bottom:10px">📊 群体对比</h4><div id="norm-comparison"></div></div>
         </div>
     </div>
-    <a href="/admin" class="admin-link">⚙️ 管理後台</a>
+    <a href="/admin" class="admin-link">⚙️ 管理后台</a>
     <script>
         const API='';
-        const DIM_NAMES={COG:'思維敏銳度',TEC:'數字應用力',COM:'溝通穿透力',SOC:'人際連結力',ORG:'目標驅動力',PRS:'應變決策力',MGT:'團隊賦能力'};
+        const DIM_NAMES={COG:'思维敏锐度',TEC:'数字应用力',COM:'沟通穿透力',SOC:'人际连结力',ORG:'目标驱动力',PRS:'应变决策力',MGT:'团队赋能力'};
         let currentQ=0,questionOrder=[],answers={},resultId=null;
         const questions=[
             {id:1,text:'我能快速理解新事物的核心原理',dim:'COG'},
-            {id:2,text:'麵對複雜問題時，我能迅速找到關鍵脈絡',dim:'COG'},
-            {id:3,text:'我善於總結歸納，能把複雜資訊簡化',dim:'COG'},
-            {id:4,text:'我對數據和邏輯敏感，能理性分析',dim:'COG'},
-            {id:5,text:'我能熟練使用各種數位工具提升效率',dim:'TEC'},
-            {id:6,text:'遇到技術問題，我能快速排查原因',dim:'TEC'},
-            {id:7,text:'我會主動學習新技術保持競爭力',dim:'TEC'},
-            {id:8,text:'我能把複雜技術概念解釋給非專業人士',dim:'TEC'},
-            {id:9,text:'我能清晰表達複雜的想法',dim:'COM'},
-            {id:10,text:'我善於傾聽，能理解對方的真實需求',dim:'COM'},
-            {id:11,text:'書面表達（郵件、報告）邏輯清晰',dim:'COM'},
-            {id:12,text:'演講或簡報時，我能吸引聽眾注意力',dim:'COM'},
-            {id:13,text:'我容易與不同背景的人建立信任',dim:'SOC'},
-            {id:14,text:'我能敏銳察覺他人的情緒變化',dim:'SOC'},
-            {id:15,text:'團隊衝突時，我能調和各方立場',dim:'SOC'},
-            {id:16,text:'我善於拓展和維護人際網絡',dim:'SOC'},
-            {id:17,text:'我能設定清晰可衡量的目標',dim:'ORG'},
-            {id:18,text:'我按計劃執行，很少拖延',dim:'ORG'},
-            {id:19,text:'我善於合理分配時間和資源',dim:'ORG'},
-            {id:20,text:'我會定期回顧和優化工作流程',dim:'ORG'},
-            {id:21,text:'壓力下我仍能保持冷靜和理性',dim:'PRS'},
-            {id:22,text:'面對突發情況，我能快速調整策略',dim:'PRS'},
-            {id:23,text:'我傾向於分析問題根本原因而非表面',dim:'PRS'},
-            {id:24,text:'做決策時，我能權衡利弊後果斷行動',dim:'PRS'},
-            {id:25,text:'我會賦權給團隊成員，信任他們的判斷',dim:'MGT'},
-            {id:26,text:'我能有效協調跨部門合作',dim:'MGT'},
-            {id:27,text:'我會及時提供反饋，幫助他人成長',dim:'MGT'},
-            {id:28,text:'團隊士氣低落時，我能激勵團隊',dim:'MGT'},
-            {id:29,text:'（此題請選擇「普通」）測試認真度',dim:'V'},
-            {id:30,text:'（此題請選擇「普通」）測試穩定性',dim:'V'},
-            {id:31,text:'（此題請選擇第3項）注意力檢驗',dim:'V'}
+            {id:2,text:'面对复杂问题时，我能迅速找到关键脉络',dim:'COG'},
+            {id:3,text:'我善于总结归纳，能把复杂信息简化',dim:'COG'},
+            {id:4,text:'我对数据和逻辑敏感，能理性分析',dim:'COG'},
+            {id:5,text:'我能熟练使用各种数字工具提升效率',dim:'TEC'},
+            {id:6,text:'遇到技术问题时，我能快速排查原因',dim:'TEC'},
+            {id:7,text:'我会主动学习新技术保持竞争力',dim:'TEC'},
+            {id:8,text:'我能把复杂技术概念解释给非专业人士',dim:'TEC'},
+            {id:9,text:'我能清晰表达复杂的想法',dim:'COM'},
+            {id:10,text:'我善于倾听，能理解对方的真实需求',dim:'COM'},
+            {id:11,text:'书面表达（邮件、报告）逻辑清晰',dim:'COM'},
+            {id:12,text:'演讲或简报时，我能吸引听众注意力',dim:'COM'},
+            {id:13,text:'我容易与不同背景的人建立信任',dim:'SOC'},
+            {id:14,text:'我能敏锐察觉他人的情绪变化',dim:'SOC'},
+            {id:15,text:'团队冲突时，我能调和各方立场',dim:'SOC'},
+            {id:16,text:'我善于拓展和维护人际网络',dim:'SOC'},
+            {id:17,text:'我能设定清晰可衡量的目标',dim:'ORG'},
+            {id:18,text:'我按计划执行，很少拖延',dim:'ORG'},
+            {id:19,text:'我善于合理分配时间和资源',dim:'ORG'},
+            {id:20,text:'我会定期回顾和优化工作流程',dim:'ORG'},
+            {id:21,text:'压力下我仍能保持冷静和理性',dim:'PRS'},
+            {id:22,text:'面对突发情况，我能快速调整策略',dim:'PRS'},
+            {id:23,text:'我倾向于分析问题根本原因而非表面',dim:'PRS'},
+            {id:24,text:'做决策时，我能权衡利弊后果断行动',dim:'PRS'},
+            {id:25,text:'我会赋权给团队成员，信任他们的判断',dim:'MGT'},
+            {id:26,text:'我能有效协调跨部门合作',dim:'MGT'},
+            {id:27,text:'我会及时提供反馈，帮助他人成长',dim:'MGT'},
+            {id:28,text:'团队士气低落时，我能激励团队',dim:'MGT'},
+            {id:29,text:'（此题请选择"普通"）测试认真度',dim:'V'},
+            {id:30,text:'（此题请选择"普通"）测试稳定性',dim:'V'},
+            {id:31,text:'（此题请选择第3项）注意力检验',dim:'V'}
         ];
         const opts=['非常不同意','不同意','普通','同意','非常同意'];
-        
+
         function shuffleQuestions(){questionOrder=[...Array(28).keys()].sort(()=>Math.random()-0.5).map(i=>i)}
-        
+
         function startQuiz(){
             const industry=document.getElementById('industry').value;
             const experience=document.getElementById('experience').value;
-            if(!industry||!experience){alert('請填寫必填項');return}
+            if(!industry||!experience){alert('请填写必填项');return}
             sessionStorage.setItem('industry',industry);
             sessionStorage.setItem('experience',experience);
             sessionStorage.setItem('userName',document.getElementById('userName').value);
@@ -180,35 +217,35 @@ HTML_INDEX = '''<!DOCTYPE html>
             document.getElementById('quiz-section').classList.remove('hidden');
             renderQuestion();
         }
-        
+
         function renderQuestion(){
             const qIdx=questionOrder[currentQ];
             const q=questions[qIdx];
             document.getElementById('progress').style.width=((currentQ+1)/28*100)+'%';
             document.getElementById('prevBtn').style.visibility=currentQ>0?'visible':'hidden';
-            document.getElementById('nextBtn').textContent=currentQ<27?'下一題 →':'提交測評 ✓';
+            document.getElementById('nextBtn').textContent=currentQ<27?'下一题 →':'提交测评 ✓';
             document.getElementById('question-container').innerHTML=`
                 <div class="question">
-                    <div class="question-meta">第 ${currentQ+1} / 28 題 | ${DIM_NAMES[q.dim]||'效度題'}</div>
+                    <div class="question-meta">第 ${currentQ+1} / 28 题 | ${DIM_NAMES[q.dim]||'效度题'}</div>
                     <div class="question-text">${q.text}</div>
                     <div class="options">${opts.map((o,i)=>`<div class="option"><input type="radio" name="answer" id="opt${i}" value="${i+1}" ${answers[q.id]==i+1?'checked':''}><label for="opt${i}">${o}</label></div>`).join('')}</div>
                 </div>`;
         }
-        
+
         function nextQuestion(){
             const selected=document.querySelector('input[name="answer"]:checked');
-            if(!selected){alert('請選擇一個選項');return}
+            if(!selected){alert('请选择一个选项');return}
             const qIdx=questionOrder[currentQ];
             answers[questions[qIdx].id]=parseInt(selected.value);
             if(currentQ<27){currentQ++;renderQuestion()}else{submitQuiz()}
         }
-        
+
         function prevQuestion(){if(currentQ>0){currentQ--;renderQuestion()}}
-        
+
         async function submitQuiz(){
             const industry=sessionStorage.getItem('industry');
             const experience=sessionStorage.getItem('experience');
-            const userName=sessionStorage.getItem('userName')||'匿名用戶';
+            const userName=sessionStorage.getItem('userName')||'匿名用户';
             try{
                 const res=await fetch(API+'/api/quiz/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:userName,industry,experience,answers,question_order:questionOrder})});
                 const data=await res.json();
@@ -219,23 +256,23 @@ HTML_INDEX = '''<!DOCTYPE html>
                 Object.entries(data.scores).forEach(([dim,s])=>{html+=`<div class="score-item"><div class="score-label">${s.name}</div><div class="score-value">${s.average.toFixed(1)}</div><div class="score-level">${s.level}</div></div>`});
                 html+='</div>';
                 document.getElementById('scores-display').innerHTML=html;
-            }catch(e){alert('提交失敗: '+e.message)}
+            }catch(e){alert('提交失败: '+e.message)}
         }
-        
+
         async function downloadReport(){if(resultId)window.open(API+'/api/quiz/report/'+resultId,'_blank')}
-        
+
         function resetQuiz(){currentQ=0;answers={};resultId=null;document.getElementById('result-section').classList.add('hidden');document.getElementById('info-section').classList.remove('hidden')}
     </script>
 </body>
 </html>'''
 
-# ============ 管理后台HTML ============
+# ============ 管理后台HTML（简体中文） ============
 HTML_ADMIN = '''<!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理後台 | 7維能力測評</title>
+    <title>管理后台 | 7维能力测评</title>
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f7fa;color:#333}
@@ -264,33 +301,33 @@ HTML_ADMIN = '''<!DOCTYPE html>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚙️ 7維能力測評 - 管理後台</h1>
-            <p>數據管理 | 批量導入 | 報告下載</p>
+            <h1>⚙️ 7维能力测评 - 管理后台</h1>
+            <p>数据管理 | 批量导入 | 报告下载</p>
         </div>
         <div class="stats-grid" id="stats"></div>
         <div class="card">
-            <h2>📋 測評記錄</h2>
+            <h2>📋 测评记录</h2>
             <div style="margin-bottom:15px">
                 <input type="text" id="searchName" placeholder="搜索姓名..." style="padding:8px;border:1px solid #ddd;border-radius:6px;width:200px">
-                <select id="filterIndustry" style="padding:8px;border:1px solid #ddd;border-radius:6px"><option value="">所有行業</option></select>
+                <select id="filterIndustry" style="padding:8px;border:1px solid #ddd;border-radius:6px"><option value="">所有行业</option></select>
                 <button class="btn" onclick="loadData()">搜索</button>
-                <a href="/api/quiz/export" class="btn" style="background:#27ae60;margin-left:10px">📥 導出CSV</a>
+                <a href="/api/quiz/export" class="btn" style="background:#27ae60;margin-left:10px">📥 导出CSV</a>
             </div>
             <div style="overflow-x:auto">
-                <table><thead><tr><th>ID</th><th>姓名</th><th>行業</th><th>年限</th><th>提交時間</th><th>有效性</th><th>操作</th></tr></thead><tbody id="tableBody"></tbody></table>
+                <table><thead><tr><th>ID</th><th>姓名</th><th>行业</th><th>年限</th><th>提交时间</th><th>有效性</th><th>操作</th></tr></thead><tbody id="tableBody"></tbody></table>
             </div>
         </div>
         <div class="card">
-            <h2>📤 批量導入（離線問卷）</h2>
+            <h2>📤 批量导入（离线问卷）</h2>
             <div class="import-section">
-                <p>上傳CSV文件批量導入測評結果</p>
-                <p style="font-size:12px;color:#888;margin:10px 0">格式：name, industry, experience, q1-q31（每題1-5分）</p>
+                <p>上传CSV文件批量导入测评结果</p>
+                <p style="font-size:12px;color:#888;margin:10px 0">格式：name, industry, experience, q1-q31（每题1-5分）</p>
                 <input type="file" id="csvFile" accept=".csv">
-                <button class="btn" onclick="importCSV()" style="margin-top:10px">導入</button>
+                <button class="btn" onclick="importCSV()" style="margin-top:10px">导入</button>
                 <div id="importResult" style="margin-top:10px"></div>
             </div>
         </div>
-        <div style="text-align:center;margin-top:20px"><a href="/" style="color:#667eea">← 返回首頁</a></div>
+        <div style="text-align:center;margin-top:20px"><a href="/" style="color:#667eea">← 返回首页</a></div>
     </div>
     <script>
         const API='';
@@ -299,12 +336,12 @@ HTML_ADMIN = '''<!DOCTYPE html>
             const data=await res.json();
             const valid=data.results.filter(r=>r.validity_check).length;
             document.getElementById('stats').innerHTML=`
-                <div class="stat-box"><div class="stat-value">${data.results.length}</div><div class="stat-label">總記錄數</div></div>
-                <div class="stat-box"><div class="stat-value">${valid}</div><div class="stat-label">有效記錄</div></div>
-                <div class="stat-box"><div class="stat-value">${data.results.length-valid}</div><div class="stat-label">無效記錄</div></div>
-                <div class="stat-box"><div class="stat-value">${data.industries.length}</div><div class="stat-label">行業數</div></div>`;
+                <div class="stat-box"><div class="stat-value">${data.results.length}</div><div class="stat-label">总记录数</div></div>
+                <div class="stat-box"><div class="stat-value">${valid}</div><div class="stat-label">有效记录</div></div>
+                <div class="stat-box"><div class="stat-value">${data.results.length-valid}</div><div class="stat-label">无效记录</div></div>
+                <div class="stat-box"><div class="stat-value">${data.industries.length}</div><div class="stat-label">行业数</div></div>`;
             const industries=[...new Set(data.results.map(r=>r.industry))];
-            document.getElementById('filterIndustry').innerHTML='<option value="">所有行業</option>'+industries.map(i=>`<option value="${i}">${i}</option>`).join('');
+            document.getElementById('filterIndustry').innerHTML='<option value="">所有行业</option>'+industries.map(i=>`<option value="${i}">${i}</option>`).join('');
             renderTable(data.results);
         }
         function renderTable(results){
@@ -312,7 +349,7 @@ HTML_ADMIN = '''<!DOCTYPE html>
                 <tr>
                     <td>${r.id}</td><td>${r.user_name}</td><td>${r.industry}</td><td>${r.experience}</td>
                     <td>${new Date(r.submitted_at).toLocaleDateString()}</td>
-                    <td><span class="badge ${r.validity_check?'badge-valid':'badge-invalid'}">${r.validity_check?'有效':'無效'}</span></td>
+                    <td><span class="badge ${r.validity_check?'badge-valid':'badge-invalid'}">${r.validity_check?'有效':'无效'}</span></td>
                     <td><button class="btn" onclick="window.open('${API}/api/quiz/report/${r.id}','_blank')">PDF</button></td>
                 </tr>`).join('');
         }
@@ -325,15 +362,15 @@ HTML_ADMIN = '''<!DOCTYPE html>
         }
         async function importCSV(){
             const file=document.getElementById('csvFile').files[0];
-            if(!file){alert('請選擇CSV文件');return}
+            if(!file){alert('请选择CSV文件');return}
             const formData=new FormData();
             formData.append('file',file);
             try{
                 const res=await fetch(API+'/api/quiz/batch-import',{method:'POST',body:formData});
                 const data=await res.json();
-                document.getElementById('importResult').innerHTML=`<b style="color:${data.success?'green':'red'}">${data.message}</b> 成功: ${data.success_count||0} 失敗: ${data.fail_count||0}`;
+                document.getElementById('importResult').innerHTML=`<b style="color:${data.success?'green':'red'}">${data.message}</b> 成功: ${data.success_count||0} 失败: ${data.fail_count||0}`;
                 if(data.success)loadStats();
-            }catch(e){document.getElementById('importResult').innerHTML=`<b style="color:red">導入失敗: ${e.message}</b>`}
+            }catch(e){document.getElementById('importResult').innerHTML=`<b style="color:red">导入失败: ${e.message}</b>`}
         }
         loadStats();
     </script>
@@ -362,13 +399,13 @@ def init_db():
         conn.commit()
 
 def calculate_scores(answers):
-    dims = {'COG':{'name':'思維敏銳度','q':[1,2,3,4]},
-            'TEC':{'name':'數字應用力','q':[5,6,7,8]},
-            'COM':{'name':'溝通穿透力','q':[9,10,11,12]},
-            'SOC':{'name':'人際連結力','q':[13,14,15,16]},
-            'ORG':{'name':'目標驅動力','q':[17,18,19,20]},
-            'PRS':{'name':'應變決策力','q':[21,22,23,24]},
-            'MGT':{'name':'團隊賦能力','q':[25,26,27,28]}}
+    dims = {'COG':{'name':'思维敏锐度','q':[1,2,3,4]},
+            'TEC':{'name':'数字应用力','q':[5,6,7,8]},
+            'COM':{'name':'沟通穿透力','q':[9,10,11,12]},
+            'SOC':{'name':'人际连结力','q':[13,14,15,16]},
+            'ORG':{'name':'目标驱动力','q':[17,18,19,20]},
+            'PRS':{'name':'应变决策力','q':[21,22,23,24]},
+            'MGT':{'name':'团队赋能力','q':[25,26,27,28]}}
     scores = {}
     for dim, cfg in dims.items():
         total = sum(answers.get(f'q{q}', 0) for q in cfg['q'])
@@ -377,11 +414,11 @@ def calculate_scores(answers):
     return scores
 
 def get_level(score):
-    if score >= 4.5: return '優秀'
+    if score >= 4.5: return '优秀'
     elif score >= 3.5: return '良好'
     elif score >= 2.5: return '中等'
     elif score >= 1.5: return '待提升'
-    else: return '需改進'
+    else: return '需改进'
 
 def check_validity(answers):
     q29 = answers.get('q29', 0)
@@ -393,25 +430,34 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='ChineseTitle', fontName='Helvetica', fontSize=20, alignment=1, spaceAfter=20))
-    styles.add(ParagraphStyle(name='ChineseText', fontName='Helvetica', fontSize=10, spaceAfter=8))
-    styles.add(ParagraphStyle(name='ChineseCenter', fontName='Helvetica', fontSize=11, alignment=1))
-    
+
+    # 根据字体可用性选择字体
+    if CHINESE_FONT_AVAILABLE:
+        font_name = 'ChineseFont'
+    else:
+        font_name = 'Helvetica'
+        print("警告: 使用Helvetica字体，中文可能无法正确显示")
+
+    styles.add(ParagraphStyle(name='ChineseTitle', fontName=font_name, fontSize=20, alignment=1, spaceAfter=20))
+    styles.add(ParagraphStyle(name='ChineseText', fontName=font_name, fontSize=10, spaceAfter=8))
+    styles.add(ParagraphStyle(name='ChineseCenter', fontName=font_name, fontSize=11, alignment=1))
+
     story = []
-    story.append(Paragraph('7維能力測評報告', styles['ChineseTitle']))
+    story.append(Paragraph('7维能力测评报告', styles['ChineseTitle']))
     story.append(Paragraph(f'<b>{user_name}</b> | {industry} | {experience}', styles['ChineseCenter']))
     story.append(Spacer(1, 15*mm))
-    
-    data = [['維度', '分數', '等級']]
+
+    data = [['维度', '分数', '等级']]
     for dim, s in scores.items():
         data.append([s['name'], f"{s['average']:.1f}", s['level']])
-    
+
     table = Table(data, colWidths=[80*mm, 40*mm, 40*mm])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), font_name),
+        ('FONTNAME', (0, 1), (-1, -1), font_name),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#ddd')),
@@ -419,24 +465,24 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
     ]))
     story.append(table)
     story.append(Spacer(1, 15*mm))
-    
+
     insights = {
-        'COG': '思維敏銳度反映認知與邏輯能力。',
-        'TEC': '數字應致力體現技術掌握程度。',
-        'COM': '溝通穿透力代表表達與傾聽能力。',
-        'SOC': '人際連結力顯示社交與情緒智商。',
-        'ORG': '目標驅動力反映規劃與執行能力。',
-        'PRS': '應變決策力體現問題解決能力。',
-        'MGT': '團隊賦能力顯示管理與領導潛力。'
+        'COG': '思维敏锐度反映认知与逻辑能力。',
+        'TEC': '数字应用力体现技术掌握程度。',
+        'COM': '沟通穿透力代表表达与倾听能力。',
+        'SOC': '人际连结力显示社交与情绪智商。',
+        'ORG': '目标驱动力反映规划与执行能力。',
+        'PRS': '应变决策力体现解决问题能力。',
+        'MGT': '团队赋能力显示管理与领导潜力。'
     }
-    story.append(Paragraph('<b>維度解讀</b>', styles['ChineseText']))
+    story.append(Paragraph('<b>维度解读</b>', styles['ChineseText']))
     for dim, s in scores.items():
-        story.append(Paragraph(f'<b>{s["name"]}</b>：{insights.get(dim, "")} 本次測評{s["level"]}。', styles['ChineseText']))
-    
+        story.append(Paragraph(f'<b>{s["name"]}</b>：{insights.get(dim, "")} 本次测评{s["level"]}。', styles['ChineseText']))
+
     story.append(Spacer(1, 20*mm))
-    story.append(Paragraph('由 Santa Chow 專業教練提供', styles['ChineseCenter']))
+    story.append(Paragraph('由 Santa Chow 专业教练提供', styles['ChineseCenter']))
     story.append(Paragraph(f'Report ID: {result_id} | {datetime.now().strftime("%Y-%m-%d")}', styles['ChineseCenter']))
-    
+
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -460,21 +506,21 @@ def submit():
         data = request.get_json()
         if not data or 'answers' not in data:
             return jsonify({'error': 'Missing answers'}), 400
-        
+
         scores = calculate_scores(data['answers'])
         validity = check_validity(data['answers'])
-        
+
         with get_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT INTO quiz_results 
+            c.execute('''INSERT INTO quiz_results
                 (user_name, industry, experience, answers, question_order, scores, validity_check, submitted_at, ip_address, user_agent)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (data.get('name', '匿名用戶'), data.get('industry', ''), data.get('experience', ''),
+                (data.get('name', '匿名用户'), data.get('industry', ''), data.get('experience', ''),
                  json.dumps(data.get('answers', {})), json.dumps(data.get('question_order', [])),
                  json.dumps(scores), 1 if validity['is_valid'] else 0,
                  datetime.now().isoformat(), request.remote_addr, request.headers.get('User-Agent', '')))
             result_id = c.lastrowid
-        
+
         return jsonify({'success': True, 'result_id': result_id, 'scores': scores, 'validity': validity})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -486,13 +532,13 @@ def report(result_id):
             c = conn.cursor()
             c.execute('SELECT * FROM quiz_results WHERE id = ?', (result_id,))
             row = c.fetchone()
-        
+
         if not row:
             return jsonify({'error': 'Not found'}), 404
-        
+
         scores = json.loads(row['scores'])
         pdf_buffer = generate_pdf(row['id'], scores, row['user_name'], row['industry'], row['experience'])
-        
+
         return send_file(pdf_buffer, mimetype='application/pdf',
                         as_attachment=True,
                         download_name=f'7d_report_{row["user_name"]}_{result_id}.pdf')
@@ -505,7 +551,7 @@ def get_all():
         name = request.args.get('name', '')
         industry = request.args.get('industry', '')
         limit = int(request.args.get('limit', 100))
-        
+
         with get_db() as conn:
             c = conn.cursor()
             conditions = ['1=1']
@@ -516,12 +562,12 @@ def get_all():
             if industry:
                 conditions.append('industry = ?')
                 params.append(industry)
-            
+
             c.execute(f'SELECT * FROM quiz_results WHERE {" AND ".join(conditions)} ORDER BY id DESC LIMIT {limit}')
             rows = c.fetchall()
             c.execute('SELECT DISTINCT industry FROM quiz_results WHERE industry IS NOT NULL AND industry != ""')
             industries = [r['industry'] for r in c.fetchall()]
-        
+
         return jsonify({'results': [dict(r) for r in rows], 'industries': industries})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -533,13 +579,13 @@ def export():
             c = conn.cursor()
             c.execute('SELECT * FROM quiz_results ORDER BY id DESC')
             rows = c.fetchall()
-        
+
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['ID', '姓名', '行業', '年限', '提交時間', '有效性'])
+        writer.writerow(['ID', '姓名', '行业', '年限', '提交时间', '有效性'])
         for r in rows:
             writer.writerow([r['id'], r['user_name'], r['industry'], r['experience'], r['submitted_at'], r['validity_check']])
-        
+
         output.seek(0)
         return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
                         mimetype='text/csv',
@@ -554,13 +600,13 @@ def batch_import():
         file = request.files.get('file')
         if not file:
             return jsonify({'error': 'No file'}), 400
-        
+
         content = file.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(content))
-        
+
         success_count = 0
         fail_count = 0
-        
+
         with get_db() as conn:
             c = conn.cursor()
             for row in reader:
@@ -568,8 +614,8 @@ def batch_import():
                     answers = {f'q{i}': int(row.get(f'q{i}', 0)) for i in range(1, 32)}
                     scores = calculate_scores(answers)
                     validity = check_validity(answers)
-                    
-                    c.execute('''INSERT INTO quiz_results 
+
+                    c.execute('''INSERT INTO quiz_results
                         (user_name, industry, experience, answers, question_order, scores, validity_check, submitted_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
                         (row.get('name', '匿名'), row.get('industry', ''), row.get('experience', ''),
@@ -579,8 +625,8 @@ def batch_import():
                 except:
                     fail_count += 1
             conn.commit()
-        
-        return jsonify({'success': True, 'message': f'導入完成', 'success_count': success_count, 'fail_count': fail_count})
+
+        return jsonify({'success': True, 'message': f'导入完成', 'success_count': success_count, 'fail_count': fail_count})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
