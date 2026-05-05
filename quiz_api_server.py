@@ -109,6 +109,7 @@ HTML_INDEX = '''<!DOCTYPE html>
         .stats-panel{background:#f8f9fc;padding:15px;border-radius:10px;margin-top:20px}
         .stats-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
         .admin-link{position:fixed;bottom:20px;right:20px;background:rgba(0,0,0,0.7);color:white;padding:8px 15px;border-radius:20px;font-size:12px;text-decoration:none}
+        .footer{copyright: center;padding:20px;text-align:center;font-size:12px;color:#888;border-top:1px solid #eee;margin-top:30px}
     </style>
 </head>
 <body>
@@ -163,17 +164,27 @@ HTML_INDEX = '''<!DOCTYPE html>
             <div class="stats-panel"><h4 style="margin-bottom:10px">📊 群体对比</h4><div id="norm-comparison"></div></div>
         </div>
     </div>
+    <div class="footer">
+        <p>© 2026 Santa Chow 专业教练 | 7维能力测评系统</p>
+        <p>如有疑问请联系：Santa Chow</p>
+    </div>
     <a href="/admin" class="admin-link">⚙️ 管理后台</a>
     <script>
         const API='';
         const DIM_NAMES={COG:'思维敏锐度',TEC:'数字应用力',COM:'沟通穿透力',SOC:'人际连结力',ORG:'目标驱动力',PRS:'应变决策力',MGT:'团队赋能力'};
         let currentQ=0,questionOrder=[],answers={},resultId=null;
+
+        // 总题数：28道能力题 + 3道效度题 = 31题
+        const MAIN_COUNT=28; // 能力题数量
+        const VALIDITY_START=28; // 效度题起始索引
+
         const questions=[
+            // ========== 能力题（id 1-28，会被打乱顺序）==========
             {id:1,text:'我能快速理解新事物的核心原理',dim:'COG'},
             {id:2,text:'面对复杂问题时，我能迅速找到关键脉络',dim:'COG'},
             {id:3,text:'我善于总结归纳，能把复杂信息简化',dim:'COG'},
             {id:4,text:'我对数据和逻辑敏感，能理性分析',dim:'COG'},
-            {id:5,text:'我能熟练使用各种数字工具提升效率',dim:'TEC'},
+            {id:5,text:'我能熟练使用AI工具（ChatGPT、Claude、Midjourney等）提升工作效率',dim:'TEC'},
             {id:6,text:'遇到技术问题时，我能快速排查原因',dim:'TEC'},
             {id:7,text:'我会主动学习新技术保持竞争力',dim:'TEC'},
             {id:8,text:'我能把复杂技术概念解释给非专业人士',dim:'TEC'},
@@ -197,13 +208,28 @@ HTML_INDEX = '''<!DOCTYPE html>
             {id:26,text:'我能有效协调跨部门合作',dim:'MGT'},
             {id:27,text:'我会及时提供反馈，帮助他人成长',dim:'MGT'},
             {id:28,text:'团队士气低落时，我能激励团队',dim:'MGT'},
-            {id:29,text:'（此题请选择"普通"）测试认真度',dim:'V'},
-            {id:30,text:'（此题请选择"普通"）测试稳定性',dim:'V'},
-            {id:31,text:'（此题请选择第3项）注意力检验',dim:'V'}
+            // ========== 效度题（id 29-31，固定在最后，不打乱）==========
+            {id:29,text:'总体而言，我认为本测评能准确反映我的能力水平',dim:'V'},
+            {id:30,text:'本测评的题目表述清晰易懂，我能准确理解每道题的意思',dim:'V'},
+            {id:31,text:'我愿意向朋友或同事推荐本测评工具',dim:'V'}
         ];
-        const opts=['非常不同意','不同意','普通','同意','非常同意'];
 
-        function shuffleQuestions(){questionOrder=[...Array(28).keys()].sort(()=>Math.random()-0.5).map(i=>i)}
+        const opts=['非常不同意','不同意','普通','同意','非常同意'];
+        const TOTAL_QUESTIONS=31; // 总题数
+
+        // 打乱能力题顺序，效度题固定在最后
+        function shuffleQuestions(){
+            // 创建能力题索引 [0,1,2,...,27]
+            const mainIndices=[...Array(MAIN_COUNT).keys()];
+            // Fisher-Yates 洗牌
+            for(let i=mainIndices.length-1;i>0;i--){
+                const j=Math.floor(Math.random()*(i+1));
+                [mainIndices[i],mainIndices[j]]=[mainIndices[j],mainIndices[i]];
+            }
+            // 能力题顺序 + 效度题固定在最后
+            questionOrder=[...mainIndices, VALIDITY_START, VALIDITY_START+1, VALIDITY_START+2];
+            console.log('题目顺序:', questionOrder);
+        }
 
         function startQuiz(){
             const industry=document.getElementById('industry').value;
@@ -213,6 +239,8 @@ HTML_INDEX = '''<!DOCTYPE html>
             sessionStorage.setItem('experience',experience);
             sessionStorage.setItem('userName',document.getElementById('userName').value);
             shuffleQuestions();
+            currentQ=0;
+            answers={};
             document.getElementById('info-section').classList.add('hidden');
             document.getElementById('quiz-section').classList.remove('hidden');
             renderQuestion();
@@ -221,12 +249,24 @@ HTML_INDEX = '''<!DOCTYPE html>
         function renderQuestion(){
             const qIdx=questionOrder[currentQ];
             const q=questions[qIdx];
-            document.getElementById('progress').style.width=((currentQ+1)/28*100)+'%';
+            const isLast=(currentQ===TOTAL_QUESTIONS-1);
+            const isValidity=(q.dim==='V');
+
+            document.getElementById('progress').style.width=((currentQ+1)/TOTAL_QUESTIONS*100)+'%';
             document.getElementById('prevBtn').style.visibility=currentQ>0?'visible':'hidden';
-            document.getElementById('nextBtn').textContent=currentQ<27?'下一题 →':'提交测评 ✓';
+
+            let btnText;
+            if(isValidity){
+                btnText=isLast?'提交测评 ✓':'下一题 →';
+            }else{
+                btnText=(currentQ<MAIN_COUNT-1)?'下一题 →':'下一题 →'; // 能力题最后一题后继续到效度题
+            }
+            if(isLast) btnText='提交测评 ✓';
+            document.getElementById('nextBtn').textContent=btnText;
+
             document.getElementById('question-container').innerHTML=`
                 <div class="question">
-                    <div class="question-meta">第 ${currentQ+1} / 28 题 | ${DIM_NAMES[q.dim]||'效度题'}</div>
+                    <div class="question-meta">第 ${currentQ+1} / ${TOTAL_QUESTIONS} 题 | ${isValidity?'问卷反馈':DIM_NAMES[q.dim]}</div>
                     <div class="question-text">${q.text}</div>
                     <div class="options">${opts.map((o,i)=>`<div class="option"><input type="radio" name="answer" id="opt${i}" value="${i+1}" ${answers[q.id]==i+1?'checked':''}><label for="opt${i}">${o}</label></div>`).join('')}</div>
                 </div>`;
@@ -237,7 +277,12 @@ HTML_INDEX = '''<!DOCTYPE html>
             if(!selected){alert('请选择一个选项');return}
             const qIdx=questionOrder[currentQ];
             answers[questions[qIdx].id]=parseInt(selected.value);
-            if(currentQ<27){currentQ++;renderQuestion()}else{submitQuiz()}
+            if(currentQ<TOTAL_QUESTIONS-1){
+                currentQ++;
+                renderQuestion();
+            }else{
+                submitQuiz();
+            }
         }
 
         function prevQuestion(){if(currentQ>0){currentQ--;renderQuestion()}}
@@ -421,10 +466,26 @@ def get_level(score):
     else: return '需改进'
 
 def check_validity(answers):
-    q29 = answers.get('q29', 0)
-    q30 = answers.get('q30', 0)
-    q31 = answers.get('q31', 0)
-    return {'is_valid': (q31 == 3) and (q29 <= 2 or q30 <= 2)}
+    """
+    效度检查：
+    - 检查是否回答了所有31道题
+    - 检查是否有明显规律性作答（如全选同一选项）
+    """
+    # 检查是否回答了所有题
+    answered_count = sum(1 for v in answers.values() if v > 0)
+    if answered_count < 31:
+        return {'is_valid': False, 'reason': '未完成所有题目'}
+
+    # 检查是否有规律性作答（超过80%的题目选择同一选项视为无效）
+    if answers:
+        option_counts = {}
+        for v in answers.values():
+            option_counts[v] = option_counts.get(v, 0) + 1
+        max_count = max(option_counts.values())
+        if max_count / len(answers) > 0.8:
+            return {'is_valid': False, 'reason': '作答规律性过强'}
+
+    return {'is_valid': True}
 
 def generate_pdf(result_id, scores, user_name, industry, experience):
     buffer = io.BytesIO()
