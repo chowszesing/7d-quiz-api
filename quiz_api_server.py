@@ -33,28 +33,98 @@ PORT = int(os.environ.get('PORT', 5000))
 # ============ 中文字体注册 ============
 def register_fonts():
     """注册中文字体，支持PDF中文输出；返回可用字体名称，失败返回None"""
-    font_candidates = [
-        # (font_name, font_path)
-        ('WenQuanYi', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
-        ('WenQuanYiZH', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
+    
+    # 首先尝试应用目录下的字体文件（优先）
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    local_fonts = [
+        os.path.join(app_dir, 'fonts', 'NotoSansCJK-Regular.otf'),
+        os.path.join(app_dir, 'fonts', 'NotoSansCJKsc-Regular.otf'),
+        os.path.join(app_dir, 'fonts', 'wqy-microhei.ttc'),
+        os.path.join(app_dir, 'fonts', 'NotoSansCJK-Regular.ttc'),
+        os.path.join(app_dir, 'NotoSansCJK-Regular.otf'),
+    ]
+    
+    # Ubuntu/Render 字体目录（递归搜索）
+    system_font_dirs = [
+        '/usr/share/fonts/',
+        '/usr/local/share/fonts/',
+        '/opt/fonts/',
+        os.path.expanduser('~/.fonts/'),
+    ]
+    
+    # 所有候选字体（按优先级排列）
+    font_candidates = []
+    
+    # 1. 本地字体（最高优先级）
+    for path in local_fonts:
+        if os.path.exists(path):
+            name = os.path.splitext(os.path.basename(path))[0].replace('-', '').replace('_', '')
+            font_candidates.append((name, path))
+    
+    # 2. 搜索系统字体目录
+    import glob
+    for font_dir in system_font_dirs:
+        if not os.path.exists(font_dir):
+            continue
+        for ext in ['*.ttf', '*.otf', '*.ttc']:
+            for f in glob.glob(os.path.join(font_dir, '**', ext), recursive=True):
+                basename = os.path.basename(f).lower()
+                # 跳过不支持中文的西方字体
+                skip_patterns = ['dejavu', 'liberation', 'ubuntu', 'freefont', 'glyphicons', 'fontawesome']
+                if any(p in basename for p in skip_patterns):
+                    continue
+                # 只选择可能包含中文的字体
+                cjk_patterns = ['cjk', 'noto', 'wqy', 'chinese', 'zh', 'sc', 'tc', 'hans', 'hant', 'droid', 'source']
+                if any(p in basename for p in cjk_patterns):
+                    name = os.path.splitext(os.path.basename(f))[0].replace('-', '').replace('_', '')
+                    font_candidates.append((name, f))
+    
+    # 3. 显式候选路径（WQY 系列）
+    explicit_paths = [
+        ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
+        ('WenQuanYiZenHei', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
+        ('WenQuanYiMicroheiTTF', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf'),
         ('NotoSansCJK', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'),
-        ('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
+        ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto-cjk/NotoSansCJKsc-Regular.otf'),
+        ('NotoSansCJKTC', '/usr/share/fonts/opentype/noto-cjk/NotoSansCJKtc-Regular.otf'),
+        ('NotoSansSC', '/usr/share/fonts/opentype/noto/NotoSansSC-Regular.otf'),
+        ('NotoSansHant', '/usr/share/fonts/opentype/noto/NotoSansHant-Regular.otf'),
+        ('DroidSansFallback', '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'),
         ('SimHei', 'C:/Windows/Fonts/simhei.ttf'),
         ('SimSun', 'C:/Windows/Fonts/simsun.ttc'),
+        # 常见中文TTF
+        ('ChineseTTF', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
     ]
-    for name, path in font_candidates:
+    
+    for name, path in explicit_paths:
         if os.path.exists(path):
-            try:
-                pdfmetrics.registerFont(TTFont(name, path))
-                print(f"成功注册字体: {name} ({path})")
-                return name
-            except Exception as e:
-                print(f"字体注册失败 {path}: {e}")
-                continue
-    print("警告: 未找到中文字体，PDF中文可能显示异常")
+            # 检查是否已在列表中
+            if not any(f == path for _, f in font_candidates):
+                font_candidates.append((name, path))
+    
+    # 尝试注册每个候选字体
+    print(f"\n{'='*50}")
+    print(f"开始字体注册，共 {len(font_candidates)} 个候选")
+    print(f"{'='*50}")
+    
+    for name, path in font_candidates:
+        try:
+            font = TTFont(name, path)
+            pdfmetrics.registerFont(font)
+            print(f"✓ 成功注册: {name}")
+            print(f"  路径: {path}")
+            print(f"{'='*50}\n")
+            return name
+        except Exception as e:
+            print(f"  ✗ 失败: {name} ({path}): {e}")
+            continue
+    
+    print(f"⚠️ 警告: 未找到中文字体，PDF中文将显示异常")
+    print(f"{'='*50}\n")
     return None
 
 CHINESE_FONT = register_fonts()
+print(f"字体注册完成: CHINESE_FONT = {CHINESE_FONT}")
 
 # ============ HTML模板（简体中文）============
 HTML_INDEX = '''<!DOCTYPE html>
