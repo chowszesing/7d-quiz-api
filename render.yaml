@@ -1,0 +1,24 @@
+# Render Blueprint - 7维能力测评一体化服务
+# 部署：连接GitHub仓库 → Render自动检测 → Deploy
+
+services:
+  - type: web
+    name: 7d-quiz-api
+    env: python
+    region: singapore  # 离香港最近
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn quiz_api_server:app -b 0.0.0.0:$PORT -w 1 --timeout 120
+    healthCheckPath: /api/health
+    
+    # 免费版设置
+    plan: free
+    autoDeploy: true
+    
+    # 环境变量
+    envVars:
+      - key: DATABASE
+        value: quiz_results.db
+      - key: PORT
+        value: "5000"
+      - key: PYTHON_VERSION
+        value: "3.11"
