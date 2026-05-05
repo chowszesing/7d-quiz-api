@@ -617,7 +617,9 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
 # ============ 路由 ============
 @app.route('/')
 def index():
-    return HTML_INDEX
+    """Serve the business-style quiz page (HK style, blue-gray daytime theme)"""
+    with open('7d_quiz_hk_style.html', 'r', encoding='utf-8') as f:
+        return f.read()
 
 @app.route('/admin')
 def admin():
