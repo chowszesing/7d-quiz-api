@@ -297,11 +297,36 @@ HTML_INDEX = '''<!DOCTYPE html>
                 resultId=data.result_id;
                 document.getElementById('quiz-section').classList.add('hidden');
                 document.getElementById('result-section').classList.remove('hidden');
+                document.getElementById('result-name').textContent=userName+' | '+industry+' | '+experience;
                 let html='<div class="score-grid">';
                 Object.entries(data.scores).forEach(([dim,s])=>{html+=`<div class="score-item"><div class="score-label">${s.name}</div><div class="score-value">${s.average.toFixed(1)}</div><div class="score-level">${s.level}</div></div>`});
                 html+='</div>';
                 document.getElementById('scores-display').innerHTML=html;
-            }catch(e){alert('提交失败: '+e.message)}
+            }catch(e){
+                // API调用失败时，使用本地计算作为备份
+                console.error('API调用失败，使用本地计算:', e);
+                calculateAndShowScoresLocal(industry, experience, userName);
+            }
+        }
+
+        // 本地计算分数（API失败时的备份方案）
+        function calculateAndShowScoresLocal(industry, experience, userName){
+            document.getElementById('quiz-section').classList.add('hidden');
+            document.getElementById('result-section').classList.remove('hidden');
+            document.getElementById('result-name').textContent=userName+' | '+industry+' | '+experience;
+
+            const dims = {COG:[1,2,3,4],TEC:[5,6,7,8],COM:[9,10,11,12],SOC:[13,14,15,16],ORG:[17,18,19,20],PRS:[21,22,23,24],MGT:[25,26,27,28]};
+            const dimNames = {COG:'思维敏锐度',TEC:'数字应用力',COM:'沟通穿透力',SOC:'人际连结力',ORG:'目标驱动力',PRS:'应变决策力',MGT:'团队赋能力'};
+
+            let html='<div class="score-grid">';
+            for(const [dim,qids] of Object.entries(dims)){
+                const avg= qids.reduce((sum,q)=>sum+(answers[q]||3),0)/4;
+                const level=avg>=4.5?'优秀':avg>=3.5?'良好':avg>=2.5?'中等':avg>=1.5?'待提升':'需改进';
+                html+=`<div class="score-item"><div class="score-label">${dimNames[dim]}</div><div class="score-value">${avg.toFixed(1)}</div><div class="score-level">${level}</div></div>`;
+            }
+            html+='</div>';
+            document.getElementById('scores-display').innerHTML=html;
+            alert('注意：结果已本地计算，服务器连接失败，PDF报告功能暂时不可用');
         }
 
         async function downloadReport(){if(resultId)window.open(API+'/api/quiz/report/'+resultId,'_blank')}
