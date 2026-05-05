@@ -32,39 +32,31 @@ PORT = int(os.environ.get('PORT', 5000))
 
 # ============ 中文字体注册 ============
 def register_fonts():
-    """注册中文字体，支持PDF中文输出"""
-    font_paths = [
-        # Linux服务器常见字体路径
-        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/truetype/arphic/uming.ttc',
-        '/usr/share/fonts/truetype/arphic/ukai.ttc',
-        # macOS
-        '/System/Library/Fonts/PingFang.ttc',
-        # Windows
-        'C:/Windows/Fonts/simhei.ttf',
-        'C:/Windows/Fonts/simsun.ttc',
+    """注册中文字体，支持PDF中文输出；返回可用字体名称，失败返回None"""
+    font_candidates = [
+        # (font_name, font_path)
+        ('WenQuanYi', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
+        ('WenQuanYiZH', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
+        ('NotoSansCJK', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'),
+        ('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
+        ('SimHei', 'C:/Windows/Fonts/simhei.ttf'),
+        ('SimSun', 'C:/Windows/Fonts/simsun.ttc'),
     ]
-
-    for path in font_paths:
+    for name, path in font_candidates:
         if os.path.exists(path):
             try:
-                pdfmetrics.registerFont(TTFont('ChineseFont', path))
-                print(f"成功注册字体: {path}")
-                return True
+                pdfmetrics.registerFont(TTFont(name, path))
+                print(f"成功注册字体: {name} ({path})")
+                return name
             except Exception as e:
                 print(f"字体注册失败 {path}: {e}")
                 continue
-
-    # 如果都找不到，使用内置Helvetica（会有问题）
     print("警告: 未找到中文字体，PDF中文可能显示异常")
-    return False
+    return None
 
-CHINESE_FONT_AVAILABLE = register_fonts()
+CHINESE_FONT = register_fonts()
 
-# ============ HTML模板（完整问卷页面 - 简体中文）============
+# ============ HTML模板（简体中文）============
 HTML_INDEX = '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -109,7 +101,7 @@ HTML_INDEX = '''<!DOCTYPE html>
         .stats-panel{background:#f8f9fc;padding:15px;border-radius:10px;margin-top:20px}
         .stats-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
         .admin-link{position:fixed;bottom:20px;right:20px;background:rgba(0,0,0,0.7);color:white;padding:8px 15px;border-radius:20px;font-size:12px;text-decoration:none}
-        .footer{copyright: center;padding:20px;text-align:center;font-size:12px;color:#888;border-top:1px solid #eee;margin-top:30px}
+        .footer{text-align:center;padding:20px;font-size:12px;color:#888;border-top:1px solid #eee;margin-top:30px}
     </style>
 </head>
 <body>
@@ -174,12 +166,11 @@ HTML_INDEX = '''<!DOCTYPE html>
         const DIM_NAMES={COG:'思维敏锐度',TEC:'数字应用力',COM:'沟通穿透力',SOC:'人际连结力',ORG:'目标驱动力',PRS:'应变决策力',MGT:'团队赋能力'};
         let currentQ=0,questionOrder=[],answers={},resultId=null;
 
-        // 总题数：28道能力题 + 3道效度题 = 31题
-        const MAIN_COUNT=28; // 能力题数量
-        const VALIDITY_START=28; // 效度题起始索引
+        const MAIN_COUNT=28;
+        const VALIDITY_START=28;
+        const TOTAL_QUESTIONS=31;
 
         const questions=[
-            // ========== 能力题（id 1-28，会被打乱顺序）==========
             {id:1,text:'我能快速理解新事物的核心原理',dim:'COG'},
             {id:2,text:'面对复杂问题时，我能迅速找到关键脉络',dim:'COG'},
             {id:3,text:'我善于总结归纳，能把复杂信息简化',dim:'COG'},
@@ -208,27 +199,20 @@ HTML_INDEX = '''<!DOCTYPE html>
             {id:26,text:'我能有效协调跨部门合作',dim:'MGT'},
             {id:27,text:'我会及时提供反馈，帮助他人成长',dim:'MGT'},
             {id:28,text:'团队士气低落时，我能激励团队',dim:'MGT'},
-            // ========== 效度题（id 29-31，固定在最后，不打乱）==========
             {id:29,text:'总体而言，我认为本测评能准确反映我的能力水平',dim:'V'},
             {id:30,text:'本测评的题目表述清晰易懂，我能准确理解每道题的意思',dim:'V'},
             {id:31,text:'我愿意向朋友或同事推荐本测评工具',dim:'V'}
         ];
 
         const opts=['非常不同意','不同意','普通','同意','非常同意'];
-        const TOTAL_QUESTIONS=31; // 总题数
 
-        // 打乱能力题顺序，效度题固定在最后
         function shuffleQuestions(){
-            // 创建能力题索引 [0,1,2,...,27]
             const mainIndices=[...Array(MAIN_COUNT).keys()];
-            // Fisher-Yates 洗牌
             for(let i=mainIndices.length-1;i>0;i--){
                 const j=Math.floor(Math.random()*(i+1));
                 [mainIndices[i],mainIndices[j]]=[mainIndices[j],mainIndices[i]];
             }
-            // 能力题顺序 + 效度题固定在最后
             questionOrder=[...mainIndices, VALIDITY_START, VALIDITY_START+1, VALIDITY_START+2];
-            console.log('题目顺序:', questionOrder);
         }
 
         function startQuiz(){
@@ -259,7 +243,7 @@ HTML_INDEX = '''<!DOCTYPE html>
             if(isValidity){
                 btnText=isLast?'提交测评 ✓':'下一题 →';
             }else{
-                btnText=(currentQ<MAIN_COUNT-1)?'下一题 →':'下一题 →'; // 能力题最后一题后继续到效度题
+                btnText=(currentQ<MAIN_COUNT-1)?'下一题 →':'下一题 →';
             }
             if(isLast) btnText='提交测评 ✓';
             document.getElementById('nextBtn').textContent=btnText;
@@ -303,13 +287,11 @@ HTML_INDEX = '''<!DOCTYPE html>
                 html+='</div>';
                 document.getElementById('scores-display').innerHTML=html;
             }catch(e){
-                // API调用失败时，使用本地计算作为备份
                 console.error('API调用失败，使用本地计算:', e);
                 calculateAndShowScoresLocal(industry, experience, userName);
             }
         }
 
-        // 本地计算分数（API失败时的备份方案）
         function calculateAndShowScoresLocal(industry, experience, userName){
             document.getElementById('quiz-section').classList.add('hidden');
             document.getElementById('result-section').classList.remove('hidden');
@@ -330,13 +312,11 @@ HTML_INDEX = '''<!DOCTYPE html>
         }
 
         async function downloadReport(){if(resultId)window.open(API+'/api/quiz/report/'+resultId,'_blank')}
-
         function resetQuiz(){currentQ=0;answers={};resultId=null;document.getElementById('result-section').classList.add('hidden');document.getElementById('info-section').classList.remove('hidden')}
     </script>
 </body>
 </html>'''
 
-# ============ 管理后台HTML（简体中文） ============
 HTML_ADMIN = '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -491,17 +471,9 @@ def get_level(score):
     else: return '需改进'
 
 def check_validity(answers):
-    """
-    效度检查：
-    - 检查是否回答了所有31道题
-    - 检查是否有明显规律性作答（如全选同一选项）
-    """
-    # 检查是否回答了所有题
     answered_count = sum(1 for v in answers.values() if v > 0)
     if answered_count < 31:
         return {'is_valid': False, 'reason': '未完成所有题目'}
-
-    # 检查是否有规律性作答（超过80%的题目选择同一选项视为无效）
     if answers:
         option_counts = {}
         for v in answers.values():
@@ -509,20 +481,20 @@ def check_validity(answers):
         max_count = max(option_counts.values())
         if max_count / len(answers) > 0.8:
             return {'is_valid': False, 'reason': '作答规律性过强'}
-
     return {'is_valid': True}
 
 def generate_pdf(result_id, scores, user_name, industry, experience):
+    """生成PDF报告，使用中文字体"""
     buffer = io.BytesIO()
+
+    # 确定使用的字体
+    if CHINESE_FONT:
+        font_name = CHINESE_FONT
+    else:
+        raise Exception('中文字体不可用，请联系管理员')
+
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
     styles = getSampleStyleSheet()
-
-    # 根据字体可用性选择字体
-    if CHINESE_FONT_AVAILABLE:
-        font_name = 'ChineseFont'
-    else:
-        font_name = 'Helvetica'
-        print("警告: 使用Helvetica字体，中文可能无法正确显示")
 
     styles.add(ParagraphStyle(name='ChineseTitle', fontName=font_name, fontSize=20, alignment=1, spaceAfter=20))
     styles.add(ParagraphStyle(name='ChineseText', fontName=font_name, fontSize=10, spaceAfter=8))
@@ -542,8 +514,7 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), font_name),
-        ('FONTNAME', (0, 1), (-1, -1), font_name),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#ddd')),
@@ -584,7 +555,7 @@ def admin():
 
 @app.route('/api/health')
 def health():
-    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat(), 'font': CHINESE_FONT or 'none'})
 
 @app.route('/api/quiz/submit', methods=['POST'])
 def submit():
@@ -629,7 +600,9 @@ def report(result_id):
                         as_attachment=True,
                         download_name=f'7d_report_{row["user_name"]}_{result_id}.pdf')
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        print(f"PDF生成错误: {traceback.format_exc()}")
+        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None}), 500
 
 @app.route('/api/quiz/all')
 def get_all():
