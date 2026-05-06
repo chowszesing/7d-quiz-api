@@ -794,18 +794,135 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
     buffer.seek(0)
     return buffer
 
+# ============ Token 入口页面（简洁美观）============
+HTML_GATEWAY = '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8维能力测评 | Santa Chow</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+            background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);
+            min-height:100vh;display:flex;align-items:center;justify-content:center;
+            padding:20px;
+        }
+        .card{
+            background:rgba(255,255,255,0.97);border-radius:20px;
+            padding:50px 40px;max-width:480px;width:100%;
+            box-shadow:0 25px 60px rgba(0,0,0,0.4);
+            text-align:center;
+        }
+        .logo{font-size:12px;letter-spacing:4px;color:#f59e0b;font-weight:600;margin-bottom:8px;}
+        h1{font-size:28px;color:#0f172a;margin-bottom:8px;letter-spacing:1px;}
+        .subtitle{color:#64748b;font-size:15px;margin-bottom:40px;line-height:1.6;}
+        .form-group{text-align:left;margin-bottom:24px;}
+        label{font-size:14px;font-weight:600;color:#334155;margin-bottom:8px;display:block;}
+        input{
+            width:100%;padding:14px 16px;font-size:16px;
+            border:2px solid #e2e8f0;border-radius:12px;
+            outline:none;transition:border-color 0.2s;
+            letter-spacing:2px;font-family:monospace;
+        }
+        input:focus{border-color:#3b82f6;}
+        .btn{
+            width:100%;padding:16px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);
+            color:white;border:none;border-radius:12px;font-size:17px;
+            font-weight:600;cursor:pointer;transition:opacity 0.2s;letter-spacing:2px;
+        }
+        .btn:hover{opacity:0.9;}
+        .note{font-size:12px;color:#94a3b8;margin-top:16px;}
+        .features{display:flex;gap:20px;margin-bottom:36px;justify-content:center;}
+        .feature{background:#f8fafc;border-radius:10px;padding:14px 12px;flex:1;}
+        .feature .num{font-size:22px;font-weight:700;color:#1e3a8a;}
+        .feature .txt{font-size:12px;color:#64748b;margin-top:4px;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .card{animation:fadeIn 0.5s ease-out;}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">SANTA CHOW</div>
+        <h1>8维能力测评</h1>
+        <p class="subtitle">48题 · 约10分钟 · 科学评估你的职场核心能力</p>
+        <div class="features">
+            <div class="feature">
+                <div class="num">8</div>
+                <div class="txt">核心维度</div>
+            </div>
+            <div class="feature">
+                <div class="num">48</div>
+                <div class="txt">道测评题</div>
+            </div>
+            <div class="feature">
+                <div class="num">10</div>
+                <div class="txt">分钟完成</div>
+            </div>
+        </div>
+        <form id="tokenForm" onsubmit="return handleSubmit()">
+            <div class="form-group">
+                <label for="token">请输入您的访问码</label>
+                <input type="text" id="token" name="token" placeholder="例如：8D-001" autocomplete="off" required>
+            </div>
+            <button type="submit" class="btn">开始答题 →</button>
+        </form>
+        <p class="note">访问码由 Santa Chow 提供，如有疑问请联系获取</p>
+    </div>
+    <script>
+        function handleSubmit(){
+            var t=document.getElementById('token').value.trim();
+            if(!t){alert('请输入访问码');return false;}
+            window.location.href='/quiz?token='+encodeURIComponent(t);
+            return false;
+        }
+    </script>
+</body>
+</html>'''
+
 # ============ 路由 ============
 @app.route('/')
 def index():
-    """Serve the 48-item business-style quiz page"""
-    with open('8d_quiz_48.html', 'r', encoding='utf-8') as f:
-        return f.read()
+    """Token 入口页面"""
+    return HTML_GATEWAY
+
+@app.route('/quiz')
+def quiz_page():
+    """8维能力测评答题页面"""
+    token = request.args.get('token', '')
+    if not token:
+        return HTML_GATEWAY  # 无 token 跳转回入口
+    # 读取 quiz HTML，注入 token
+    quiz_path = os.path.join(os.path.dirname(__file__), '8d_quiz_48.html')
+    try:
+        with open(quiz_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+        # 将 token 注入页面（前端 JS 会从 URL 读取 ?token=）
+        return html
+    except FileNotFoundError:
+        return jsonify({'error': 'Quiz page not found'}), 404
+
+@app.route('/8d_quiz_48.html')
+def quiz_legacy():
+    """兼容旧链接，自动跳转"""
+    token = request.args.get('token', '')
+    if token:
+        return quiz_page()
+    return HTML_GATEWAY
 
 @app.route('/quiz48')
 def quiz48():
-    """Alias for the 48-item quiz"""
-    with open('8d_quiz_48.html', 'r', encoding='utf-8') as f:
-        return f.read()
+    """Alias for the quiz"""
+    token = request.args.get('token', '')
+    if not token:
+        return HTML_GATEWAY
+    quiz_path = os.path.join(os.path.dirname(__file__), '8d_quiz_48.html')
+    try:
+        with open(quiz_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return jsonify({'error': 'Quiz page not found'}), 404
 
 @app.route('/admin')
 def admin():
