@@ -39,6 +39,21 @@ COLOR_BORDER = colors.HexColor('#e2e8f0')         # 边框色
 app = Flask(__name__)
 CORS(app)
 
+# ============ 静态文件路由（report_engine.js 等前端资源）============
+@app.route('/report_engine_data.js')
+def serve_report_engine_data():
+    """提供 report_engine_data.js"""
+    from flask import send_from_directory
+    import os
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'report_engine_data.js')
+
+@app.route('/report_engine.js')
+def serve_report_engine():
+    """提供 report_engine.js"""
+    from flask import send_from_directory
+    import os
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'report_engine.js')
+
 # 配置
 DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
 PORT = int(os.environ.get('PORT', 5000))
