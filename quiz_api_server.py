@@ -938,6 +938,15 @@ def admin():
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat(), 'font': CHINESE_FONT or 'none'})
 
+@app.route('/api/debug/routes')
+def debug_routes():
+    """调试用：列出所有已注册路由"""
+    rules = []
+    for rule in app.url_map.iter_rules():
+        if not rule.endpoint.startswith('static'):
+            rules.append({'endpoint': rule.endpoint, 'path': rule.rule, 'methods': list(rule.methods)})
+    return jsonify({'routes': rules, 'total': len(rules)})
+
 @app.route('/api/quiz/submit', methods=['POST'])
 def submit():
     try:
