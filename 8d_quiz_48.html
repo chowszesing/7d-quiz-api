@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8维能力测评 | Santa Chow</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #3b82f6;
+            --secondary: #475569;
+            --accent: #f59e0b;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --gray-200: #e2e8f0;
+            --gray-400: #94a3b8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans HK", "PingFang HK", "Microsoft YaHei", sans-serif;
+            background: var(--dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .hero-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 0; overflow: hidden; }
+        .hero-bg::before {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.4) 30%, rgba(15,23,42,0.7) 70%, rgba(15,23,42,0.95) 100%),
+                url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80') center/cover;
+            animation: slowZoom 45s ease-in-out infinite alternate;
+        }
+        @keyframes slowZoom { from { transform: scale(1); } to { transform: scale(1.1); } }
+        .city-silhouette {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 25%;
+            background: linear-gradient(to top, rgba(15,23,42,0.3) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .main-container { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+        .logo-section { text-align: center; margin-bottom: 40px; animation: fadeInDown 0.8s ease-out; }
+        .logo { font-size: 14px; letter-spacing: 4px; color: var(--accent); font-weight: 600; }
+        .logo-section h1 { font-size: 36px; color: white; margin-top: 10px; font-weight: 700; letter-spacing: 2px; }
+        .logo-section p { color: var(--gray-400); margin-top: 8px; font-size: 15px; }
+        .tagline { color: var(--accent); font-size: 18px; font-weight: 500; margin-top: 6px; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .card { max-width: 720px; width: 100%; background: rgba(255,255,255,0.97); border-radius: 20px; padding: 40px; backdrop-filter: blur(20px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); animation: fadeInUp 0.6s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none !important; }
+
+        /* Info Section */
+        .info-title { font-size: 22px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+        .info-subtitle { font-size: 14px; color: var(--gray-400); margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 600; color: var(--secondary); margin-bottom: 6px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 14px 16px; border: 2px solid var(--gray-200); border-radius: 12px;
+            font-size: 15px; transition: border-color 0.2s; background: white;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+
+        /* Progress */
+        .progress-container { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; }
+        .progress-bar { flex: 1; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); border-radius: 4px; transition: width 0.4s ease; }
+        .progress-text { font-size: 13px; color: var(--gray-400); font-weight: 600; min-width: 60px; text-align: right; }
+
+        /* Question */
+        .question-card { background: var(--light); border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+        .question-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .question-dimension { font-size: 12px; color: var(--primary); background: rgba(30,58,138,0.1); padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+        .question-number { font-size: 12px; color: var(--gray-400); }
+        .question-text { font-size: 17px; font-weight: 500; color: var(--dark); line-height: 1.6; margin-bottom: 20px; }
+
+        /* Options */
+        .options-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .option { position: relative; }
+        .option input { position: absolute; opacity: 0; }
+        .option label {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 12px 4px; background: white; border: 2px solid var(--gray-200);
+            border-radius: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .option label:hover { border-color: var(--primary-light); background: #f0f4ff; }
+        .option input:checked + label { border-color: var(--primary); background: #eef2ff; box-shadow: 0 0 0 3px rgba(30,58,138,0.15); }
+        .option .opt-num { font-size: 16px; font-weight: 700; color: var(--primary); }
+        .option .opt-label { font-size: 10px; color: var(--gray-400); text-align: center; line-height: 1.3; }
+
+        /* Buttons */
+        .nav-buttons { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; }
+        .btn {
+            padding: 14px 32px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-light); transform: translateY(-2px); }
+        .btn-secondary { background: white; color: var(--secondary); border: 2px solid var(--gray-200); }
+        .btn-secondary:hover { border-color: var(--gray-400); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* Result */
+        .result-header { text-align: center; padding: 20px 0 30px; }
+        .result-header h2 { font-size: 28px; color: var(--dark); }
+        .result-header p { color: var(--gray-400); margin-top: 8px; }
+        .chart-container { margin: 24px 0; width: 100%; }
+        .score-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .score-table th { background: var(--primary); color: white; padding: 12px; font-size: 13px; text-align: left; }
+        .score-table td { padding: 12px; border-bottom: 1px solid var(--gray-200); font-size: 14px; }
+        .score-table tr:hover { background: #f8fafc; }
+        .score-bar { display: inline-block; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #3b82f6, #1e3a8a); }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-high { background: #d1fae5; color: #065f46; }
+        .badge-mid { background: #fef3c7; color: #92400e; }
+        .badge-low { background: #fee2e2; color: #991b1b; }
+        .report-section { margin: 20px 0; }
+        .report-section h3 { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-200); }
+        .report-section ul { list-style: none; padding: 0; }
+        .report-section li { padding: 8px 0; font-size: 14px; color: var(--secondary); line-height: 1.6; padding-left: 20px; position: relative; }
+        .report-section li::before { content: '▸'; position: absolute; left: 0; color: var(--primary-light); }
+        .insight-block { background: #f0f4ff; border-radius: 12px; padding: 16px; margin: 8px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: var(--gray-400); margin-top: 20px; }
+        .footer a { color: var(--gray-400); text-decoration: none; }
+        .loading { text-align: center; padding: 60px 20px; }
+        .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .goto-report { position: fixed; bottom: 30px; right: 30px; z-index: 100; }
+        .goto-report a { background: var(--primary); color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.2s; }
+        .goto-report a:hover { background: var(--primary-light); }
+    </style>
+</head>
+<body>
+    <div class="hero-bg"><div class="city-silhouette"></div></div>
+    <div class="main-container">
+        <div class="logo-section">
+            <div class="logo">✦ SANTA CHOW</div>
+            <h1>8維能力深度評測</h1>
+            <p>48道情境題 · 精準定位你的職場核心競爭力</p>
+            <div class="tagline">耗時約 8-10 分鐘</div>
+        </div>
+
+        <div class="card" id="infoSection">
+            <div class="info-title">📋 開始評測前</div>
+            <div class="info-subtitle">請填寫以下基本資料 · 測評結果將用於後續常模對比</div>
+            <div class="form-group">
+                <label>姓名 (選填)</label>
+                <input type="text" id="userName" placeholder="你的名字">
+            </div>
+            <div class="form-group">
+                <label>工作經驗 *</label>
+                <select id="experience">
+                    <option value="">請選擇...</option>
+                    <option value="應屆生">應屆生</option>
+                    <option value="1-3年">1-3年</option>
+                    <option value="3-5年">3-5年</option>
+                    <option value="5-10年">5-10年</option>
+                    <option value="10年以上">10年以上</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>當前/目標行業 (選填)</label>
+                <select id="industry">
+                    <option value="">請選擇...</option>
+                    <option value="銀行/金融">銀行/金融</option>
+                    <option value="投資銀行">投資銀行</option>
+                    <option value="四大審計">四大審計</option>
+                    <option value="管理諮詢">管理諮詢</option>
+                    <option value="科技/互聯網">科技/互聯網</option>
+                    <option value="保險">保險</option>
+                    <option value="房地產">房地產</option>
+                    <option value="零售/快消">零售/快消</option>
+                    <option value="政府/公共事業">政府/公共事業</option>
+                    <option value="教育">教育</option>
+                    <option value="醫療/製藥">醫療/製藥</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="startQuiz()" style="width:100%;justify-content:center;margin-top:10px">開始評測 →</button>
+        </div>
+
+        <div class="card hidden" id="quizSection">
+            <div class="progress-container">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-text" id="progressText">1 / 48</div>
+            </div>
+            <div id="questionContainer"></div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()">← 上一題</button>
+                <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">下一題 →</button>
+            </div>
+        </div>
+
+        <div class="card hidden" id="resultSection">
+            <div class="result-header">
+                <h2>🎯 評測完成！</h2>
+                <p id="resultTitle"></p>
+                <button class="btn btn-secondary" onclick="downloadPDF()" style="margin-top:16px">📄 下載PDF報告</button>
+                <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:8px">重新評測</button>
+            </div>
+            <div id="resultContent"></div>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 <a href="#">Santa Chow</a> · 8維能力深度評測系統</p>
+            <p style="margin-top:4px">數據僅用於常模統計，不涉及個人隱私</p>
+        </div>
+    </div>
+
+    <script>
+        const DIM_INFO = {
+            COG: { name: '認知能力', icon: '🧠', color: '#3b82f6' },
+            TEC: { name: '技術掌握', icon: '💻', color: '#10b981' },
+            COM: { name: '理解表達', icon: '💬', color: '#f59e0b' },
+            SOC: { name: '社交技能', icon: '🤝', color: '#ef4444' },
+            ORG: { name: '策劃執行', icon: '🎯', color: '#8b5cf6' },
+            PRS: { name: '解決問題', icon: '⚡', color: '#ec4899' },
+            MGT: { name: '管理技能', icon: '👥', color: '#14b8a6' },
+            LLA: { name: '持續學習', icon: '📚', color: '#f97316' }
+        };
+
+        const questions = [
+            // === COG 认知能力 (1-6) ===
+            { id: 1, dim: 'COG', text: '我能從大量複雜資訊中，快速提取關鍵重點。' },
+            { id: 2, dim: 'COG', text: '我擅長用圖表或結構化方式呈現複雜資訊。' },
+            { id: 3, dim: 'COG', text: '面對矛盾資訊時，我能理性分析並做出合理判斷。' },
+            { id: 4, dim: 'COG', text: '我能發現論證中的邏輯漏洞或不一致之處。' },
+            { id: 5, dim: 'COG', text: '我能在短時間內掌握一個全新的知識領域。' },
+            { id: 6, dim: 'COG', text: '相較於同儕，我學習新事物的速度明顯更快。' },
+            // === TEC 技术掌握能力 (7-12) ===
+            { id: 7, dim: 'TEC', text: '我熟練使用AI工具（ChatGPT、Claude等）提升工作效率。' },
+            { id: 8, dim: 'TEC', text: '我能有效運用數據分析工具（Excel/Tableau等）處理工作數據。' },
+            { id: 9, dim: 'TEC', text: '面對新技術或新系統，我能快速上手適應。' },
+            { id: 10, dim: 'TEC', text: '我樂於嘗試新工具來優化現有工作流程。' },
+            { id: 11, dim: 'TEC', text: '遇到技術問題時，我能有條理地排查根本原因。' },
+            { id: 12, dim: 'TEC', text: '我不依賴他人，能自行解決大部分技術難題。' },
+            // === COM 理解及表达能力 (13-18) ===
+            { id: 13, dim: 'COM', text: '我能準確理解對方言辭背後的真正意圖。' },
+            { id: 14, dim: 'COM', text: '閱讀複雜文件時，我能快速掌握核心要點。' },
+            { id: 15, dim: 'COM', text: '我擅長用簡潔語言說清楚複雜概念。' },
+            { id: 16, dim: 'COM', text: '我的書面表達（郵件、報告）邏輯清晰、重點突出。' },
+            { id: 17, dim: 'COM', text: '公開發言時，我能有效吸引聽眾注意力。' },
+            { id: 18, dim: 'COM', text: '在會議中，我的發言常能被採納或影響決策。' },
+            // === SOC 社交技能 (19-24) ===
+            { id: 19, dim: 'SOC', text: '我能敏銳察覺身邊人情緒變化的細微訊號。' },
+            { id: 20, dim: 'SOC', text: '我能根據對方情緒狀態適當調整溝通方式。' },
+            { id: 21, dim: 'SOC', text: '團隊出現分歧時，我能協助各方找到共識。' },
+            { id: 22, dim: 'SOC', text: '面對人際衝突，我能冷靜處理而不情緒化。' },
+            { id: 23, dim: 'SOC', text: '我容易與不同背景的人建立信任關係。' },
+            { id: 24, dim: 'SOC', text: '我善於維護長期人脈網絡並保持有效聯繫。' },
+            // === ORG 策划及执行能力 (25-30) ===
+            { id: 25, dim: 'ORG', text: '我能將模糊目標拆解為清晰可衡量的行動步驟。' },
+            { id: 26, dim: 'ORG', text: '我習慣在項目開始前制定詳細計劃和時間表。' },
+            { id: 27, dim: 'ORG', text: '沒有上級監督時，我仍能維持高標準完成任務。' },
+            { id: 28, dim: 'ORG', text: '我很少因為拖延而導致任務逾期。' },
+            { id: 29, dim: 'ORG', text: '我能合理分配時間、人力、預算等資源以達成目標。' },
+            { id: 30, dim: 'ORG', text: '我善於在有限資源下權衡取捨以最大化產出。' },
+            // === PRS 解决问题能力 (31-36) ===
+            { id: 31, dim: 'PRS', text: '當原定方案失敗時，我能迅速提出替代方案。' },
+            { id: 32, dim: 'PRS', text: '面對突發狀況，我能快速調整策略應對變化。' },
+            { id: 33, dim: 'PRS', text: '解決問題時，我會深挖根本原因而非只處理表面。' },
+            { id: 34, dim: 'PRS', text: '我擅長用結構化方法（如5 Whys、魚骨圖）分析問題。' },
+            { id: 35, dim: 'PRS', text: '沒有現成流程時，我能自行設計有效解決方案。' },
+            { id: 36, dim: 'PRS', text: '我常提出別人想不到的創意解決方法。' },
+            // === MGT 管理技能 (37-42) ===
+            { id: 37, dim: 'MGT', text: '我能有效管理上級對任務結果的期望。' },
+            { id: 38, dim: 'MGT', text: '我能清晰設定團隊成員的工作目標和標準。' },
+            { id: 39, dim: 'MGT', text: '多項任務並行時，我能準確判斷輕重緩急。' },
+            { id: 40, dim: 'MGT', text: '我敢於拒絕次要任務以確保關鍵目標達成。' },
+            { id: 41, dim: 'MGT', text: '我能有效分配任務並建立跟進機制確保執行。' },
+            { id: 42, dim: 'MGT', text: '我信任團隊成員的能力，不過度干預執行過程。' },
+            // === LLA 持续学习能力 (43-48) ===
+            { id: 43, dim: 'LLA', text: '我保持定期閱讀行業書刊或參加課程的習慣。' },
+            { id: 44, dim: 'LLA', text: '我關注行業最新動態並主動學習新知識。' },
+            { id: 45, dim: 'LLA', text: '我會主動探索本職以外的新領域。' },
+            { id: 46, dim: 'LLA', text: '我經常因為好奇心學習一些暫時用不到的東西。' },
+            { id: 47, dim: 'LLA', text: '遇到失敗時，我會反思並從中提煉教訓。' },
+            { id: 48, dim: 'LLA', text: '批評意見對我而言是成長機會而非打擊。' }
+        ];
+
+        const OPTIONS = [
+            { val: 1, label: '非常不同意', short: '不同意' },
+            { val: 2, label: '不同意', short: '' },
+            { val: 3, label: '普通', short: '普通' },
+            { val: 4, label: '同意', short: '' },
+            { val: 5, label: '非常同意', short: '同意' }
+        ];
+
+        let currentQ = 0;
+        let answers = {};
+        let order = [];
+        let resultId = null;
+
+        // Shuffle
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function startQuiz() {
+            const exp = document.getElementById('experience').value;
+            if (!exp) { alert('請選擇工作經驗'); return; }
+            // Build order: shuffle each dimension's questions to keep dimension grouping
+            const dims = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
+            order = [];
+            for (const dim of dims) {
+                const dimQs = questions.filter(q => q.dim === dim);
+                order.push(...shuffle(dimQs));
+            }
+            // Validation check: randomly insert 1 attention-check
+            // Actually just proceed
+            currentQ = 0;
+            answers = {};
+            document.getElementById('infoSection').classList.add('hidden');
+            document.getElementById('quizSection').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = order[currentQ];
+            const total = order.length;
+            const pct = ((currentQ + 1) / total * 100).toFixed(0);
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressText').textContent = `${currentQ+1} / ${total}`;
+            document.getElementById('prevBtn').disabled = currentQ === 0;
+
+            const dimInfo = DIM_INFO[q.dim];
+            const nextLabel = currentQ === total - 1 ? '提交評測 ✓' : '下一題 →';
+
+            let optHtml = OPTIONS.map((o, i) => {
+                const checked = answers[q.id] === o.val ? 'checked' : '';
+                return `<div class="option">
+                    <input type="radio" name="ans" id="opt${i}" value="${o.val}" ${checked}>
+                    <label for="opt${i}">
+                        <span class="opt-num">${o.val}</span>
+                        <span class="opt-label">${o.label}</span>
+                    </label>
+                </div>`;
+            }).join('');
+
+            document.getElementById('nextBtn').innerHTML = nextLabel;
+            document.getElementById('questionContainer').innerHTML = `
+                <div class="question-card">
+                    <div class="question-meta">
+                        <span class="question-dimension" style="background:${dimInfo.color}22;color:${dimInfo.color}">${dimInfo.icon} ${dimInfo.name}</span>
+                        <span class="question-number">第 ${currentQ+1} / ${total} 題</span>
+                    </div>
+                    <div class="question-text">${q.text}</div>
+                    <div class="options-grid">${optHtml}</div>
+                </div>`;
+        }
+
+        function nextQuestion() {
+            const selected = document.querySelector('input[name="ans"]:checked');
+            if (!selected) { alert('請選擇一個選項'); return; }
+            answers[order[currentQ].id] = parseInt(selected.value);
+            if (currentQ < order.length - 1) {
+                currentQ++;
+                renderQuestion();
+            } else {
+                submitQuiz();
+            }
+        }
+
+        function prevQuestion() {
+            const selected = document.querySelector('input[name="ans"]:checked');
+            if (selected) answers[order[currentQ].id] = parseInt(selected.value);
+            if (currentQ > 0) { currentQ--; renderQuestion(); }
+        }
+
+        async function submitQuiz() {
+            document.getElementById('quizSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('resultContent').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>正在計算評測結果...</p></div>';
+
+            const name = document.getElementById('userName').value || '匿名用戶';
+            const exp = document.getElementById('experience').value;
+            const ind = document.getElementById('industry').value;
+
+            try {
+                const res = await fetch('/api/quiz/submit_48', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name, experience: exp, industry: ind,
+                        answers, question_order: order.map(q => q.id)
+                    })
+                });
+                const data = await res.json();
+                resultId = data.result_id;
+                renderResult(data.scores, name, exp, ind);
+            } catch(e) {
+                console.error('API error, using local calculation:', e);
+                renderResultLocal(name, exp, ind);
+            }
+        }
+
+        function getLevel(score) {
+            if (score >= 4.0) return { label: '優秀', badge: 'badge-high' };
+            if (score >= 3.0) return { label: '良好', badge: 'badge-mid' };
+            if (score >= 2.0) return { label: '待提升', badge: 'badge-low' };
+            return { label: '需加強', badge: 'badge-low' };
+        }
+
+        function renderResult(scores, name, exp, ind) {
+            const title = `${name}${ind ? ' | '+ind : ''}${exp ? ' | '+exp : ''}`;
+            document.getElementById('resultTitle').textContent = title;
+
+            const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
+            let tableHtml = '<table class="score-table"><tr><th>維度</th><th>分數</th><th>等級</th><th>分布</th></tr>';
+            for (const dim of dimOrder) {
+                const s = scores[dim];
+                const info = DIM_INFO[dim];
+                const level = getLevel(s.average);
+                const pct = (s.average / 5 * 100).toFixed(0);
+                tableHtml += `<tr>
+                    <td>${info.icon} ${info.name}</td>
+                    <td style="font-weight:700;font-size:18px">${s.average.toFixed(1)}</td>
+                    <td><span class="badge ${level.badge}">${level.label}</span></td>
+                    <td><div class="score-bar" style="width:${pct}%"></div></td>
+                </tr>`;
+            }
+            tableHtml += '</table>';
+
+            // Find strengths & weaknesses
+            const sorted = dimOrder.map(d => ({ dim: d, score: scores[d].average })).sort((a,b) => b.score - a.score);
+            const top3 = sorted.slice(0, 3);
+            const bot3 = sorted.slice(-3).reverse();
+
+            let insightHtml = '<div class="report-section"><h3>📊 能力畫像</h3><p style="font-size:14px;color:var(--secondary);margin-bottom:16px">你的8維能力分布如下，分數越高代表自評越強。</p>' + tableHtml + '</div>';
+
+            insightHtml += '<div class="report-section"><h3>✅ 核心優勢</h3><ul>';
+            for (const item of top3) {
+                const info = DIM_INFO[item.dim];
+                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 這是你最突出的能力領域</li>`;
+            }
+            insightHtml += '</ul></div>';
+
+            insightHtml += '<div class="report-section"><h3>📈 發展空間</h3><ul>';
+            for (const item of bot3) {
+                const info = DIM_INFO[item.dim];
+                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 建議優先投入提升資源</li>`;
+            }
+            insightHtml += '</ul></div>';
+
+            // Sub-dimension breakdown
+            insightHtml += '<div class="report-section"><h3>🔍 子能力細分</h3>';
+            const subInfo = {
+                COG: ['資訊提煉', '邏輯推理', '快速學習'],
+                TEC: ['數字生產力', '技術適應力', '故障排查'],
+                COM: ['解碼能力', '精煉表達', '口頭影響力'],
+                SOC: ['情緒覺察', '衝突協調', '關係建立'],
+                ORG: ['目標規劃', '自主執行', '資源管理'],
+                PRS: ['應變能力', '根源分析', '創新方案'],
+                MGT: ['預期管理', '優先級取捨', '授權追蹤'],
+                LLA: ['知識更新', '主動探索', '挫折轉化']
+            };
+            for (const dim of dimOrder) {
+                const info = DIM_INFO[dim];
+                const subs = subInfo[dim];
+                const s = scores[dim];
+                // Compute sub-dimension scores from the 2 items each
+                const dimQs = order.filter(q => q.dim === dim);
+                // 2 items per sub-ability
+                const subScores = subs.map((sub, idx) => {
+                    const items = dimQs.slice(idx*2, idx*2+2);
+                    const avg = items.reduce((sum, q) => sum + (answers[q.id] || 0), 0) / Math.max(items.length, 1);
+                    return { sub, avg };
+                });
+                insightHtml += `<div class="insight-block">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <strong style="color:${info.color}">${info.icon} ${info.name}</strong>
+                        <span style="font-weight:700;font-size:16px">${s.average.toFixed(1)}</span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">`;
+                for (const ss of subScores) {
+                    const pct = (ss.avg / 5 * 100).toFixed(0);
+                    const barColor = ss.avg >= 3.5 ? '#10b981' : ss.avg >= 2.5 ? '#f59e0b' : '#ef4444';
+                    insightHtml += `<div style="flex:1;min-width:100px;background:white;border-radius:8px;padding:8px;text-align:center">
+                        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">${ss.sub}</div>
+                        <div style="font-size:16px;font-weight:700;color:${barColor}">${ss.avg.toFixed(1)}</div>
+                    </div>`;
+                }
+                insightHtml += '</div></div>';
+            }
+            insightHtml += '</div>';
+
+            // Improvement guidance (NO industry matching)
+            insightHtml += '<div class="report-section"><h3>💡 提升建議</h3><ul>';
+            for (const item of bot3) {
+                const info = DIM_INFO[item.dim];
+                const tips = {
+                    COG: '• 每天閱讀一篇分析性文章，練習總結核心論點\n• 嘗試用思維導圖整理複雜問題',
+                    TEC: '• 每週花2小時學習一個新工具\n• 遇到問題先自行嘗試排查30分鐘',
+                    COM: '• 練習用一句話概括複雜概念\n• 多參與需要公開表達的場合',
+                    SOC: '• 主動發起1對1咖啡聊天空\n• 練習在會議中詢問他人感受',
+                    ORG: '• 每週日規劃下週任務清單\n• 使用番茄工作法提升執行力',
+                    PRS: '• 遇到問題先問三次「為什麼」\n• 練習在壓力下冷靜列出備選方案',
+                    MGT: '• 練習用SMART原則設定目標\n• 主動爭取小型團隊協調機會',
+                    LLA: '• 設定每月學習目標並追蹤進度\n• 建立個人知識管理系統'
+                };
+                insightHtml += `<li><strong>${info.name}</strong><br><span style="font-size:12px;color:var(--gray-400)">${tips[item.dim].replace(/\n/g, '<br>')}</span></li>`;
+            }
+            insightHtml += '</ul></div>';
+
+            // Disclaimer
+            insightHtml += '<div style="margin-top:24px;padding:12px;background:#fef3c7;border-radius:12px;font-size:12px;color:#92400e">';
+            insightHtml += '📌 本報告基於自評數據，僅供參考。如需一對一專業求職定位諮詢，請聯繫 Santa Chow 教練獲取個人化指導。';
+            insightHtml += '</div>';
+
+            document.getElementById('resultContent').innerHTML = insightHtml;
+        }
+
+        function renderResultLocal(name, exp, ind) {
+            const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
+            const dimQs = {};
+            for (const dim of dimOrder) dimQs[dim] = questions.filter(q => q.dim === dim);
+            const scores = {};
+            for (const dim of dimOrder) {
+                const items = dimQs[dim];
+                const avg = items.reduce((s, q) => s + (answers[q.id] || 0), 0) / items.length;
+                scores[dim] = { average: Math.round(avg*100)/100 };
+            }
+            renderResult(scores, name, exp, ind);
+            console.warn('Local calculation mode — server unavailable');
+        }
+
+        function downloadPDF() {
+            if (resultId) window.open('/api/quiz/report_48/' + resultId, '_blank');
+            else alert('暫無報告ID，請重新提交');
+        }
+
+        // Keyboard: Enter to continue
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('quizSection').classList.contains('hidden')) {
+                const btn = document.getElementById('nextBtn');
+                if (!btn.disabled) btn.click();
+            }
+        });
+    </script>
+</body>
+</html>

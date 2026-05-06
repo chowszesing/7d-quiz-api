@@ -516,6 +516,11 @@ def init_db():
             answers TEXT, question_order TEXT, scores TEXT,
             validity_check INTEGER, submitted_at TEXT,
             ip_address TEXT, user_agent TEXT)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS quiz_results_48 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT, experience TEXT, industry TEXT,
+            answers TEXT, question_order TEXT, scores TEXT,
+            submitted_at TEXT, ip_address TEXT, user_agent TEXT)''')
         conn.commit()
 
 def calculate_scores(answers):
@@ -533,16 +538,41 @@ def calculate_scores(answers):
         scores[dim] = {'name': cfg['name'], 'average': round(avg, 2), 'level': get_level(avg)}
     return scores
 
-def get_level(score):
-    if score >= 4.5: return '优秀'
-    elif score >= 3.5: return '良好'
-    elif score >= 2.5: return '中等'
-    elif score >= 1.5: return '待提升'
-    else: return '需改进'
+def calculate_scores_48(answers):
+    """8维能力评分：每维6题，支持str/int keys"""
+    # Normalize keys to int
+    normalized = {}
+    for k, v in answers.items():
+        try:
+            normalized[int(k)] = int(v)
+        except (ValueError, TypeError):
+            continue
+    dims = {
+        'COG': {'name':'认知能力','q':[1,2,3,4,5,6]},
+        'TEC': {'name':'技术掌握','q':[7,8,9,10,11,12]},
+        'COM': {'name':'理解表达','q':[13,14,15,16,17,18]},
+        'SOC': {'name':'社交技能','q':[19,20,21,22,23,24]},
+        'ORG': {'name':'策划执行','q':[25,26,27,28,29,30]},
+        'PRS': {'name':'解决问题','q':[31,32,33,34,35,36]},
+        'MGT': {'name':'管理技能','q':[37,38,39,40,41,42]},
+        'LLA': {'name':'持续学习','q':[43,44,45,46,47,48]}
+    }
+    scores = {}
+    for dim, cfg in dims.items():
+        total = sum(normalized.get(q, 0) for q in cfg['q'])
+        avg = total / 6
+        scores[dim] = {'name': cfg['name'], 'average': round(avg, 2), 'level': get_level(avg)}
+    return scores
 
-def check_validity(answers):
+def get_level(score):
+    if score >= 4.0: return '优秀'
+    elif score >= 3.0: return '良好'
+    elif score >= 2.0: return '待提升'
+    else: return '需加强'
+
+def check_validity(answers, expected=31):
     answered_count = sum(1 for v in answers.values() if v > 0)
-    if answered_count < 31:
+    if answered_count < expected:
         return {'is_valid': False, 'reason': '未完成所有题目'}
     if answers:
         option_counts = {}
@@ -617,8 +647,14 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
 # ============ 路由 ============
 @app.route('/')
 def index():
-    """Serve the business-style quiz page (HK style, blue-gray daytime theme)"""
-    with open('7d_quiz_hk_style.html', 'r', encoding='utf-8') as f:
+    """Serve the 48-item business-style quiz page"""
+    with open('8d_quiz_48.html', 'r', encoding='utf-8') as f:
+        return f.read()
+
+@app.route('/quiz48')
+def quiz48():
+    """Alias for the 48-item quiz"""
+    with open('8d_quiz_48.html', 'r', encoding='utf-8') as f:
         return f.read()
 
 @app.route('/admin')
@@ -760,6 +796,167 @@ def batch_import():
         return jsonify({'success': True, 'message': f'导入完成', 'success_count': success_count, 'fail_count': fail_count})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ============ 8D 48题新增路由 ============
+
+@app.route('/api/quiz/submit_48', methods=['POST'])
+def submit_48():
+    """提交48题8维测评"""
+    try:
+        data = request.get_json()
+        if not data or 'answers' not in data:
+            return jsonify({'error': 'Missing answers'}), 400
+
+        scores = calculate_scores_48(data['answers'])
+
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('''INSERT INTO quiz_results_48
+                (user_name, experience, industry, answers, question_order, scores, submitted_at, ip_address, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (data.get('name', '匿名用户'), data.get('experience', ''),
+                 data.get('industry', ''), json.dumps(data.get('answers', {})),
+                 json.dumps(data.get('question_order', [])), json.dumps(scores),
+                 datetime.now().isoformat(), request.remote_addr,
+                 request.headers.get('User-Agent', '')))
+            result_id = c.lastrowid
+
+        return jsonify({'success': True, 'result_id': result_id, 'scores': scores})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/quiz/report_48/<int:result_id>')
+def report_48(result_id):
+    """生成48题PDF报告（不含行业适配分析）"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
+            row = c.fetchone()
+
+        if not row:
+            return jsonify({'error': 'Not found'}), 404
+
+        scores = json.loads(row['scores'])
+        pdf_buffer = generate_pdf_48(row['id'], scores, row['user_name'], row['experience'])
+        report_date = datetime.now().strftime("%Y%m%d")
+
+        return send_file(pdf_buffer, mimetype='application/pdf',
+                        as_attachment=True,
+                        download_name=f'8d_report_{row["user_name"]}_{report_date}.pdf')
+    except Exception as e:
+        import traceback
+        print(f"PDF生成错误: {traceback.format_exc()}")
+        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None}), 500
+
+
+def generate_pdf_48(result_id, scores, user_name, experience):
+    """生成48题PDF报告 — 纯能力分析，不含行业匹配"""
+    buffer = io.BytesIO()
+
+    if CHINESE_FONT:
+        font_name = CHINESE_FONT
+    else:
+        raise Exception('中文字体不可用')
+
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=18*mm, bottomMargin=18*mm)
+    styles = getSampleStyleSheet()
+
+    styles.add(ParagraphStyle(name='CTitle', fontName=font_name, fontSize=20, alignment=1, spaceAfter=8))
+    styles.add(ParagraphStyle(name='CSub', fontName=font_name, fontSize=11, alignment=1, spaceAfter=16, textColor=colors.HexColor('#475569')))
+    styles.add(ParagraphStyle(name='CText', fontName=font_name, fontSize=10, spaceAfter=6, leading=16))
+    styles.add(ParagraphStyle(name='CSection', fontName=font_name, fontSize=13, spaceAfter=8, spaceBefore=10, textColor=colors.HexColor('#1e3a8a')))
+    styles.add(ParagraphStyle(name='CFooter', fontName=font_name, fontSize=9, alignment=1, textColor=colors.HexColor('#94a3b8')))
+
+    story = []
+
+    # Title
+    story.append(Paragraph('8維能力深度評測報告', styles['CTitle']))
+    story.append(Paragraph(f'<b>{user_name}</b> | {experience} | 評測日期: {datetime.now().strftime("%Y-%m-%d")}', styles['CSub']))
+    story.append(Spacer(1, 10*mm))
+
+    # Dimension order
+    dim_order = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA']
+    dim_names = {
+        'COG':'認知能力','TEC':'技術掌握','COM':'理解表達','SOC':'社交技能',
+        'ORG':'策劃執行','PRS':'解決問題','MGT':'管理技能','LLA':'持續學習'
+    }
+    dim_icons = {'COG':'🧠','TEC':'💻','COM':'💬','SOC':'🤝','ORG':'🎯','PRS':'⚡','MGT':'👥','LLA':'📚'}
+
+    # Score table
+    story.append(Paragraph('📊 能力分數總覽', styles['CSection']))
+    data = [['維度', '分數', '等級']]
+    sort_scores = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
+    for dim, s in sort_scores:
+        data.append([f"{dim_icons.get(dim,'')} {s['name']}", f"{s['average']:.1f}", s['level']])
+
+    table = Table(data, colWidths=[80*mm, 40*mm, 60*mm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#ddd')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4ff')]),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 8*mm))
+
+    # Top 3 strengths
+    story.append(Paragraph('✅ 核心優勢', styles['CSection']))
+    top3 = sort_scores[:3]
+    for dim, s in top3:
+        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — 這是你最突出的能力領域。', styles['CText']))
+    story.append(Spacer(1, 5*mm))
+
+    # Bottom 3 development areas (NO industry matching)
+    story.append(Paragraph('📈 發展空間', styles['CSection']))
+    bot3 = sort_scores[-3:][::-1]
+    tips_map = {
+        'COG':'可加強結構化思維訓練，多練習歸納總結。',
+        'TEC':'建議每週投入固定時間學習新工具，遇到問題先自行排查。',
+        'COM':'練習用一句話概括複雜概念，多參與需要公開表達的場合。',
+        'SOC':'主動發起1對1交流，練習在對話中感知他人情緒。',
+        'ORG':'養成每週規劃習慣，善用任務管理工具提升執行力。',
+        'PRS':'遇到問題先問三次「為什麼」，練習在壓力下列出備選方案。',
+        'MGT':'練習用SMART原則設定目標，主動爭取協調機會。',
+        'LLA':'設定每月學習目標並追蹤進度，建立個人知識管理系統。'
+    }
+    for dim, s in bot3:
+        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — {tips_map.get(dim, "建議優先投入提升資源。")}', styles['CText']))
+    story.append(Spacer(1, 8*mm))
+
+    # Detailed dimension insights
+    story.append(Paragraph('🔍 維度詳解', styles['CSection']))
+    insights_map = {
+        'COG': '反映資訊提煉（快速抓重點）、邏輯推理（分析判斷）、快速學習（掌握新知）三項子能力。',
+        'TEC': '反映數字生產力（AI/數據工具）、技術適應力（上手新系統）、故障排查（自行解決問題）三項子能力。',
+        'COM': '反映解碼能力（理解意圖）、精煉表達（簡潔清晰）、口頭影響力（會議主導）三項子能力。',
+        'SOC': '反映情緒覺察（敏銳感知）、衝突協調（共識建立）、關係建立（信任與網絡）三項子能力。',
+        'ORG': '反映目標規劃（行動拆解）、自主執行（無人監督高標準）、資源管理（預算時間人分配）三項子能力。',
+        'PRS': '反映應變能力（Plan B即時產出）、根源分析（結構化診斷）、創新方案（無SOP自創解法）三項子能力。',
+        'MGT': '反映預期管理（上下級期望控管）、優先級取捨（輕重緩急判斷）、授權追蹤（分配與跟進）三項子能力。',
+        'LLA': '反映知識更新（行業書刊課程）、主動探索（跨界好奇心）、挫折轉化（從失敗提煉教訓）三項子能力。'
+    }
+    for dim, s in sort_scores:
+        insight = insights_map.get(dim, '')
+        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b>（{s["average"]:.1f}分·{s["level"]}）', styles['CText']))
+        if insight:
+            story.append(Paragraph(f'　{insight}', styles['CText']))
+    story.append(Spacer(1, 15*mm))
+
+    # Disclaimer (no industry reference)
+    story.append(Paragraph('📌 本報告基於自評數據，僅供參考。如需一對一專業求職定位諮詢，請聯繫 Santa Chow 教練。', styles['CFooter']))
+    story.append(Spacer(1, 5*mm))
+    story.append(Paragraph(f'Report ID: 8D-{result_id} | Santa Chow 8維能力評測系統', styles['CFooter']))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 # ============ 主函数 ============
 if __name__ == '__main__':
