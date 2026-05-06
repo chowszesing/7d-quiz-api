@@ -2132,108 +2132,56 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
 
     story.append(Spacer(1, 3*mm))
 
-    # ========== P6：总结与行动（基于弱项子能力） ==========
+    # ========== P6：总结与行动（基于弱项维度） ==========
     story.append(PageBreak())
     story.append(Paragraph('总结与优先行动', styles['V2Section']))
 
-    # 计算子能力分数（基于作答数据）
-    # answers_json 来自 report_engine_data.js
-    answers_for_subs = {}
-    if answers_json and isinstance(answers_json, dict):
-        for k, v in answers_json.items():
-            try:
-                answers_for_subs[int(k)] = int(v)
-            except (ValueError, TypeError):
-                pass
-
-    # 子能力 → 提升建议映射
-    SUB_IMPROVEMENT = {
-        # COG
-        ('COG', '资讯提炼'): ('信息降噪训练', '每天用3句话总结一篇长文；建立"一句话核心"习惯'),
-        ('COG', '逻辑推理'): ('结构化思维', '练习MECE原则分类；用逻辑树拆解复杂问题'),
-        ('COG', '快速学习'): ('快速入门法', '用"20小时学习法"：拆解最小技能单元 → 针对性练习'),
-        # TEC
-        ('TEC', '数字生产力'): ('AI工具深度使用', '每周解锁1个AI新功能；建立个人工具提示词库'),
-        ('TEC', '技术适应力'): ('技术适应计划', '每季度学习1个新技术；用side project巩固'),
-        ('TEC', '故障排查'): ('系统排查法', '练习"排除法"：记录每次问题的解决路径'),
-        # COM
-        ('COM', '解码能力'): ('反向确认训练', '接受任务时复述对方意图；练习"你说的是...对吗？"'),
-        ('COM', '精炼表达'): ('电梯演讲练习', '30秒说清一个复杂观点；写完报告后用3句话概括'),
-        ('COM', '口头影响力'): ('汇报刻意练习', '每次汇报后记录"听众记住了什么"并复盘'),
-        # SOC
-        ('SOC', '情绪觉察'): ('情绪观察日记', '每天记录3次他人情绪变化；会议中观察非语言信号'),
-        ('SOC', '冲突协调'): ('冲突处理框架', '学习"非暴力沟通"四步法；练习先倾听再回应'),
-        ('SOC', '关系建立'): ('关系维护系统', '每月与1位非同事朋友深入交流；建立人脉备注'),
-        # ORG
-        ('ORG', '目标规划'): ('SMART目标法', '每任务用SMART原则拆解；设定比deadline早1天的内部节点'),
-        ('ORG', '自主执行'): ('番茄工作法', '25分钟专注+5分钟休息；用任务追踪表记录产出'),
-        ('ORG', '资源管理'): ('资源分配优化', '每周日规划TOP 3优先任务；设置时间块专注工作'),
-        # PRS
-        ('PRS', '应变能力'): ('Plan B训练', '每任务预设应急方案；练习"如果X失败，怎么做"'),
-        ('PRS', '根源分析'): ('5 Whys追问法', '遇到问题时连续追问5个为什么；用鱼骨图归类'),
-        ('PRS', '创新方案'): ('创意孵化习惯', '每天想3个"如果...会怎样"；建立创新灵感库'),
-        # MGT
-        ('MGT', '预期管理'): ('预期对齐四步', '接任务时复述理解；每周主动与上级对齐一次进度'),
-        ('MGT', '优先级取舍'): ('四象限法则', '每天用"重要/紧急"矩阵筛选TOP 3；敢于说不'),
-        ('MGT', '授权追踪'): ('委托四步法', '说目标→给资源→少干预→做复盘；建立周检视机制'),
-        # LLA
-        ('LLA', '知识更新'): ('知识输入系统', '每周精读1篇深度文章；建立标签化知识笔记库'),
-        ('LLA', '主动探索'): ('跨界探索计划', '每月尝试1个非本职领域；用好奇心驱动学习'),
-        ('LLA', '挫折转化'): ('反馈转化训练', '把每次批评写成"事实→感受→教训→行动"复盘卡'),
-    }
-
-    # 计算子能力分数
+    # 计算维度分数
     dim_base = {'COG': 1, 'TEC': 7, 'COM': 13, 'SOC': 19, 'ORG': 25, 'PRS': 31, 'MGT': 37, 'LLA': 43}
     dim_names = {'COG': '认知能力', 'TEC': '技术掌握', 'COM': '理解表达', 'SOC': '社交技能',
                  'ORG': '策划执行', 'PRS': '解决问题', 'MGT': '管理技能', 'LLA': '持续学习'}
+    dim_colors = {
+        'COG': '#3b82f6', 'TEC': '#8b5cf6', 'COM': '#06b6d4', 'SOC': '#10b981',
+        'ORG': '#f59e0b', 'PRS': '#ef4444', 'MGT': '#ec4899', 'LLA': '#6366f1'
+    }
 
-    sub_scores = []
+    # 维度 → 提升建议映射（精简版）
+    DIM_IMPROVEMENT = {
+        'COG': ('信息降噪训练', '每天用3句话总结一篇长文；练习MECE原则分类'),
+        'TEC': ('AI工具深度使用', '每周解锁1个AI新功能；建立个人工具提示词库'),
+        'COM': ('电梯演讲练习', '30秒说清一个复杂观点；写完报告后用3句话概括'),
+        'SOC': ('情绪观察日记', '每天记录3次他人情绪变化；学习非暴力沟通四步法'),
+        'ORG': ('SMART目标法', '每任务用SMART原则拆解；25分钟专注+5分钟休息'),
+        'PRS': ('Plan B训练', '每任务预设应急方案；练习"排除法"记录解决路径'),
+        'MGT': ('预期对齐四步', '接任务时复述理解；每天用"重要/紧急"矩阵筛选TOP 3'),
+        'LLA': ('知识输入系统', '每周精读1篇深度文章；每月尝试1个非本职领域'),
+    }
+
+    dim_scores = []
     for dim, base in dim_base.items():
-        for sub_idx in range(3):
-            sub_names_map = {
-                0: ('资讯提炼', '逻辑推理', '快速学习', '数字生产力', '技术适应力', '故障排查',
-                    '解码能力', '精炼表达', '口头影响力', '情绪觉察', '冲突协调', '关系建立',
-                    '目标规划', '自主执行', '资源管理', '应变能力', '根源分析', '创新方案',
-                    '预期管理', '优先级取舍', '授权追踪', '知识更新', '主动探索', '挫折转化'),
-            }
-            q1 = base + sub_idx * 2
-            q2 = q1 + 1
-            score = (answers_for_subs.get(q1, 0) + answers_for_subs.get(q2, 0)) / 2
+        score = (answers.get(base, 0) + answers.get(base+1, 0) + answers.get(base+2, 0) +
+                  answers.get(base+3, 0) + answers.get(base+4, 0) + answers.get(base+5, 0)) / 6
+        dim_scores.append({
+            'dim': dim,
+            'name': dim_names[dim],
+            'score': round(score, 2),
+            'color': dim_colors.get(dim, '#64748b')
+        })
 
-            # 获取子能力名称
-            all_subs = ['资讯提炼', '逻辑推理', '快速学习', '数字生产力', '技术适应力', '故障排查',
-                       '解码能力', '精炼表达', '口头影响力', '情绪觉察', '冲突协调', '关系建立',
-                       '目标规划', '自主执行', '资源管理', '应变能力', '根源分析', '创新方案',
-                       '预期管理', '优先级取舍', '授权追踪', '知识更新', '主动探索', '挫折转化']
-            dim_order = ['COG', 'TEC', 'COM', 'SOC', 'ORG', 'PRS', 'MGT', 'LLA']
-            sub_idx_global = dim_order.index(dim) * 3 + sub_idx
-            sub_name = all_subs[sub_idx_global] if sub_idx_global < len(all_subs) else f'子能力{sub_idx+1}'
-
-            sub_scores.append({
-                'dim': dim,
-                'dim_name': dim_names[dim],
-                'name': sub_name,
-                'score': round(score, 2)
-            })
-
-    # 按分数升序，取最弱的6项
-    sub_scores.sort(key=lambda x: x['score'])
-    weakest_subs = sub_scores[:6]
+    # 按分数升序，取最弱的6个维度
+    dim_scores.sort(key=lambda x: x['score'])
+    weakest_dims = dim_scores[:6]
 
     # 生成优先行动卡片
     action_cards = []
-    for idx, sub in enumerate(weakest_subs):
-        key = (sub['dim'], sub['name'])
-        tool_name, action_desc = SUB_IMPROVEMENT.get(key, ('刻意练习', '建议进行针对性训练'))
-
-        score_color = get_score_color(sub['score'])
-        score_hex = '#ea580c' if sub['score'] < 2.5 else ('#f59e0b' if sub['score'] < 3.0 else '#64748b')
+    for idx, d in enumerate(weakest_dims):
+        tool_name, action_desc = DIM_IMPROVEMENT.get(d['dim'], ('刻意练习', '建议进行针对性训练'))
+        score_hex = '#ea580c' if d['score'] < 2.5 else ('#f59e0b' if d['score'] < 3.0 else '#64748b')
 
         card = [
-            Paragraph(f'<b>P{idx}</b> <font color="{score_hex}">{sub["score"]:.1f}分</font>',
+            Paragraph(f'<b>P{idx+1}</b> <font color="{score_hex}">{d["score"]:.1f}分</font>',
                      styles['V2CardTitle']),
-            Paragraph(f'<b>{sub["name"]}</b> <font color="#64748b" size="8">（{sub["dim_name"]}）</font>',
-                     styles['V2Muted']),
+            Paragraph(f'<b>{d["name"]}</b>', styles['V2Muted']),
             Spacer(1, 1*mm),
             Paragraph(f'<b>方法</b>：{tool_name}', styles['V2Text']),
             Paragraph(f'<b>行动</b>：{action_desc}', styles['V2Text']),
@@ -2261,8 +2209,7 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
 
     # 90天行动计划提示
     story.append(Spacer(1, 4*mm))
-    weakest_dim = weakest_subs[0]['dim'] if weakest_subs else None
-    plan_text = f'💡 <b>90天行动计划建议</b>：从"<b>{weakest_subs[0]["name"]}</b>"切入，每30天完成1次自检并记录进步幅度。'
+    plan_text = f'💡 <b>90天行动计划建议</b>：从"<b>{weakest_dims[0]["name"]}</b>"切入，每30天完成1次自检并记录进步幅度。'
     story.append(Paragraph(plan_text, styles['V2Muted']))
 
     story.append(Spacer(1, 3*mm))
