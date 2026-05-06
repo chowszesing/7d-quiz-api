@@ -1262,15 +1262,19 @@ def get_level_label(score):
     elif score >= 2.5: return '待提升'
     else: return '需加强'
 
-def draw_radar_chart_v2(dims, scores, width=200, height=200):
-    """绘制 V2 雷达图（带网格和数据多边形）"""
+def draw_radar_chart_v2(dims, scores, width=220, height=220):
+    """绘制 V2 雷达图（8维完整显示）"""
     from reportlab.graphics.shapes import Drawing, Polygon, String, Line, Circle
     import math
 
     d = Drawing(width, height)
     cx, cy = width // 2, height // 2
-    radius = 75
+    radius = 80
     n = len(dims)
+
+    # 绘制半透明背景圆
+    d.add(Circle(cx, cy, radius, strokeColor=None,
+                 fillColor=colors.HexColor('#f8fafc'), strokeWidth=0))
 
     # 绘制同心圆网格（3圈：30%/60%/100%）
     for r_pct in [0.33, 0.66, 1.0]:
@@ -1282,7 +1286,7 @@ def draw_radar_chart_v2(dims, scores, width=200, height=200):
         angle = 2 * math.pi * i / n - math.pi / 2
         x2 = cx + radius * math.cos(angle)
         y2 = cy + radius * math.sin(angle)
-        d.add(Line(cx, cy, x2, y2, strokeColor=COLOR_GRID, strokeWidth=1))
+        d.add(Line(cx, cy, x2, y2, strokeColor=COLOR_GRID, strokeWidth=0.8))
 
     # 绘制数据多边形
     points = []
@@ -1293,21 +1297,25 @@ def draw_radar_chart_v2(dims, scores, width=200, height=200):
         y = cy + r * math.sin(angle)
         points.extend([x, y])
 
+    # 多边形填充（带渐变感）
     d.add(Polygon(points,
-                  fillColor=colors.HexColor('#1e3a8a22'),
+                  fillColor=colors.HexColor('#3b82f622'),
                   strokeColor=COLOR_EXCELLENT,
                   strokeWidth=2))
 
-    # 绘制数据点圆圈
+    # 绘制数据点圆圈（带颜色编码）
     for i, score in enumerate(scores):
         angle = 2 * math.pi * i / n - math.pi / 2
         r = radius * (score - 1) / 4
         x = cx + r * math.cos(angle)
         y = cy + r * math.sin(angle)
         dot_color = get_score_color(score)
-        d.add(Circle(x, y, 4, fillColor=dot_color, strokeColor=COLOR_WHITE, strokeWidth=1))
+        # 外圈白边
+        d.add(Circle(x, y, 5, fillColor=dot_color, strokeColor=COLOR_WHITE, strokeWidth=2))
+        # 小内圈高光
+        d.add(Circle(x, y, 2.5, fillColor=colors.white, strokeColor=None))
 
-    # 绘制维度标签（简化名称）
+    # 绘制维度标签（带分数标注）
     dim_labels = {
         'COG': '认知', 'TEC': '技术', 'COM': '表达',
         'SOC': '社交', 'ORG': '策划', 'PRS': '应变',
@@ -1315,15 +1323,25 @@ def draw_radar_chart_v2(dims, scores, width=200, height=200):
     }
     for i, dim in enumerate(dims):
         angle = 2 * math.pi * i / n - math.pi / 2
-        label_radius = radius + 20
+        label_radius = radius + 14
         lx = cx + label_radius * math.cos(angle)
         ly = cy + label_radius * math.sin(angle)
         label = dim_labels.get(dim, dim)
+        # 标签背景（让文字更清晰）
         s = String(lx, ly, label)
-        s.fontName = 'Helvetica'
-        s.fontSize = 8
+        s.fontName = 'Helvetica-Bold'
+        s.fontSize = 9
         s.textAnchor = 'middle'
+        s.fillColor = COLOR_EXCELLENT
         d.add(s)
+        # 在标签下方加分数
+        score_val = scores[i] if i < len(scores) else 3
+        score_text = String(lx, ly - 11, f'{score_val:.1f}')
+        score_text.fontName = 'Helvetica'
+        score_text.fontSize = 7
+        score_text.textAnchor = 'middle'
+        score_text.fillColor = get_score_color(score_val)
+        d.add(score_text)
 
     return d
 
@@ -1369,6 +1387,23 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
 
     story = []
 
+    # Add section divider helper
+    def add_section_divider(story, color=COLOR_EXCELLENT):
+        """添加装饰性分隔线"""
+        divider_data = [['', '']]
+        divider = Table(divider_data, colWidths=[80*mm, 100*mm], rowHeights=[1])
+        divider.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), color),
+            ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#e2e8f033')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(Spacer(1, 1*mm))
+        story.append(divider)
+        story.append(Spacer(1, 1*mm))
+
     # ========== P1：标题 + 雷达图 + 总览表 ==========
     story.append(Paragraph('8维能力深度评测报告', styles['V2Title']))
     story.append(Paragraph(f'<b>{user_name}</b> · {experience} · {datetime.now().strftime("%Y年%m月%d日")}',
@@ -1382,6 +1417,39 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
         'MGT': '管理技能', 'LLA': '持续学习'
     }
     sort_scores = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
+
+    # 综合评分摘要
+    all_avgs = [s['average'] for _, s in sort_scores]
+    total_avg = sum(all_avgs) / len(all_avgs)
+    max_dim = sort_scores[0]
+    min_dim = sort_scores[-1]
+
+    summary_data = [
+        [Paragraph(f'<b>综合平均</b>', styles['V2Text']),
+         Paragraph(f'{total_avg:.1f}', styles['V2CardTitle']),
+         Paragraph(f'<b>最突出</b>', styles['V2Text']),
+         Paragraph(f'{max_dim[1]["name"]} ({max_dim[1]["average"]:.1f})', styles['V2Text']),
+         Paragraph(f'<b>待提升</b>', styles['V2Text']),
+         Paragraph(f'{min_dim[1]["name"]} ({min_dim[1]["average"]:.1f})', styles['V2Text']),
+        ]]
+    summary_tbl = Table(summary_data, colWidths=[25*mm, 22*mm, 22*mm, 35*mm, 22*mm, 35*mm])
+    summary_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8fafc')),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('ALIGN', (3, 0), (3, 0), 'CENTER'),
+        ('ALIGN', (5, 0), (5, 0), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), ['#f8fafc', '#f8fafc']),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BOX', (0, 0), (-1, -1), 0.5, COLOR_GRID),
+    ]))
+    story.append(summary_tbl)
+    story.append(Spacer(1, 4*mm))
 
     # 雷达图 + 总览表并排
     radar_scores = [scores[d]['average'] for d in dim_order]
@@ -1413,11 +1481,12 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_WHITE, colors.HexColor('#f8fafc')]),
     ] + score_colors))
 
-    # 并排布局（雷达图 + 表格）
+    # 并排布局（雷达图 + 总览表）—— A4可用宽度180mm
     from reportlab.platypus import KeepInFrame
-    left_col = KeepInFrame(90*mm, 150*mm, [radar_drawing], hAlign='CENTER')
-    right_col = KeepInFrame(110*mm, 150*mm, [score_table], hAlign='CENTER')
-    layout_table = Table([[left_col, right_col]], colWidths=[100*mm, 90*mm])
+    # 雷达图 220x220 drawing，KeepInFrame宽度72mm足够容纳
+    left_col = KeepInFrame(72*mm, 160*mm, [radar_drawing], hAlign='CENTER', vAlign='MIDDLE')
+    right_col = KeepInFrame(100*mm, 160*mm, [score_table], hAlign='CENTER', vAlign='MIDDLE')
+    layout_table = Table([[left_col, right_col]], colWidths=[72*mm, 100*mm])  # 合计172mm，安全
     layout_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (0, 0), 'CENTER'),
@@ -1426,7 +1495,8 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
     story.append(layout_table)
-    story.append(Spacer(1, 5*mm))
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story)
 
     # ========== P2：核心优势 Top 3（浅蓝底色） ==========
     story.append(Paragraph('★ 核心优势 TOP 3', styles['V2Section']))
@@ -1434,7 +1504,7 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
     advantageDescV2 = {
         'COG': ('认知领跑者',
                 '陈志明展现出极强的逻辑构建能力，尤其在处理非结构化信息时——能迅速剥离噪音，直达核心本质。',
-                ['拆解模糊目标为可衡量步骤', '维持高产出执行（无人督促时）', '调度多元资源达成目标']),
+                ['快速提炼复杂信息核心', '发现逻辑论证中的漏洞', '掌握新领域速度快于常人']),
         'TEC': ('技术适应力强',
                 '陈志明对新技术保持开放心态，能快速上手并将新工具转化为生产力，是团队的数字化先锋。',
                 ['AI和数据工具运用自如', '面对新技术快速上手', '遇问题自主排查解决']),
@@ -1496,7 +1566,8 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
     story.append(cards_row)
-    story.append(Spacer(1, 5*mm))
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story, COLOR_IMPROVE)
 
     # ========== P3：发展空间 Bottom 3（暖橙底色） ==========
     story.append(Paragraph('🌱 发展空间（最具成长潜力的领域）', styles['V2Section']))
@@ -1578,7 +1649,8 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
     story.append(dev_cards_row)
-    story.append(Spacer(1, 5*mm))
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story)
 
     # ========== P4-P5：子能力细分 24 项（彩色分数条） ==========
     story.append(PageBreak())

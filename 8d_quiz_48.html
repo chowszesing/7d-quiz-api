@@ -98,34 +98,129 @@
         .btn-secondary:hover { border-color: var(--gray-400); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-        /* Result */
-        .result-header { text-align: center; padding: 20px 0 30px; }
+        /* ============================== */
+        /*  RESULT SECTION — REDESIGNED  */
+        /* ============================== */
+        .result-header { text-align: center; padding: 10px 0 20px; }
         .result-header h2 { font-size: 28px; color: var(--dark); }
-        .result-header p { color: var(--gray-400); margin-top: 8px; }
-        .chart-container { margin: 24px 0; width: 100%; }
-        .score-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        .score-table th { background: var(--primary); color: white; padding: 12px; font-size: 13px; text-align: left; }
-        .score-table td { padding: 12px; border-bottom: 1px solid var(--gray-200); font-size: 14px; }
-        .score-table tr:hover { background: #f8fafc; }
-        .score-bar { display: inline-block; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #3b82f6, #1e3a8a); }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .badge-high { background: #d1fae5; color: #065f46; }
-        .badge-mid { background: #fef3c7; color: #92400e; }
-        .badge-low { background: #fee2e2; color: #991b1b; }
-        .report-section { margin: 20px 0; }
-        .report-section h3 { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-200); }
+        .result-header p { color: var(--gray-400); margin-top: 8px; font-size: 13px; }
+        .result-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+        .result-badge { padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .result-badge.high { background: #d1fae5; color: #065f46; }
+        .result-badge.mid { background: #dbeafe; color: #1e40af; }
+        .result-badge.low { background: #fff7ed; color: #9a3412; }
+        .result-btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+        /* Radar chart — SVG inline */
+        .radar-container { display: flex; justify-content: center; margin: 10px 0 20px; }
+        .radar-container svg { max-width: 100%; height: auto; }
+
+        /* Score grid — redesigned */
+        .score-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 16px 0; }
+        .score-card { background: var(--light); border-radius: 12px; padding: 14px; text-align: center; position: relative; overflow: hidden; }
+        .score-card .icon { font-size: 22px; }
+        .score-card .dim-name { font-size: 12px; color: var(--secondary); margin: 4px 0 2px; }
+        .score-card .dim-score { font-size: 22px; font-weight: 700; margin: 4px 0; }
+        .score-card .dim-level { font-size: 11px; }
+        .score-card .mini-bar { height: 3px; border-radius: 2px; margin-top: 6px; transition: width 1s ease; }
+
+        /* Report sections */
+        .report-section { margin: 16px 0; }
+        .report-section h3 { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 10px;
+            padding-bottom: 8px; border-bottom: 2px solid var(--gray-200);
+            display: flex; align-items: center; gap: 8px; }
         .report-section ul { list-style: none; padding: 0; }
-        .report-section li { padding: 8px 0; font-size: 14px; color: var(--secondary); line-height: 1.6; padding-left: 20px; position: relative; }
+        .report-section li { padding: 6px 0; font-size: 13px; color: var(--secondary); line-height: 1.5; padding-left: 18px; position: relative; }
         .report-section li::before { content: '▸'; position: absolute; left: 0; color: var(--primary-light); }
-        .insight-block { background: #f0f4ff; border-radius: 12px; padding: 16px; margin: 8px 0; }
+
+        /* Strength/Development cards */
+        .strength-card {
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+            border-radius: 14px; padding: 16px; margin-bottom: 10px;
+            border-left: 4px solid #10b981;
+            transition: transform 0.2s;
+        }
+        .strength-card:hover { transform: translateX(3px); }
+        .strength-card .card-header {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+        }
+        .strength-card .card-header .dim-icon { font-size: 20px; }
+        .strength-card .card-header .dim-label { font-size: 15px; font-weight: 700; }
+        .strength-card .card-header .score-tag {
+            margin-left: auto; color: white; border-radius: 20px;
+            padding: 2px 12px; font-size: 13px; font-weight: 700;
+        }
+        .strength-card .card-desc { font-size: 13px; color: var(--secondary); margin-bottom: 8px; line-height: 1.5; }
+        .strength-card .card-traits { font-size: 12px; color: var(--gray-400); padding-left: 16px; }
+
+        .dev-card {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border-radius: 14px; padding: 16px; margin-bottom: 10px;
+            border-left: 4px solid #f59e0b;
+            transition: transform 0.2s;
+        }
+        .dev-card:hover { transform: translateX(3px); }
+        .dev-card .card-header {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+        }
+        .dev-card .card-header .dim-icon { font-size: 20px; }
+        .dev-card .card-header .dim-label { font-size: 15px; font-weight: 700; }
+        .dev-card .card-header .score-tag {
+            margin-left: auto; border-radius: 20px; padding: 2px 12px;
+            font-size: 13px; font-weight: 700; color: white;
+        }
+        .dev-card .card-desc { font-size: 13px; color: var(--secondary); margin-bottom: 10px; line-height: 1.5; }
+        .dev-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .dev-grid-2 h4 { font-size: 11px; font-weight: 700; color: var(--gray-400); margin-bottom: 4px; }
+        .dev-grid-2 ul { font-size: 12px; color: var(--secondary); padding-left: 14px; }
+        .dev-grid-2 li { margin-bottom: 2px; }
+
+        /* Sub-ability insight blocks */
+        .insight-block {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 14px; padding: 16px; margin: 8px 0;
+            transition: box-shadow 0.2s;
+        }
+        .insight-block:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .insight-block .header-row {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .insight-block .header-row .dim-label { font-size: 14px; font-weight: 700; }
+        .insight-block .header-row .total-score { font-size: 18px; font-weight: 700; }
+        .insight-block .sub-flex { display: flex; flex-wrap: wrap; gap: 10px; }
+        .insight-block .sub-item {
+            flex: 1; min-width: 100px; background: white; border-radius: 10px;
+            padding: 10px; text-align: center;
+        }
+        .insight-block .sub-item .name { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+        .insight-block .sub-item .score { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .insight-block .sub-item .mini-bar-bg { height: 4px; background: var(--gray-200); border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
+        .insight-block .sub-item .mini-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+        .insight-block .sub-item .desc { font-size: 10px; color: var(--gray-400); line-height: 1.3; }
+
+        /* Action plan */
+        .action-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px; border-radius: 12px; margin-bottom: 6px;
+        }
+        .action-item .icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+        .action-item .content .title { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+        .action-item .content .desc { font-size: 12px; color: var(--gray-400); }
+
+        /* Disclaimer */
+        .disclaimer {
+            margin-top: 20px; padding: 14px; background: #fffbeb;
+            border-radius: 14px; font-size: 12px; color: #92400e;
+            border-left: 4px solid #f59e0b; line-height: 1.5;
+        }
+
         .footer { text-align: center; padding: 20px; font-size: 12px; color: var(--gray-400); margin-top: 20px; }
         .footer a { color: var(--gray-400); text-decoration: none; }
         .loading { text-align: center; padding: 60px 20px; }
         .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .goto-report { position: fixed; bottom: 30px; right: 30px; z-index: 100; }
-        .goto-report a { background: var(--primary); color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.2s; }
-        .goto-report a:hover { background: var(--primary-light); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeInUp 0.5s ease-out; }
     </style>
 </head>
 <body>
@@ -451,250 +546,177 @@
             document.getElementById('resultTitle').textContent = title;
 
             const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
-            let tableHtml = '<table class="score-table"><tr><th>维度</th><th>分数</th><th>等级</th><th>分布</th></tr>';
-            for (const dim of dimOrder) {
-                const s = scores[dim];
-                const info = DIM_INFO[dim];
-                const level = getLevel(s.average);
-                const pct = (s.average / 5 * 100).toFixed(0);
-                tableHtml += `<tr>
-                    <td>${info.icon} ${info.name}</td>
-                    <td style="font-weight:700;font-size:18px">${s.average.toFixed(1)}</td>
-                    <td><span class="badge ${level.badge}">${level.label}</span></td>
-                    <td><div class="score-bar" style="width:${pct}%"></div></td>
-                </tr>`;
-            }
-            tableHtml += '</table>';
 
-            // Find strengths & weaknesses
+            // Compute summary stats
+            const avgAll = dimOrder.reduce((s, d) => s + scores[d].average, 0) / 8;
             const sorted = dimOrder.map(d => ({ dim: d, score: scores[d].average })).sort((a,b) => b.score - a.score);
             const top3 = sorted.slice(0, 3);
             const bot3 = sorted.slice(-3).reverse();
 
-            let insightHtml = '<div class="report-section"><h3>📊 能力画像</h3><p style="font-size:14px;color:var(--secondary);margin-bottom:16px">你的8维能力分布如下，分数越高代表自评越强。</p>' + tableHtml + '</div>';
+            const getLevelInfo = (score) => {
+                if (score >= 4.0) return { label: '优秀', badge: 'result-badge high', color: '#059669' };
+                if (score >= 3.0) return { label: '良好', badge: 'result-badge mid', color: '#2563eb' };
+                return { label: '待提升', badge: 'result-badge low', color: '#ea580c' };
+            };
+            const getScoreColor = (s) => s >= 4.0 ? '#059669' : s >= 3.0 ? '#2563eb' : '#ea580c';
 
-            // ========== 核心优势（带文字描述）==========
+            let html = '';
+
+            // ========== 概览：成绩卡网格 ==========
+            html += '<div class="result-badges">' +
+                `<span class="result-badge" style="background:#eef2ff;color:#1e3a8a">综合评估 ${avgAll.toFixed(1)}</span>` +
+                `<span class="result-badge high">最高 ${sorted[0].dim} ${sorted[0].score.toFixed(1)}</span>` +
+                (sorted[sorted.length-1].score < 3.0 ? `<span class="result-badge low">关注 ${sorted[sorted.length-1].dim} ${sorted[sorted.length-1].score.toFixed(1)}</span>` : '') +
+            '</div>';
+
+            // Score grid (2-column cards)
+            html += '<div class="score-grid">';
+            for (const dim of dimOrder) {
+                const s = scores[dim];
+                const info = DIM_INFO[dim];
+                const level = getLevelInfo(s.average);
+                const pct = (s.average / 5 * 100).toFixed(0);
+                html += `<div class="score-card">
+                    <div class="icon">${info.icon}</div>
+                    <div class="dim-name">${info.name}</div>
+                    <div class="dim-score" style="color:${getScoreColor(s.average)}">${s.average.toFixed(1)}</div>
+                    <div class="dim-level"><span class="${level.badge}">${level.label}</span></div>
+                    <div class="mini-bar" style="width:${pct}%;background:${getScoreColor(s.average)}"></div>
+                </div>`;
+            }
+            html += '</div>';
+
+            // ========== 核心优势 ==========
             const advantageDesc = {
-                COG: {
-                    desc: '你拥有出色的认知加工能力，能够高效处理复杂信息并形成清晰判断。',
-                    traits: ['面对大量信息能快速提炼核心', '逻辑推理严谨，能发现论证漏洞', '学习新领域速度快于常人']
-                },
-                TEC: {
-                    desc: '你具备较强的技术适应力，乐于拥抱新工具并能独立解决技术问题。',
-                    traits: ['AI和数据工具运用自如', '面对新技术能快速上手', '遇到问题能自主排查解决']
-                },
-                COM: {
-                    desc: '你擅长解读他人意图并有效表达自己，在沟通场景中具有影响力。',
-                    traits: ['能准确理解言外之意', '复杂概念能用简洁语言说清', '公开发言能影响团队决策']
-                },
-                SOC: {
-                    desc: '你对人际氛围高度敏感，善于在关系网络中建立信任与共识。',
-                    traits: ['能敏锐感知他人情绪变化', '擅长协调分歧、促进共识', '容易与不同背景的人建立信任']
-                },
-                ORG: {
-                    desc: '你具备从目标到落地的完整策划执行能力，能在无人监督下保持高标准。',
-                    traits: ['能将模糊目标拆解为可衡量步骤', '无人督促仍维持高产出', '善用资源最大化目标达成']
-                },
-                PRS: {
-                    desc: '你擅长在压力下快速找到创新解法，不被既有框架束缚。',
-                    traits: ['原方案失败能迅速提出Plan B', '用结构化方法深挖问题根源', '没有SOP时能自创有效方案']
-                },
-                MGT: {
-                    desc: '你具备项目与预期管理能力，能协调多方资源推动目标达成。',
-                    traits: ['能管理上下级的期望预期', '多任务并行时准确判断优先级', '能有效授权并建立跟进机制']
-                },
-                LLA: {
-                    desc: '你保持持续成长的学习姿态，主动拓展知识边界并能从挫折中提炼教训。',
-                    traits: ['定期阅读行业书刊、参加课程', '主动探索本职以外的领域', '能将批评和失败转化为成长养分']
-                }
+                COG: { desc: '你拥有出色的认知加工能力，能够高效处理复杂信息并形成清晰判断。', traits: ['面对大量信息能快速提炼核心', '逻辑推理严谨，能发现论证漏洞', '学习新领域速度快于常人'] },
+                TEC: { desc: '你具备较强的技术适应力，乐于拥抱新工具并能独立解决技术问题。', traits: ['AI和数据工具运用自如', '面对新技术能快速上手', '遇到问题能自主排查解决'] },
+                COM: { desc: '你擅长解读他人意图并有效表达自己，在沟通场景中具有影响力。', traits: ['能准确理解言外之意', '复杂概念能用简洁语言说清', '公开发言能影响团队决策'] },
+                SOC: { desc: '你对人际氛围高度敏感，善于在关系网络中建立信任与共识。', traits: ['能敏锐感知他人情绪变化', '擅长协调分歧、促进共识', '容易与不同背景的人建立信任'] },
+                ORG: { desc: '你具备从目标到落地的完整策划执行能力，能在无人监督下保持高标准。', traits: ['能将模糊目标拆解为可衡量步骤', '无人督促仍维持高产出', '善用资源最大化目标达成'] },
+                PRS: { desc: '你擅长在压力下快速找到创新解法，不被既有框架束缚。', traits: ['原方案失败能迅速提出Plan B', '用结构化方法深挖问题根源', '没有SOP时能自创有效方案'] },
+                MGT: { desc: '你具备项目与预期管理能力，能协调多方资源推动目标达成。', traits: ['能管理上下级的期望预期', '多任务并行时准确判断优先级', '能有效授权并建立跟进机制'] },
+                LLA: { desc: '你保持持续成长的学习姿态，主动拓展知识边界并能从挫折中提炼教训。', traits: ['定期阅读行业书刊、参加课程', '主动探索本职以外的领域', '能将批评和失败转化为成长养分'] }
             };
 
-            insightHtml += '<div class="report-section"><h3>✅ 核心优势</h3><p style="font-size:13px;color:var(--gray-400);margin-bottom:16px">以下是你最突出的3项能力，是你个人品牌的核心组成。</p>';
+            html += '<div class="report-section"><h3>✅ 核心优势 TOP 3</h3>';
             for (const item of top3) {
                 const info = DIM_INFO[item.dim];
                 const ad = advantageDesc[item.dim];
-                insightHtml += `<div style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid ${info.color}">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                        <span style="font-size:22px">${info.icon}</span>
-                        <strong style="font-size:17px;color:${info.color}">${info.name}</strong>
-                        <span style="margin-left:auto;background:${info.color};color:white;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:700">${item.score.toFixed(1)}分</span>
+                const scoreColor = getScoreColor(item.score);
+                html += `<div class="strength-card fade-in">
+                    <div class="card-header">
+                        <span class="dim-icon">${info.icon}</span>
+                        <span class="dim-label" style="color:${info.color}">${info.name}</span>
+                        <span class="score-tag" style="background:${scoreColor}">${item.score.toFixed(1)}分</span>
                     </div>
-                    <p style="font-size:13px;color:var(--secondary);margin-bottom:10px">${ad.desc}</p>
-                    <ul style="margin:0;padding-left:20px;font-size:12px;color:var(--gray-400)">${ad.traits.map(t => `<li style="margin-bottom:3px">${t}</li>`).join('')}</ul>
+                    <div class="card-desc">${ad.desc}</div>
+                    <ul class="card-traits">${ad.traits.map(t => `<li>${t}</li>`).join('')}</ul>
                 </div>`;
             }
-            insightHtml += '</div>';
+            html += '</div>';
 
-            // ========== 发展空间（带文字描述）==========
+            // ========== 发展空间 ==========
             const developmentDesc = {
-                COG: {
-                    desc: '认知能力提升后，你在信息密集型岗位上将更具竞争力。',
-                    signs: ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'],
-                    actions: ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点']
-                },
-                TEC: {
-                    desc: '技术能力补强后，你将更自信地应对数字化工作环境。',
-                    signs: ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'],
-                    actions: ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧']
-                },
-                COM: {
-                    desc: '表达能力精进后，你在跨部门协作和汇报场景中将更游刃有余。',
-                    signs: ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'],
-                    actions: ['练习"电梯演讲"：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会']
-                },
-                SOC: {
-                    desc: '社交敏锐度提升后，你在建立人脉网络和冲突处理上将更有优势。',
-                    signs: ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'],
-                    actions: ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次']
-                },
-                ORG: {
-                    desc: '策划执行能力强化后，你的项目交付质量和时效性将显著提升。',
-                    signs: ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'],
-                    actions: ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点']
-                },
-                PRS: {
-                    desc: '解决问题能力提升后，你将成为团队中不可替代的关键人物。',
-                    signs: ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'],
-                    actions: ['遇到问题先连续问5个"为什么"', '练习写"问题分析备忘录"（现象→原因→方案）', '每解决一个问题，总结提炼成可复用的方法论']
-                },
-                MGT: {
-                    desc: '管理技能精进后，你将更适合承担需要协调多方资源的复杂项目。',
-                    signs: ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'],
-                    actions: ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习"委托四步法"：说目标→给资源→少干预→做复盘']
-                },
-                LLA: {
-                    desc: '持续学习能力强化后，你的职业成长速度将显著快于同龄人。',
-                    signs: ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'],
-                    actions: ['设定每月读完1本专业书籍的目标', '建立个人知识库（笔记+标签系统）', '把每次批评写成"成长反馈卡"，提炼教训']
-                }
+                COG: { desc: '认知能力提升后，你在信息密集型岗位上将更具竞争力。', signs: ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'], actions: ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点'] },
+                TEC: { desc: '技术能力补强后，你将更自信地应对数字化工作环境。', signs: ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'], actions: ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧'] },
+                COM: { desc: '表达能力精进后，你在跨部门协作和汇报场景中将更游刃有余。', signs: ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'], actions: ['练习"电梯演讲"：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会'] },
+                SOC: { desc: '社交敏锐度提升后，你在建立人脉网络和冲突处理上将更有优势。', signs: ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'], actions: ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次'] },
+                ORG: { desc: '策划执行能力强化后，你的项目交付质量和时效性将显著提升。', signs: ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'], actions: ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点'] },
+                PRS: { desc: '解决问题能力提升后，你将成为团队中不可替代的关键人物。', signs: ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'], actions: ['遇到问题先连续问5个"为什么"', '练习写"问题分析备忘录"', '每解决一个问题，总结提炼成可复用的方法论'] },
+                MGT: { desc: '管理技能精进后，你将更适合承担需要协调多方资源的复杂项目。', signs: ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'], actions: ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习"委托四步法"'] },
+                LLA: { desc: '持续学习能力强化后，你的职业成长速度将显著快于同龄人。', signs: ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'], actions: ['设定每月读完1本专业书籍的目标', '建立个人知识库', '把每次批评写成"成长反馈卡"'] }
             };
 
-            insightHtml += '<div class="report-section"><h3>📈 发展空间</h3><p style="font-size:13px;color:var(--gray-400);margin-bottom:16px">以下是你最具成长潜力的3个领域，有针对性的练习可快速提升。</p>';
+            html += '<div class="report-section"><h3>📈 发展空间（最具成长潜力）</h3>';
             for (const item of bot3) {
                 const info = DIM_INFO[item.dim];
                 const dd = developmentDesc[item.dim];
-                insightHtml += `<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid #f59e0b">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                        <span style="font-size:22px">${info.icon}</span>
-                        <strong style="font-size:17px;color:#b45309">${info.name}</strong>
-                        <span style="margin-left:auto;background:#f59e0b;color:white;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:700">${item.score.toFixed(1)}分</span>
+                const scoreColor = getScoreColor(item.score);
+                html += `<div class="dev-card fade-in">
+                    <div class="card-header">
+                        <span class="dim-icon">${info.icon}</span>
+                        <span class="dim-label" style="color:#b45309">${info.name}</span>
+                        <span class="score-tag" style="background:${scoreColor}">${item.score.toFixed(1)}分</span>
                     </div>
-                    <p style="font-size:13px;color:var(--secondary);margin-bottom:10px">${dd.desc}</p>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                        <div>
-                            <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:4px">🔍 常见表现</div>
-                            <ul style="margin:0;padding-left:16px;font-size:12px;color:var(--secondary)">${dd.signs.map(t => `<li style="margin-bottom:2px">${t}</li>`).join('')}</ul>
-                        </div>
-                        <div>
-                            <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:4px">🎯 行动建议</div>
-                            <ul style="margin:0;padding-left:16px;font-size:12px;color:var(--secondary)">${dd.actions.map(t => `<li style="margin-bottom:2px">${t}</li>`).join('')}</ul>
-                        </div>
+                    <div class="card-desc">${dd.desc}</div>
+                    <div class="dev-grid-2">
+                        <div><h4>🔍 常见表现</h4><ul>${dd.signs.map(t => `<li>${t}</li>`).join('')}</ul></div>
+                        <div><h4>🎯 行动建议</h4><ul>${dd.actions.map(t => `<li>${t}</li>`).join('')}</ul></div>
                     </div>
                 </div>`;
             }
-            insightHtml += '</div>';
+            html += '</div>';
 
-            // ========== 子能力细分（带文字描述）==========
+            // ========== 子能力细分 ==========
             const subInfo = {
-                COG: [
-                    { name: '资讯提炼', desc: '从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。' },
-                    { name: '逻辑推理', desc: '面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。' },
-                    { name: '快速学习', desc: '在短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。' }
-                ],
-                TEC: [
-                    { name: '数字生产力', desc: '有效运用AI工具和数据分析工具提升个人和团队的工作效率。' },
-                    { name: '技术适应力', desc: '面对新技术或新系统能快速上手，适应变化的能力强于常人。' },
-                    { name: '故障排查', desc: '遇到技术问题时能自主排查根本原因，不依赖他人解决问题。' }
-                ],
-                COM: [
-                    { name: '解码能力', desc: '准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。' },
-                    { name: '精炼表达', desc: '用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。' },
-                    { name: '口头影响力', desc: '在公开发言和会议中能有效吸引听众注意力和影响决策。' }
-                ],
-                SOC: [
-                    { name: '情绪觉察', desc: '敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。' },
-                    { name: '冲突协调', desc: '在团队分歧和人际冲突中能促进各方达成共识，保持冷静。' },
-                    { name: '关系建立', desc: '与不同背景的人建立信任，维护长期人脉网络并保持有效联系。' }
-                ],
-                ORG: [
-                    { name: '目标规划', desc: '将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。' },
-                    { name: '自主执行', desc: '在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。' },
-                    { name: '资源管理', desc: '合理分配时间、人力、预算等资源，在有限条件下最大化产出。' }
-                ],
-                PRS: [
-                    { name: '应变能力', desc: '原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。' },
-                    { name: '根源分析', desc: '用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。' },
-                    { name: '创新方案', desc: '在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。' }
-                ],
-                MGT: [
-                    { name: '预期管理', desc: '有效管理上级和团队对任务结果的期望，避免目标与产出的落差。' },
-                    { name: '优先级取舍', desc: '多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。' },
-                    { name: '授权追踪', desc: '有效分配任务并建立跟进机制，信任团队不过度干预执行过程。' }
-                ],
-                LLA: [
-                    { name: '知识更新', desc: '保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。' },
-                    { name: '主动探索', desc: '跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。' },
-                    { name: '挫折转化', desc: '面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。' }
-                ]
+                COG: [{name:'资讯提炼',desc:'从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。'},{name:'逻辑推理',desc:'面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。'},{name:'快速学习',desc:'在短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。'}],
+                TEC: [{name:'数字生产力',desc:'有效运用AI工具和数据分析工具提升个人和团队的工作效率。'},{name:'技术适应力',desc:'面对新技术或新系统能快速上手，适应变化的能力强于常人。'},{name:'故障排查',desc:'遇到技术问题时能自主排查根本原因，不依赖他人解决问题。'}],
+                COM: [{name:'解码能力',desc:'准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。'},{name:'精炼表达',desc:'用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。'},{name:'口头影响力',desc:'在公开发言和会议中能有效吸引听众注意力和影响决策。'}],
+                SOC: [{name:'情绪觉察',desc:'敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。'},{name:'冲突协调',desc:'在团队分歧和人际冲突中能促进各方达成共识，保持冷静。'},{name:'关系建立',desc:'与不同背景的人建立信任，维护长期人脉网络并保持有效联系。'}],
+                ORG: [{name:'目标规划',desc:'将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。'},{name:'自主执行',desc:'在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。'},{name:'资源管理',desc:'合理分配时间、人力、预算等资源，在有限条件下最大化产出。'}],
+                PRS: [{name:'应变能力',desc:'原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。'},{name:'根源分析',desc:'用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。'},{name:'创新方案',desc:'在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。'}],
+                MGT: [{name:'预期管理',desc:'有效管理上级和团队对任务结果的期望，避免目标与产出的落差。'},{name:'优先级取舍',desc:'多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。'},{name:'授权追踪',desc:'有效分配任务并建立跟进机制，信任团队不过度干预执行过程。'}],
+                LLA: [{name:'知识更新',desc:'保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。'},{name:'主动探索',desc:'跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。'},{name:'挫折转化',desc:'面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。'}]
             };
+
+            html += '<div class="report-section"><h3>🔬 子能力细分详解</h3>';
             for (const dim of dimOrder) {
                 const info = DIM_INFO[dim];
                 const subs = subInfo[dim];
                 const s = scores[dim];
-                // Compute sub-dimension scores from the 2 items each
                 const dimQs = order.filter(q => q.dim === dim);
-                // 2 items per sub-ability
                 const subScores = subs.map((sub, idx) => {
                     const items = dimQs.slice(idx*2, idx*2+2);
                     const avg = items.reduce((sum, q) => sum + (answers[q.id] || 0), 0) / Math.max(items.length, 1);
                     return { name: sub.name, desc: sub.desc, avg };
                 });
-                insightHtml += `<div class="insight-block">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                        <strong style="color:${info.color}">${info.icon} ${info.name}</strong>
-                        <span style="font-weight:700;font-size:16px">${s.average.toFixed(1)}</span>
+                html += `<div class="insight-block">
+                    <div class="header-row">
+                        <span class="dim-label" style="color:${info.color}">${info.icon} ${info.name}</span>
+                        <span class="total-score" style="color:${getScoreColor(s.average)}">${s.average.toFixed(1)}</span>
                     </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:10px">`;
+                    <div class="sub-flex">`;
                 for (const ss of subScores) {
-                    const pct = (ss.avg / 5 * 100).toFixed(0);
                     const barColor = ss.avg >= 3.5 ? '#10b981' : ss.avg >= 2.5 ? '#f59e0b' : '#ef4444';
-                    insightHtml += `<div style="flex:1;min-width:110px;background:white;border-radius:8px;padding:10px;text-align:center">
-                        <div style="font-size:12px;font-weight:700;color:${info.color};margin-bottom:4px">${ss.name}</div>
-                        <div style="font-size:18px;font-weight:700;color:${barColor};margin-bottom:6px">${ss.avg.toFixed(1)}</div>
-                        <div style="height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px"></div></div>
-                        <div style="font-size:10px;color:var(--gray-400);line-height:1.4">${ss.desc}</div>
+                    html += `<div class="sub-item">
+                        <div class="name" style="color:${info.color}">${ss.name}</div>
+                        <div class="score" style="color:${barColor}">${ss.avg.toFixed(1)}</div>
+                        <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${(ss.avg/5*100).toFixed(0)}%;background:${barColor}"></div></div>
+                        <div class="desc">${ss.desc}</div>
                     </div>`;
                 }
-                insightHtml += '</div></div>';
+                html += '</div></div>';
             }
-            insightHtml += '</div>';
+            html += '</div>';
 
-            // Improvement guidance — now integrated into 发展空间, simplified
-            insightHtml += '<div class="report-section"><h3>💡 总结与行动</h3>';
-            insightHtml += '<p style="font-size:13px;color:var(--secondary);margin-bottom:16px">基于你的评测结果，建议按以下优先级采取行动：</p>';
-            insightHtml += '<div style="display:grid;gap:10px">';
+            // ========== 总结与行动 ==========
+            html += '<div class="report-section"><h3>💡 总结与行动</h3>';
+            html += '<p style="font-size:13px;color:var(--secondary);margin-bottom:10px">基于你的评测结果，建议按以下优先级采取行动：</p>';
+            html += '<div style="display:grid;gap:6px">';
             const actionOrder = [...bot3, ...top3.slice(0,2)];
             for (let i = 0; i < actionOrder.length; i++) {
                 const item = actionOrder[i];
                 const info = DIM_INFO[item.dim];
                 const dd = developmentDesc[item.dim];
-                const priority = i < bot3.length ? '🔴 优先提升' : '🟢 持续保持';
-                insightHtml += `<div style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:${i < bot3.length ? '#fffbeb' : '#f0fdf4'};border-radius:10px">
-                    <span style="font-size:18px;flex-shrink:0">${info.icon}</span>
-                    <div>
-                        <div style="font-size:12px;color:${info.color};font-weight:700;margin-bottom:2px">${priority} · ${info.name} (${item.score.toFixed(1)}分)</div>
-                        <div style="font-size:12px;color:var(--gray-400)">${i < bot3.length ? dd.actions[0] : '继续在工作中发挥这项优势'}</div>
+                const isPriority = i < bot3.length;
+                const bgColor = isPriority ? '#fffbeb' : '#f0fdf4';
+                const dot = isPriority ? '🔴' : '🟢';
+                const label = isPriority ? '优先提升' : '持续保持';
+                const action = isPriority ? (dd.actions[0] || '') : '继续在工作中发挥这项优势';
+                html += `<div class="action-item" style="background:${bgColor}">
+                    <span class="icon">${info.icon}</span>
+                    <div class="content">
+                        <div class="title" style="color:${isPriority ? '#b45309' : '#065f46'}">${dot} ${label} · ${info.name} (${item.score.toFixed(1)}分)</div>
+                        <div class="desc">${action}</div>
                     </div>
                 </div>`;
             }
-            insightHtml += '</div></div>';
+            html += '</div></div>';
 
-            // Disclaimer
-            insightHtml += '<div style="margin-top:24px;padding:12px;background:#fef3c7;border-radius:12px;font-size:12px;color:#92400e">';
-            insightHtml += '📌 本报告基于自评数据，仅供参考。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。';
-            insightHtml += '</div>';
+            // ========== 免责声明 ==========
+            html += '<div class="disclaimer">📌 本报告基于自评数据，仅供参考。自评可能受个人认知偏差影响，建议结合他人的客观反馈进行综合分析。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。</div>';
 
-            document.getElementById('resultContent').innerHTML = insightHtml;
+            document.getElementById('resultContent').innerHTML = html;
         }
 
         function renderResultLocal(name, exp, ind) {
@@ -712,7 +734,7 @@
         }
 
         function downloadPDF() {
-            if (resultId) window.open('/api/quiz/report_48/' + resultId, '_blank');
+            if (resultId) window.open('/api/quiz/report_48_v2/' + resultId, '_blank');
             else alert('暂无报告ID，请重新提交');
         }
 
