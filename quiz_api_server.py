@@ -1069,11 +1069,357 @@ def batch_import():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============ 人格画像 + 张力分析 + 缺陷重塑引擎 ============
+def generate_personality_analysis(scores):
+    """
+    基于8维评分生成：人格画像 / 张力分析 / 缺陷重塑报告数据。
+    由 submit_48 自动调用，结果嵌入JSON响应。
+    """
+    if not scores:
+        return {}
+
+    dim_names = {
+        'COG': '认知能力', 'TEC': '技术能力', 'COM': '表达能力',
+        'SOC': '社交能力', 'ORG': '策划执行', 'PRS': '解决问题',
+        'MGT': '管理能力', 'LLA': '持续学习'
+    }
+    dim_en = {
+        'COG': 'Cognitive', 'TEC': 'Technical', 'COM': 'Communication',
+        'SOC': 'Social', 'ORG': 'Organization', 'PRS': 'Problem Solving',
+        'MGT': 'Management', 'LLA': 'Lifelong Learning'
+    }
+
+    def avg(d):
+        return d.get('average', 0)
+
+    # ── 维度高低判定 ──
+    is_high = lambda d: avg(scores.get(d, {})) >= 3.5
+    is_low  = lambda d: avg(scores.get(d, {})) < 3.0
+
+    cog_h, tec_h, com_h = is_high('COG'), is_high('TEC'), is_high('COM')
+    soc_h, mgt_h, lla_h = is_high('SOC'), is_high('MGT'), is_high('LLA')
+    org_h, prs_h         = is_high('ORG'), is_high('PRS')
+
+    cog_l, tec_l, com_l = is_low('COG'), is_low('TEC'), is_low('COM')
+    soc_l, mgt_l, lla_l = is_low('SOC'), is_low('MGT'), is_low('LLA')
+    org_l, prs_l         = is_low('ORG'), is_low('PRS')
+
+    # ── 维度组聚类 ──
+    # 思维表达组：COG+TEC+COM（信息处理与输出）
+    thinking = 'analytical' if (cog_h and (tec_h or com_h)) else \
+               'pragmatic' if (tec_h and not cog_h) else \
+               'expressive' if (com_h and not cog_h and not tec_h) else \
+               'foundational'
+    # 人际取向组：SOC+MGT+LLA（人际连接与影响）
+    social   = 'connector' if (soc_h and not mgt_h) else \
+               'leader'    if (mgt_h and soc_h) else \
+               'specialist' if (lla_h and not soc_h and not mgt_h) else \
+               'independent'
+    # 执行模式组：ORG+PRS（目标达成方式）
+    execution = 'strategic'  if (org_h and prs_h) else \
+                'executor'    if (org_h and not prs_h) else \
+                'problem-solver' if (prs_h and not org_h) else \
+                'adaptive'
+
+    # ── 16型人格画像库 ──
+    profile_map = {
+        ('analytical', 'connector', 'strategic'): ('远见策划型', '战略协调者', '创新布道'),
+        ('analytical', 'connector', 'executor'):   ('思想领袖型', '知识传播者', '系统建造'),
+        ('analytical', 'connector', 'problem-solver'): ('创新倡导型', '跨界连接者', '洞察驱动'),
+        ('analytical', 'connector', 'adaptive'):  ('智慧顾问型', '认知导师', '知识架构'),
+        ('analytical', 'leader', 'strategic'):    ('战略指挥官', '全局架构', '决策引擎'),
+        ('analytical', 'leader', 'executor'):    ('思想管理者', '知识整合', '执行智囊'),
+        ('analytical', 'leader', 'problem-solver'): ('破局策划型', '方案设计', '模式重构'),
+        ('analytical', 'leader', 'adaptive'):    ('智库策略型', '战略规划', '方法论设计'),
+        ('analytical', 'specialist', 'strategic'): ('技术战略型', '深度专才', '架构思维'),
+        ('analytical', 'specialist', 'executor'): ('技术作家型', '知识沉淀', '文档大师'),
+        ('analytical', 'specialist', 'problem-solver'): ('研究专家型', '学术探究', '深度钻研'),
+        ('analytical', 'specialist', 'adaptive'): ('技术顾问型', '解决方案', '专业咨询'),
+        ('analytical', 'independent', 'strategic'): ('独立策划型', '自由思考', '个人战略'),
+        ('analytical', 'independent', 'executor'): ('独立建造型', '自驱实现', '工匠精神'),
+        ('analytical', 'independent', 'problem-solver'): ('独立分析师', '自我提升', '深度思考'),
+        ('analytical', 'independent', 'adaptive'): ('独立顾问型', '自我迭代', '持续进化'),
+        # ── 务实 pragmatics ──
+        ('pragmatic', 'connector', 'strategic'):  ('业务策划型', '落地推动', '资源整合'),
+        ('pragmatic', 'connector', 'executor'):   ('业务拓展型', '关系推动', '机会捕捉'),
+        ('pragmatic', 'connector', 'problem-solver'): ('问题协调型', '关系解决', '冲突处理'),
+        ('pragmatic', 'connector', 'adaptive'):   ('机会探索型', '敏锐嗅探', '关系拓展'),
+        ('pragmatic', 'leader', 'strategic'):    ('业务指挥官', '目标驱动', '资源调配'),
+        ('pragmatic', 'leader', 'executor'):     ('执行领袖型', '结果导向', '团队驱动'),
+        ('pragmatic', 'leader', 'problem-solver'): ('破局领袖型', '快速决断', '逆境突破'),
+        ('pragmatic', 'leader', 'adaptive'):      ('业务舵手型', '市场嗅觉', '灵活调度'),
+        ('pragmatic', 'specialist', 'strategic'): ('技术策划型', '工具思维', '效率优化'),
+        ('pragmatic', 'specialist', 'executor'):  ('技术工匠型', '精耕细作', '品质保障'),
+        ('pragmatic', 'specialist', 'problem-solver'): ('技术医师型', '故障排除', '系统修复'),
+        ('pragmatic', 'specialist', 'adaptive'):   ('技术通才型', '多工具', '适应力强'),
+        ('pragmatic', 'independent', 'strategic'): ('独立策划型', '自我管理', '目标明确'),
+        ('pragmatic', 'independent', 'executor'):  ('独立工匠型', '自我驱动', '高质量输出'),
+        ('pragmatic', 'independent', 'problem-solver'): ('独立医师型', '自我诊断', '自主解决'),
+        ('pragmatic', 'independent', 'adaptive'):  ('独立通才型', '多面手', '灵活适应'),
+        # ── 表达型 expressives ──
+        ('expressive', 'connector', 'strategic'):  ('魅力策划型', '愿景描绘', '人心凝聚'),
+        ('expressive', 'connector', 'executor'):  ('魅力行动型', '热情驱动', '人际带动'),
+        ('expressive', 'connector', 'problem-solver'): ('魅力协调型', '人心解决', '关系润滑'),
+        ('expressive', 'connector', 'adaptive'):  ('魅力探索型', '社交敏锐', '机会链接'),
+        ('expressive', 'leader', 'strategic'):   ('激励指挥官', '愿景领导', '战略传播'),
+        ('expressive', 'leader', 'executor'):    ('激励执行型', '人心驱动', '团队激活'),
+        ('expressive', 'leader', 'problem-solver'): ('激励破局型', '人心突破', '共识构建'),
+        ('expressive', 'leader', 'adaptive'):    ('激励舵手型', '氛围营造', '人心调度'),
+        ('expressive', 'specialist', 'strategic'): ('专业布道型', '知识传播', '理念推广'),
+        ('expressive', 'specialist', 'executor'): ('专业导师型', '教学相长', '经验传承'),
+        ('expressive', 'specialist', 'problem-solver'): ('专业协调型', '咨询顾问', '方案解读'),
+        ('expressive', 'specialist', 'adaptive'):  ('专业探索型', '多元学习', '跨界应用'),
+        ('expressive', 'independent', 'strategic'): ('独立布道型', '个人品牌', '影响力扩散'),
+        ('expressive', 'independent', 'executor'): ('独立导师型', '自我实现', '经验沉淀'),
+        ('expressive', 'independent', 'problem-solver'): ('独立协调型', '自主咨询', '问题洞察'),
+        ('expressive', 'independent', 'adaptive'): ('独立导师型', '自我迭代', '多元发展'),
+        # ── 基础型 foundational ──
+        ('foundational', 'connector', 'strategic'): ('成长策划型', '协作学习', '目标聚焦'),
+        ('foundational', 'connector', 'executor'):  ('成长行动型', '协作驱动', '稳步推进'),
+        ('foundational', 'connector', 'problem-solver'): ('成长协调型', '协作问题解决', '关系维护'),
+        ('foundational', 'connector', 'adaptive'): ('成长探索型', '协作适应', '机会感知'),
+        ('foundational', 'leader', 'strategic'):   ('成长指挥官', '带队成长', '目标管理'),
+        ('foundational', 'leader', 'executor'):    ('成长执行型', '带队实践', '稳步落地'),
+        ('foundational', 'leader', 'problem-solver'): ('成长破局型', '带队解决问题', '集体突破'),
+        ('foundational', 'leader', 'adaptive'):    ('成长舵手型', '带队适应', '灵活调度'),
+        ('foundational', 'specialist', 'strategic'): ('专精策划型', '垂直深耕', '体系建立'),
+        ('foundational', 'specialist', 'executor'): ('专精执行型', '专业积累', '品质沉淀'),
+        ('foundational', 'specialist', 'problem-solver'): ('专精医师型', '故障专研', '系统理解'),
+        ('foundational', 'specialist', 'adaptive'): ('专精适应型', '专业拓展', '跨界整合'),
+        ('foundational', 'independent', 'strategic'): ('独立成长型', '自学成才', '自我管理'),
+        ('foundational', 'independent', 'executor'):  ('独立工匠型', '自我驱动', '踏实积累'),
+        ('foundational', 'independent', 'problem-solver'): ('独立医师型', '自我摸索', '试错学习'),
+        ('foundational', 'independent', 'adaptive'): ('独立适应型', '自我迭代', '持续成长'),
+    }
+
+    key = (thinking, social, execution)
+    primary, secondary, third = profile_map.get(key, ('多元复合型', '适应性人才', '持续进化'))
+    tag  = f"{primary} · {secondary} · {third}"
+
+    # ── 维度性格解读 ──
+    cog_s = avg(scores.get('COG', {})); tec_s = avg(scores.get('TEC', {}))
+    com_s = avg(scores.get('COM', {})); soc_s = avg(scores.get('SOC', {}))
+    org_s = avg(scores.get('ORG', {})); prs_s = avg(scores.get('PRS', {}))
+    mgt_s = avg(scores.get('MGT', {})); lla_s = avg(scores.get('LLA', {}))
+
+    cog_lbl = '强分析' if cog_h else ('弱分析' if cog_l else '均衡')
+    tec_lbl = '技术型' if tec_h else ('非技术' if tec_l else '均衡')
+    com_lbl = '表达型' if com_h else ('内敛型' if com_l else '均衡')
+    soc_lbl = '社交型' if soc_h else ('独立型' if soc_l else '均衡')
+    org_lbl = '策划型' if org_h else ('执行型' if org_l else '均衡')
+    prs_lbl = '解决型' if prs_h else ('稳健型' if prs_l else '均衡')
+    mgt_lbl = '管理型' if mgt_h else ('执行型' if mgt_l else '均衡')
+    lla_lbl = '学习型' if lla_h else ('经验型' if lla_l else '均衡')
+
+    # ── 行为特征 ──
+    traits = []
+    if cog_h and prs_h:  traits.append('理性驱动，习惯从根源解决问题')
+    if cog_h and soc_h:  traits.append('兼具洞察力与同理心，影响力强')
+    if tec_h and org_h:  traits.append('擅长用系统化方式推进目标')
+    if tec_h and soc_h:  traits.append('技术+人际双轨，能推动团队落地')
+    if com_h and soc_h:  traits.append('表达生动，善于凝聚共识与调动氛围')
+    if org_h and prs_h:  traits.append('有战略眼光，既能规划又能突破')
+    if mgt_h and org_h:  traits.append('具备全局视角，擅长目标分解与资源调配')
+    if lla_h and cog_h:  traits.append('终身学习者，知识更新速度快')
+    if cog_l and soc_h:  traits.append('以关系为中心，直觉判断多于逻辑分析')
+    if tec_h and lla_l:  traits.append('技术积累扎实，但更新意愿较低')
+    if org_h and prs_l:  traits.append('规划能力强，执行落地节奏偏慢')
+    if soc_l and mgt_h:  traits.append('管理欲望强，但更倾向于独立工作')
+    if not traits:       traits.append('能力均衡，适应性强，角色灵活')
+
+    # ── 张力分析（最多4条） ──
+    tensions = []
+    tension_score = 0
+
+    def add_tension(score_add, type_code, headline, detail):
+        nonlocal tension_score
+        tensions.append({'type': type_code, 'headline': headline, 'detail': detail})
+        tension_score += score_add
+
+    if tec_h and soc_l:
+        add_tension(20, 'tech-vs-social', '技术深度 vs 社交意愿',
+                    f'技术能力({tec_s:.1f})突出，但社交意愿({soc_s:.1f})偏低。'
+                    '容易沉浸独立解决问题，错失协作带来的杠杆效应。建议主动参与跨团队项目，将技术价值扩散。')
+    elif soc_h and tec_l:
+        add_tension(15, 'social-vs-tech', '人际热度 vs 技术深度',
+                    f'社交能力({soc_s:.1f})突出，但技术基础({tec_s:.1f})偏弱。'
+                    '依赖关系网络而非专业壁垒建立影响力。建议培养一项可量化的核心技术能力。')
+
+    if org_h and prs_l:
+        add_tension(20, 'plan-vs-execute', '策划宏大 vs 落地迟缓',
+                    f'策划能力({org_s:.1f})强，但解决问题敏捷性({prs_s:.1f})偏低。'
+                    '方案完善但推进速度慢。建议缩短方案迭代周期，用"72小时行动规则"强制落地。')
+    elif prs_h and org_l:
+        add_tension(15, 'solve-vs-plan', '快速解决 vs 缺乏规划',
+                    f'解决问题({prs_s:.1f})敏捷，但策划规划({org_s:.1f})偏弱。'
+                    '频繁救火，缺乏长期主线。建议用OKR框架锁定季度目标，每月复盘纠偏。')
+
+    if soc_h and mgt_l:
+        add_tension(20, 'social-vs-mgmt', '关系优先 vs 管理回避',
+                    f'社交热情({soc_s:.1f})高，但管理意愿({mgt_s:.1f})低。'
+                    '善于建立关系但回避主导角色，可能错失影响他人的机会。建议从"项目协调"角色切入，积累管理信心。')
+    elif mgt_h and soc_l:
+        add_tension(15, 'mgmt-vs-social', '管理野心 vs 社交孤立',
+                    f'管理能力({mgt_s:.1f})强，但社交连接({soc_s:.1f})弱。'
+                    '推动力足但人心凝聚不足。建议每季度建立2-3个跨部门弱连接，扩展影响力网络。')
+
+    if tec_h and lla_l:
+        add_tension(25, 'tech-vs-stagnate', '技术积累深 vs 更新停滞',
+                    f'技术适应({tec_s:.1f})强，但学习意愿({lla_s:.1f})低。'
+                    '当前技术优势可能在3-5年后被淘汰。建议每季度强制学习1项新工具，以"教别人"的方式输出。')
+    elif lla_h and tec_l:
+        add_tension(20, 'learn-vs-apply', '学习欲强 vs 技术落地弱',
+                    f'持续学习({lla_s:.1f})强，但技术掌握({tec_s:.1f})偏弱。'
+                    '知识广度够但深度不足，容易"样样通样样松"。建议选择1个领域深耕6个月，形成专业壁垒。')
+
+    if com_h and cog_l:
+        add_tension(15, 'express-vs-think', '表达流畅 vs 深度不足',
+                    f'表达能力({com_s:.1f})强，但认知深度({cog_s:.1f})偏低。'
+                    '输出量大但洞察浅。建议每季度精读1本领域经典著作，写结构化笔记深化思考。')
+    elif cog_h and com_l:
+        add_tension(10, 'think-vs-express', '深度思考 vs 表达钝化',
+                    f'认知能力({cog_s:.1f})强，但表达({com_s:.1f})偏弱。'
+                    '有真知灼见但难以传递给他人。建议练习"3分钟电梯演讲"，强制结构化输出。')
+
+    if soc_l and mgt_l and com_h:
+        add_tension(15, 'solo-expert', '独狼专家陷阱',
+                    '社交、管理双低+表达偏高，倾向独自钻研后单点输出。'
+                    '影响力天花板明显。建议主动承担"知识传播者"角色，从写文章开始扩大影响半径。')
+
+    if org_l and prs_l and lla_l:
+        add_tension(30, 'drift-risk', '能力漂移风险',
+                    '策划、解决问题、持续学习三项均偏低，职业方向可能模糊。'
+                    '建议尽快用职业兴趣测评锁定1-2个方向，每方向深耕3个月试错验证。')
+    elif org_h and prs_h and mgt_h:
+        add_tension(20, 'burnout-risk', '高期望高压风险',
+                    '策划、解决问题、管理三项均高，自我期待极高，容易过度消耗。'
+                    '建议建立"能量边界"机制，每周预留1天完全不工作，防止职业倦怠。')
+
+    tension_score = min(100, tension_score)
+
+    # ── 缺陷重塑（来自 BOT 3 维度） ──
+    bot3 = sorted(scores.items(), key=lambda x: x[1]['average'])[:3]
+    defects = []
+    defect_actions = {}
+
+    for dim, s in bot3:
+        v = s['average']
+        d_name = dim_names.get(dim, dim)
+        d_en    = dim_en.get(dim, dim)
+
+        if dim == 'COG':
+            defect_actions[dim] = {
+                'sign': '信息过载时判断迟缓，容易被细节淹没',
+                'action': '建立信息过滤漏斗：每日上午10点前只处理"与目标直接相关"的信息，用5Why追问法提取核心。',
+                'resource': '《思考，快与慢》+ 金字塔原理'
+            }
+        elif dim == 'TEC':
+            defect_actions[dim] = {
+                'sign': '对新技术保持观望，倾向于用旧工具解决新问题',
+                'action': '每季度设定"探索日"，强制用新工具完成1件日常任务（如用Notion重构工作流）。',
+                'resource': 'Product Hunt 每日精选 + Coursera 短期课程'
+            }
+        elif dim == 'COM':
+            defect_actions[dim] = {
+                'sign': '表达冗长或难以抓住重点，沟通效率低',
+                'action': '练习"电梯演讲"：任何话题必须在3句话内说明核心观点。用晨间写作（每天300字）锻炼结构化表达。',
+                'resource': '《金字塔原理》+ TED演讲结构'
+            }
+        elif dim == 'SOC':
+            defect_actions[dim] = {
+                'sign': '倾向独自工作，对人际互动的能量消耗感强',
+                'action': '每周主动发起1次"15分钟咖啡聊"（线上即可），逐步建立关系舒适区。',
+                'resource': 'LinkedIn 社交策略 + 《人性的弱点》'
+            }
+        elif dim == 'ORG':
+            defect_actions[dim] = {
+                'sign': '有目标但执行节奏慢，计划赶不上变化',
+                'action': '将季度目标拆解为每周3个"必须完成"（MIT），每天早晨写3个MIT，强制优先执行。',
+                'resource': 'OKR工作法 + 《高效能人士的七个习惯》'
+            }
+        elif dim == 'PRS':
+            defect_actions[dim] = {
+                'sign': '遇到复杂问题时习惯等待更多信息，错失行动窗口',
+                'action': '采用"最坏情况预案"：有60%信息时就做出初步决策，用Plan B兜底，而非等待100%确定性。',
+                'resource': '《零点思考》+ 麦肯锡问题解决7步'
+            }
+        elif dim == 'MGT':
+            defect_actions[dim] = {
+                'sign': '倾向于亲力亲为，难以有效授权',
+                'action': '每周选择1件可委托的事，明确"期望结果"而非"执行方式"，强制自己只追踪里程碑。',
+                'resource': '《卓有成效的管理者》+ 情境领导力'
+            }
+        elif dim == 'LLA':
+            defect_actions[dim] = {
+                'sign': '学习停留在舒适区，缺乏主动更新知识的意识',
+                'action': '建立"学习输出"机制：每学完一项内容，必须写1篇笔记或教给别人1次，否则视为未完成。',
+                'resource': '费曼学习法 + Obsidian 知识管理系统'
+            }
+
+        defects.append({
+            'dimension': dim,
+            'name': d_name,
+            'en': d_en,
+            'score': v,
+            **defect_actions.get(dim, {'sign': '有待发展', 'action': '建议针对性训练', 'resource': ''})
+        })
+
+    # ── 综合结论 ──
+    all_scores = [v['average'] for v in scores.values()]
+    overall = sum(all_scores) / len(all_scores) if all_scores else 0
+    top3_local = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)[:3]
+    conclusion = (
+        f"你的核心优势集中在{dim_names.get(top3_local[0][0],'') if top3_local else '综合能力'}，"
+        f"建议持续强化这一优势作为职业壁垒。"
+        f"当前最高张力为「{tensions[0]['headline']}」（{tension_score}%），"
+        f"优先解决该张力可带来最大的能力提升杠杆。"
+        f"最需要发展的维度是{dim_names.get(bot3[0][0],'') if bot3 else '综合能力'}，"
+        f"建议从{bot3[0][0] if bot3 else ''}维度入手制定90天行动计划。"
+    ) if tensions else (
+        f"你的8维能力分布均衡，整体综合评分{overall:.1f}/5.0，具备良好的职业适应性。"
+        f"核心优势为{dim_names.get(top3_local[0][0],'')}，建议持续深耕形成差异化竞争力。"
+    )
+
+    return {
+        'profile': {
+            'type': primary,
+            'sub_type': secondary,
+            'third_type': third,
+            'tag': tag,
+            'thinking': thinking,
+            'social': social,
+            'execution': execution,
+            'dimension_labels': {
+                'COG': cog_lbl, 'TEC': tec_lbl, 'COM': com_lbl,
+                'SOC': soc_lbl, 'ORG': org_lbl, 'PRS': prs_lbl,
+                'MGT': mgt_lbl, 'LLA': lla_lbl
+            },
+            'traits': traits,
+            'overall_score': round(overall, 1),
+            'top_dimension': dim_names.get(top3_local[0][0] if top3_local else '', ''),
+            'growth_dimension': dim_names.get(bot3[0][0] if bot3 else '', '')
+        },
+        'tension_analysis': {
+            'score': tension_score,
+            'level': '高危' if tension_score >= 60 else '中危' if tension_score >= 30 else '低危',
+            'items': tensions[:4],
+            'summary': f'检测到{len(tensions)}项核心张力，综合张力指数{tension_score}%，{"建议优先解决最高张力项" if tensions else "能力分布相对均衡"}'
+        },
+        'defect_reshaping': {
+            'areas': defects,
+            'top_priority': defects[0] if defects else None,
+            'action_plan': f'90天行动计划：从{dim_names.get(bot3[0][0],'') if bot3 else "综合"}维度切入，'
+                           f'每30天完成1次能力里程碑自检，90天后复盘提升幅度。'
+        },
+        'conclusion': conclusion
+    }
+
+
 # ============ 8D 48题新增路由 ============
 
 @app.route('/api/quiz/submit_48', methods=['POST'])
 def submit_48():
-    """提交48题8维测评（无需Token，任何人可直接访问）"""
+    """提交48题8维测评，同时触发人格画像+张力分析+缺陷重塑报告引擎"""
     try:
         data = request.get_json()
         if not data or 'answers' not in data:
@@ -1094,7 +1440,16 @@ def submit_48():
             result_id = c.lastrowid
             conn.commit()
 
-        return jsonify({'success': True, 'result_id': result_id, 'scores': scores})
+        # ── 自动触发人格画像 + 张力分析 + 缺陷重塑引擎 ──
+        analysis = generate_personality_analysis(scores)
+
+        return jsonify({
+            'success': True,
+            'result_id': result_id,
+            'scores': scores,
+            # ── 人格画像 + 张力分析 + 缺陷重塑报告 ──
+            'personality_report': analysis
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2686,6 +3041,231 @@ def generate_pdf_48_v4(result_id, scores, user_name, experience, font_name='Helv
             ('SPAN', (0,1), (1,1)),
         ]))
         story.append(ct); story.append(Spacer(1, 5))
+
+    story.append(PageBreak())
+
+    # ─── 人格画像报告 ───
+    analysis = generate_personality_analysis(scores)
+    profile = analysis.get('profile', {})
+    tension  = analysis.get('tension_analysis', {})
+    defects  = analysis.get('defect_reshaping', {})
+
+    # 人格画像标题
+    story.append(Paragraph("人格画像报告", ps('PT', fontName=font_name+'-Bold',
+        fontSize=17, textColor=COLOR_PRIMARY, spaceAfter=6)))
+    story.append(Paragraph("Personality Profile & Behavioral Archetype Analysis",
+        ps('PS', fontName=font_name, fontSize=9,
+           textColor=COLOR_SECONDARY, spaceAfter=12)))
+    story.append(Spacer(1, 3*mm))
+
+    # 人格类型卡
+    type_color = COLOR_SECONDARY
+    type_bg   = colors.HexColor('#eff6ff')
+    type_card = Table([[
+        Paragraph(f"<b>{profile.get('type', '—')}</b>",
+                  ps('pc1', fontName=font_name+'-Bold', fontSize=22,
+                     textColor=type_color, alignment=TA_CENTER)),
+        Paragraph(f"<b>{profile.get('sub_type', '—')}</b><br/>"
+                  f"<font size=9 color='#{COLOR_TEXT_MID.hexval()[2:]}'>{profile.get('third_type', '')}</font>",
+                  ps('pc2', fontName=font_name+'-Bold', fontSize=13,
+                     textColor=COLOR_TEXT_DARK, alignment=TA_CENTER, leading=18)),
+        Paragraph(f"<b>{profile.get('overall_score', '—')}</b>/5.0<br/>"
+                  f"<font size=8 color='#{COLOR_TEXT_MID.hexval()[2:]}'>综合评分</font>",
+                  ps('pc3', fontName=font_name+'-Bold', fontSize=16,
+                     textColor=score_color(profile.get('overall_score', 0)),
+                     alignment=TA_CENTER, leading=18)),
+    ]], colWidths=[105, 175, 160])
+    type_card.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), type_bg),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 14), ('BOTTOMPADDING', (0,0), (-1,-1), 14),
+        ('LINEAFTER', (0,0), (1,0), 1, COLOR_BORDER),
+    ]))
+    story.append(type_card)
+    story.append(Spacer(1, 5*mm))
+
+    # 维度行为标签（8宫格）
+    dim_lbls = profile.get('dimension_labels', {})
+    tags_row1 = [
+        f"🤔 {dim_lbls.get('COG','—')} · {dim_lbls.get('TEC','—')} · {dim_lbls.get('COM','—')}",
+        f"🤝 {dim_lbls.get('SOC','—')} · {dim_lbls.get('MGT','—')} · {dim_lbls.get('LLA','—')}",
+    ]
+    tags_row2 = [
+        f"🎯 {dim_lbls.get('ORG','—')} · {dim_lbls.get('PRS','—')}",
+        f"综合优势：{profile.get('top_dimension','—')}  |  成长区：{profile.get('growth_dimension','—')}",
+    ]
+    dim_tbl = Table([
+        [Paragraph(tags_row1[0], ps('tb1', fontName=font_name, fontSize=9,
+                                    textColor=COLOR_TEXT_DARK)),
+         Paragraph(tags_row1[1], ps('tb2', fontName=font_name, fontSize=9,
+                                    textColor=COLOR_TEXT_DARK))],
+        [Paragraph(tags_row2[0], ps('tb3', fontName=font_name, fontSize=9,
+                                    textColor=COLOR_TEXT_DARK)),
+         Paragraph(tags_row2[1], ps('tb4', fontName=font_name, fontSize=9,
+                                    textColor=COLOR_TEXT_DARK))],
+    ], colWidths=[220, 220])
+    dim_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), COLOR_BG_LIGHT),
+        ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7),
+        ('LEFTPADDING', (0,0), (-1,-1), 10), ('RIGHTPADDING', (0,0), (-1,-1), 10),
+        ('LINEBELOW', (0,-1), (-1,-1), 0.5, COLOR_BORDER),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(dim_tbl)
+    story.append(Spacer(1, 5*mm))
+
+    # 行为特征
+    traits = profile.get('traits', [])
+    story.append(Paragraph("<b>行为特征</b>", ps('bfh', fontName=font_name+'-Bold',
+        fontSize=10, textColor=COLOR_PRIMARY, spaceAfter=5)))
+    for t in traits[:5]:
+        row = Table([[Paragraph(f"• {t}", ps('trow', fontName=font_name,
+            fontSize=9, textColor=COLOR_TEXT_DARK, leading=14))]],
+            colWidths=[440])
+        row.setStyle(TableStyle([
+            ('TOPPADDING', (0,0), (-1,-1), 3), ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(row)
+
+    story.append(PageBreak())
+
+    # ─── 张力分析报告 ───
+    t_items = tension.get('items', [])
+    t_level = tension.get('level', '低危')
+    t_score = tension.get('score', 0)
+
+    story.append(Paragraph("张力分析报告", ps('TT2', fontName=font_name+'-Bold',
+        fontSize=17, textColor=colors.HexColor('#7c3aed'), spaceAfter=6)))
+    story.append(Paragraph("Internal Tension & Conflict Pattern Analysis",
+        ps('TS', fontName=font_name, fontSize=9,
+           textColor=colors.HexColor('#8b5cf6'), spaceAfter=8)))
+
+    # 张力概览卡
+    level_colors = {'高危': colors.HexColor('#ef4444'), '中危': colors.HexColor('#f59e0b'), '低危': colors.HexColor('#10b981')}
+    lc = level_colors.get(t_level, colors.HexColor('#64748b'))
+    overview_card = Table([[
+        Paragraph(f"<b>{t_score}%</b>", ps('ovs', fontName=font_name+'-Bold',
+            fontSize=36, textColor=lc, alignment=TA_CENTER, leading=40)),
+        Table([
+            [Paragraph("<b>张力指数</b>", ps('ovh1', fontName=font_name+'-Bold',
+                fontSize=10, textColor=COLOR_TEXT_DARK)),
+             Paragraph("<b>张力等级</b>", ps('ovh2', fontName=font_name+'-Bold',
+                fontSize=10, textColor=COLOR_TEXT_DARK))],
+            [Paragraph(t_level, ps('ovv1', fontName=font_name+'-Bold',
+                fontSize=14, textColor=lc)),
+             Paragraph(f"<b>{len(t_items)}</b> 项核心张力",
+                ps('ovv2', fontName=font_name, fontSize=10, textColor=COLOR_TEXT_DARK))],
+        ], colWidths=[110, 150]),
+    ]], colWidths=[120, 260])
+    overview_card.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#faf5ff')),
+        ('ALIGN', (0,0), (0,0), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 12), ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+        ('LEFTPADDING', (0,0), (-1,-1), 15), ('LINEAFTER', (0,0), (0,0), 1, COLOR_BORDER),
+    ]))
+    story.append(overview_card)
+    story.append(Spacer(1, 5*mm))
+
+    # 各张力项
+    tension_colors_map = {
+        'tech-vs-social': colors.HexColor('#3b82f6'),
+        'social-vs-tech': colors.HexColor('#06b6d4'),
+        'plan-vs-execute': colors.HexColor('#8b5cf6'),
+        'solve-vs-plan': colors.HexColor('#ec4899'),
+        'social-vs-mgmt': colors.HexColor('#f59e0b'),
+        'mgmt-vs-social': colors.HexColor('#f97316'),
+        'tech-vs-stagnate': colors.HexColor('#ef4444'),
+        'learn-vs-apply': colors.HexColor('#84cc16'),
+        'express-vs-think': colors.HexColor('#06b6d4'),
+        'think-vs-express': colors.HexColor('#14b8a6'),
+        'solo-expert': colors.HexColor('#f43f5e'),
+        'drift-risk': colors.HexColor('#dc2626'),
+        'burnout-risk': colors.HexColor('#b91c1c'),
+    }
+    for i, t in enumerate(t_items):
+        tc = tension_colors_map.get(t.get('type', ''), COLOR_SECONDARY)
+        tcard = Table([
+            [Paragraph(f"<b>{i+1}. {t.get('headline', '')}</b>",
+                      ps(f't{i}a', fontName=font_name+'-Bold', fontSize=11,
+                         textColor=tc)),
+             Paragraph(f"<b>张力系数：{20 if i==0 else 15}%</b>",
+                      ps(f't{i}b', fontName=font_name+'-Bold', fontSize=9,
+                         textColor=tc, alignment=TA_RIGHT))],
+            [Paragraph(t.get('detail', ''),
+                      ps(f't{i}c', fontName=font_name, fontSize=9,
+                         textColor=COLOR_TEXT_DARK, leading=14)), ""],
+        ], colWidths=[360, 80])
+        tcard.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#faf5ff') if i%2==0 else colors.HexColor('#f5f3ff')),
+            ('TOPPADDING', (0,0), (-1,-1), 8), ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12),
+            ('LINEBELOW', (0,0), (-1,0), 1.5, tc),
+            ('SPAN', (0,1), (1,1)),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        story.append(tcard); story.append(Spacer(1, 4))
+
+    story.append(PageBreak())
+
+    # ─── 缺陷重塑报告 ───
+    story.append(Paragraph("缺陷重塑报告", ps('DR', fontName=font_name+'-Bold',
+        fontSize=17, textColor=colors.HexColor('#dc2626'), spaceAfter=6)))
+    story.append(Paragraph("Competency Gap & Targeted Development Plan",
+        ps('DS', fontName=font_name, fontSize=9,
+           textColor=colors.HexColor('#f87171'), spaceAfter=8)))
+
+    areas = defects.get('areas', [])
+    for i, area in enumerate(areas):
+        d_score = area.get('score', 0)
+        d_name  = area.get('name', '')
+        d_en    = area.get('en', '')
+        d_sign  = area.get('sign', '')
+        d_action = area.get('action', '')
+        d_resource = area.get('resource', '')
+        priority_label = '🔴 最高优先级' if i == 0 else f'🟡 优先级 {i+1}'
+        dcard = Table([
+            [Paragraph(f"<b>{priority_label} · {d_name}</b> ({d_en})",
+                      ps(f'd{i}a', fontName=font_name+'-Bold', fontSize=11,
+                         textColor=colors.HexColor('#dc2626'))),
+             Paragraph(f"<b>{d_score:.1f}</b>/5.0",
+                      ps(f'd{i}b', fontName=font_name+'-Bold', fontSize=13,
+                         textColor=colors.HexColor('#dc2626'), alignment=TA_RIGHT))],
+            [Paragraph(f"<b>⚠️ {d_sign}</b>",
+                      ps(f'd{i}c', fontName=font_name+'-Bold', fontSize=9,
+                         textColor=COLOR_TEXT_DARK, leading=13)), ""],
+            [Paragraph(f"<b>✅ 行动方案：</b>{d_action}",
+                      ps(f'd{i}d', fontName=font_name, fontSize=9,
+                         textColor=COLOR_TEXT_DARK, leading=13)), ""],
+            [Paragraph(f"<b>📚 推荐资源：</b>{d_resource}",
+                      ps(f'd{i}e', fontName=font_name, fontSize=9,
+                         textColor=COLOR_TEXT_MID, leading=13)), ""],
+        ], colWidths=[370, 70])
+        dcard.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#fff5f5') if i==0 else colors.HexColor('#fef2f2')),
+            ('TOPPADDING', (0,0), (-1,-1), 8), ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12),
+            ('LINEBELOW', (0,0), (-1,0), 2, colors.HexColor('#dc2626')),
+            ('SPAN', (0,1), (1,1)), ('SPAN', (0,2), (1,2)), ('SPAN', (0,3), (1,3)),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        story.append(dcard); story.append(Spacer(1, 5))
+
+    # 综合结论
+    conclusion = analysis.get('conclusion', '')
+    if conclusion:
+        story.append(Spacer(1, 4*mm))
+        conc_tbl = Table([[Paragraph(f"<b>📌 综合发展建议：</b>{conclusion}",
+            ps('conc', fontName=font_name, fontSize=9,
+               textColor=COLOR_TEXT_DARK, leading=14))]],
+            colWidths=[440])
+        conc_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#eff6ff')),
+            ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12),
+        ]))
+        story.append(conc_tbl)
 
     story.append(PageBreak())
 
