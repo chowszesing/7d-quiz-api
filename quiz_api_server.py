@@ -1257,6 +1257,17 @@ def list_48():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============ 管理接口 ============
+@app.route('/api/admin/init_db', methods=['POST'])
+def admin_init_db():
+    """手动初始化数据库（创建所有表）"""
+    init_db()
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [r[0] for r in c.fetchall()]
+    return jsonify({'success': True, 'tables': tables, 'message': '数据库初始化完成'})
+
 # ============ 主函数 ============
 if __name__ == '__main__':
     init_db()
