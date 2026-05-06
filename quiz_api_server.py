@@ -821,6 +821,87 @@ def calculate_scores_48(answers):
         scores[dim] = {'name': cfg['name'], 'average': round(avg, 2), 'level': get_level(avg)}
     return scores
 
+
+def calculate_sub_scores_48(answers):
+    """
+    计算24项子能力分数：每维度3项子能力，每项2题
+    子能力映射：
+      - 维度内Q1-2 → 子能力1
+      - 维度内Q3-4 → 子能力2
+      - 维度内Q5-6 → 子能力3
+    返回: [(dim, sub_idx, sub_name, score, level), ...] 按分数升序排列
+    """
+    normalized = {}
+    for k, v in answers.items():
+        try:
+            normalized[int(k)] = int(v)
+        except (ValueError, TypeError):
+            continue
+
+    # 子能力定义：(维度, 子能力索引0-2, 名称)
+    sub_competencies = {
+        # COG - 认知能力
+        ('COG', 0): ('资讯提炼', '快速从复杂信息中提取关键重点'),
+        ('COG', 1): ('逻辑推理', '理性分析矛盾资讯，发现论证漏洞'),
+        ('COG', 2): ('快速学习', '短时间内掌握全新技术领域'),
+        # TEC - 技术掌握
+        ('TEC', 0): ('数字生产力', '有效运用AI工具和数据分析工具'),
+        ('TEC', 1): ('技术适应力', '面对新技术能快速上手'),
+        ('TEC', 2): ('故障排查', '能自主排查技术问题根本原因'),
+        # COM - 理解表达
+        ('COM', 0): ('解码能力', '准确理解对方言辞背后的真正意图'),
+        ('COM', 1): ('精炼表达', '用简洁清晰的语言表达复杂概念'),
+        ('COM', 2): ('口头影响力', '在公开发言中有效吸引听众注意力'),
+        # SOC - 社交技能
+        ('SOC', 0): ('情绪觉察', '敏锐感知他人情绪的细微变化'),
+        ('SOC', 1): ('冲突协调', '在团队分歧中促进各方达成共识'),
+        ('SOC', 2): ('关系建立', '与不同背景的人建立信任'),
+        # ORG - 策划执行
+        ('ORG', 0): ('目标规划', '将模糊目标拆解为清晰可衡量步骤'),
+        ('ORG', 1): ('自主执行', '无外部监督时仍维持高标准'),
+        ('ORG', 2): ('资源管理', '合理分配时间、人力、预算等资源'),
+        # PRS - 解决问题
+        ('PRS', 0): ('应变能力', '原方案失败时迅速产出替代方案'),
+        ('PRS', 1): ('根源分析', '用结构化方法深挖问题根本原因'),
+        ('PRS', 2): ('创新方案', '无既有SOP时自行设计有效解决方案'),
+        # MGT - 管理技能
+        ('MGT', 0): ('预期管理', '有效管理上下级对结果的期望'),
+        ('MGT', 1): ('优先级取舍', '准确判断轻重缓急，敢于拒绝干扰'),
+        ('MGT', 2): ('授权追踪', '有效分配任务并建立跟进机制'),
+        # LLA - 持续学习
+        ('LLA', 0): ('知识更新', '保持定期阅读行业书刊、参加课程'),
+        ('LLA', 1): ('主动探索', '跨界探索本职以外的新领域'),
+        ('LLA', 2): ('挫折转化', '将负面反馈转化为改进养分'),
+    }
+
+    # 维度基础题号
+    dim_base = {
+        'COG': 1, 'TEC': 7, 'COM': 13, 'SOC': 19,
+        'ORG': 25, 'PRS': 31, 'MGT': 37, 'LLA': 43
+    }
+
+    results = []
+    for dim, base in dim_base.items():
+        for sub_idx in range(3):
+            # 子能力对应题目：Q(base+sub_idx*2) 和 Q(base+sub_idx*2+1)
+            q1 = base + sub_idx * 2
+            q2 = q1 + 1
+            score = (normalized.get(q1, 0) + normalized.get(q2, 0)) / 2
+            key = (dim, sub_idx)
+            sub_name, sub_desc = sub_competencies.get(key, (f'子能力{sub_idx+1}', ''))
+            results.append({
+                'dim': dim,
+                'sub_idx': sub_idx,
+                'name': sub_name,
+                'desc': sub_desc,
+                'score': round(score, 2),
+                'level': get_level_label(score)
+            })
+
+    # 按分数升序排列（最弱的在前面）
+    results.sort(key=lambda x: x['score'])
+    return results
+
 def get_level(score):
     if score >= 4.0: return '优秀'
     elif score >= 3.0: return '良好'
@@ -2051,69 +2132,143 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
 
     story.append(Spacer(1, 3*mm))
 
-    # ========== P6：总结与行动 Top 5 ==========
+    # ========== P6：总结与行动（基于弱项子能力） ==========
     story.append(PageBreak())
     story.append(Paragraph('总结与优先行动', styles['V2Section']))
 
-    top5_data = [
-        ['优先级', '维度', '推荐工具/方法', '预期收益'],
-    ]
-    top5_rows = [
-        ('P0', sort_scores[-3:][2], '逻辑树 + 5 Whys追问法', '缩短Plan B产出时间'),
-        ('P1', sort_scores[-3:][1], 'Check-back法则（任务复述确认）', '减少返工，提升交付准确率'),
-        ('P2', sort_scores[-3:][0], '番茄工作法 + 内部截点设定', '提升无监督产出效率'),
-        ('P3', sort_scores[3], '电梯演讲练习（30秒说清观点）', '增强会议主导力'),
-        ('持续', sort_scores[0], '成长反馈卡模板（批评→教训→行动）', '加速职场成熟度'),
-    ]
-    for priority, (_, s), tool, benefit in top5_rows:
-        top5_data.append([priority, s['name'], tool, benefit])
+    # 计算子能力分数（基于作答数据）
+    # answers_json 来自 report_engine_data.js
+    answers_for_subs = {}
+    if answers_json and isinstance(answers_json, dict):
+        for k, v in answers_json.items():
+            try:
+                answers_for_subs[int(k)] = int(v)
+            except (ValueError, TypeError):
+                pass
 
-    action_table = Table(top5_data, colWidths=[22*mm, 38*mm, 60*mm, 50*mm])
-    action_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), COLOR_EXCELLENT),
-        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_WHITE),
-        ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-        ('ALIGN', (1, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('GRID', (0, 0), (-1, -1), 0.5, COLOR_GRID),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_WHITE, colors.HexColor('#f8fafc')]),
-        # 优先级颜色
-        ('TEXTCOLOR', (0, 1), (0, 1), COLOR_IMPROVE),
-        ('TEXTCOLOR', (0, 2), (0, 2), COLOR_IMPROVE),
-        ('TEXTCOLOR', (0, 3), (0, 3), COLOR_IMPROVE),
-        ('TEXTCOLOR', (0, 4), (0, 4), COLOR_GOOD),
-        ('TEXTCOLOR', (0, 5), (0, 5), COLOR_EXCELLENT),
-    ]))
-    story.append(action_table)
-    story.append(Spacer(1, 5*mm))
+    # 子能力 → 提升建议映射
+    SUB_IMPROVEMENT = {
+        # COG
+        ('COG', '资讯提炼'): ('信息降噪训练', '每天用3句话总结一篇长文；建立"一句话核心"习惯'),
+        ('COG', '逻辑推理'): ('结构化思维', '练习MECE原则分类；用逻辑树拆解复杂问题'),
+        ('COG', '快速学习'): ('快速入门法', '用"20小时学习法"：拆解最小技能单元 → 针对性练习'),
+        # TEC
+        ('TEC', '数字生产力'): ('AI工具深度使用', '每周解锁1个AI新功能；建立个人工具提示词库'),
+        ('TEC', '技术适应力'): ('技术适应计划', '每季度学习1个新技术；用side project巩固'),
+        ('TEC', '故障排查'): ('系统排查法', '练习"排除法"：记录每次问题的解决路径'),
+        # COM
+        ('COM', '解码能力'): ('反向确认训练', '接受任务时复述对方意图；练习"你说的是...对吗？"'),
+        ('COM', '精炼表达'): ('电梯演讲练习', '30秒说清一个复杂观点；写完报告后用3句话概括'),
+        ('COM', '口头影响力'): ('汇报刻意练习', '每次汇报后记录"听众记住了什么"并复盘'),
+        # SOC
+        ('SOC', '情绪觉察'): ('情绪观察日记', '每天记录3次他人情绪变化；会议中观察非语言信号'),
+        ('SOC', '冲突协调'): ('冲突处理框架', '学习"非暴力沟通"四步法；练习先倾听再回应'),
+        ('SOC', '关系建立'): ('关系维护系统', '每月与1位非同事朋友深入交流；建立人脉备注'),
+        # ORG
+        ('ORG', '目标规划'): ('SMART目标法', '每任务用SMART原则拆解；设定比deadline早1天的内部节点'),
+        ('ORG', '自主执行'): ('番茄工作法', '25分钟专注+5分钟休息；用任务追踪表记录产出'),
+        ('ORG', '资源管理'): ('资源分配优化', '每周日规划TOP 3优先任务；设置时间块专注工作'),
+        # PRS
+        ('PRS', '应变能力'): ('Plan B训练', '每任务预设应急方案；练习"如果X失败，怎么做"'),
+        ('PRS', '根源分析'): ('5 Whys追问法', '遇到问题时连续追问5个为什么；用鱼骨图归类'),
+        ('PRS', '创新方案'): ('创意孵化习惯', '每天想3个"如果...会怎样"；建立创新灵感库'),
+        # MGT
+        ('MGT', '预期管理'): ('预期对齐四步', '接任务时复述理解；每周主动与上级对齐一次进度'),
+        ('MGT', '优先级取舍'): ('四象限法则', '每天用"重要/紧急"矩阵筛选TOP 3；敢于说不'),
+        ('MGT', '授权追踪'): ('委托四步法', '说目标→给资源→少干预→做复盘；建立周检视机制'),
+        # LLA
+        ('LLA', '知识更新'): ('知识输入系统', '每周精读1篇深度文章；建立标签化知识笔记库'),
+        ('LLA', '主动探索'): ('跨界探索计划', '每月尝试1个非本职领域；用好奇心驱动学习'),
+        ('LLA', '挫折转化'): ('反馈转化训练', '把每次批评写成"事实→感受→教训→行动"复盘卡'),
+    }
 
-    # 评分说明
-    legend_data = [
-        ['分数区间', '等级', '含义'],
-        ['4.0 – 5.0', '优秀 / 良好+', '核心竞争优势，建议持续保持并发挥'],
-        ['3.0 – 3.9', '良好 / 中等', '稳健基石，可作为职业发展的支撑能力'],
-        ['< 3.0', '待提升', '高增长潜力领域，优先投入资源进行突破'],
-    ]
-    legend_table = Table(legend_data, colWidths=[40*mm, 40*mm, 80*mm])
-    legend_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f1f5f9')),
-        ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 8.5),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('GRID', (0, 0), (-1, -1), 0.5, COLOR_GRID),
-        ('TEXTCOLOR', (0, 1), (1, 1), COLOR_EXCELLENT),
-        ('TEXTCOLOR', (0, 2), (1, 2), COLOR_GOOD),
-        ('TEXTCOLOR', (0, 3), (1, 3), COLOR_IMPROVE),
+    # 计算子能力分数
+    dim_base = {'COG': 1, 'TEC': 7, 'COM': 13, 'SOC': 19, 'ORG': 25, 'PRS': 31, 'MGT': 37, 'LLA': 43}
+    dim_names = {'COG': '认知能力', 'TEC': '技术掌握', 'COM': '理解表达', 'SOC': '社交技能',
+                 'ORG': '策划执行', 'PRS': '解决问题', 'MGT': '管理技能', 'LLA': '持续学习'}
+
+    sub_scores = []
+    for dim, base in dim_base.items():
+        for sub_idx in range(3):
+            sub_names_map = {
+                0: ('资讯提炼', '逻辑推理', '快速学习', '数字生产力', '技术适应力', '故障排查',
+                    '解码能力', '精炼表达', '口头影响力', '情绪觉察', '冲突协调', '关系建立',
+                    '目标规划', '自主执行', '资源管理', '应变能力', '根源分析', '创新方案',
+                    '预期管理', '优先级取舍', '授权追踪', '知识更新', '主动探索', '挫折转化'),
+            }
+            q1 = base + sub_idx * 2
+            q2 = q1 + 1
+            score = (answers_for_subs.get(q1, 0) + answers_for_subs.get(q2, 0)) / 2
+
+            # 获取子能力名称
+            all_subs = ['资讯提炼', '逻辑推理', '快速学习', '数字生产力', '技术适应力', '故障排查',
+                       '解码能力', '精炼表达', '口头影响力', '情绪觉察', '冲突协调', '关系建立',
+                       '目标规划', '自主执行', '资源管理', '应变能力', '根源分析', '创新方案',
+                       '预期管理', '优先级取舍', '授权追踪', '知识更新', '主动探索', '挫折转化']
+            dim_order = ['COG', 'TEC', 'COM', 'SOC', 'ORG', 'PRS', 'MGT', 'LLA']
+            sub_idx_global = dim_order.index(dim) * 3 + sub_idx
+            sub_name = all_subs[sub_idx_global] if sub_idx_global < len(all_subs) else f'子能力{sub_idx+1}'
+
+            sub_scores.append({
+                'dim': dim,
+                'dim_name': dim_names[dim],
+                'name': sub_name,
+                'score': round(score, 2)
+            })
+
+    # 按分数升序，取最弱的6项
+    sub_scores.sort(key=lambda x: x['score'])
+    weakest_subs = sub_scores[:6]
+
+    # 生成优先行动卡片
+    action_cards = []
+    for idx, sub in enumerate(weakest_subs):
+        key = (sub['dim'], sub['name'])
+        tool_name, action_desc = SUB_IMPROVEMENT.get(key, ('刻意练习', '建议进行针对性训练'))
+
+        score_color = get_score_color(sub['score'])
+        score_hex = '#ea580c' if sub['score'] < 2.5 else ('#f59e0b' if sub['score'] < 3.0 else '#64748b')
+
+        card = [
+            Paragraph(f'<b>P{idx}</b> <font color="{score_hex}">{sub["score"]:.1f}分</font>',
+                     styles['V2CardTitle']),
+            Paragraph(f'<b>{sub["name"]}</b> <font color="#64748b" size="8">（{sub["dim_name"]}）</font>',
+                     styles['V2Muted']),
+            Spacer(1, 1*mm),
+            Paragraph(f'<b>方法</b>：{tool_name}', styles['V2Text']),
+            Paragraph(f'<b>行动</b>：{action_desc}', styles['V2Text']),
+        ]
+        action_cards.append(card)
+
+    # 2列3行布局
+    card_rows = []
+    for i in range(0, len(action_cards), 2):
+        row = []
+        for j in range(2):
+            if i + j < len(action_cards):
+                row.append(make_card(action_cards[i + j], COLOR_BG_BOT))
+            else:
+                row.append(Spacer(1, 1))
+        card_rows.append(row)
+
+    cards_table = Table(card_rows, colWidths=[82*mm, 82*mm])
+    cards_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
     ]))
-    story.append(legend_table)
-    story.append(Spacer(1, 5*mm))
+    story.append(cards_table)
+
+    # 90天行动计划提示
+    story.append(Spacer(1, 4*mm))
+    weakest_dim = weakest_subs[0]['dim'] if weakest_subs else None
+    plan_text = f'💡 <b>90天行动计划建议</b>：从"<b>{weakest_subs[0]["name"]}</b>"切入，每30天完成1次自检并记录进步幅度。'
+    story.append(Paragraph(plan_text, styles['V2Muted']))
+
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story)
+
+    # ========== P7-P8: 子能力细分详解（24项） ==========
 
     # ========== 免责声明 ==========
     story.append(Paragraph(
