@@ -1,32 +1,19 @@
 # Render Blueprint - 8维能力测评一体化服务 (48题版)
-# 部署：连接GitHub仓库 → Render自动检测 → Deploy
-
-
+# 字体持久化：fonts/NotoSansSC-Regular.otf 提交到 GitHub，构建时直接可用
 services:
   - type: web
     name: 7d-quiz-api
     env: python
-    region: singapore  # 离香港最近
+    region: singapore
     buildCommand: |
-      # 安装多个字体包以确保覆盖
-      apt-get update && apt-get install -y \
-        fonts-wqy-microhei \
-        fonts-wqy-zenhei \
-        fonts-noto-cjk \
-        fonts-noto-cjk-extra \
-        fontconfig \
-        && fc-cache -fv
-      # 列出已安装的字体（调试用）
-      fc-list :lang=zh | head -20
+      fc-cache -fv 2>/dev/null || true
       pip install -r requirements.txt
-    startCommand: gunicorn quiz_api_server:app -b 0.0.0.0:$PORT -w 1 --timeout 120
+    startCommand: |
+      fc-cache -fv 2>/dev/null || true
+      gunicorn quiz_api_server:app -b 0.0.0.0:$PORT -w 1 --timeout 120
     healthCheckPath: /api/health
-
-    # 免费版设置
     plan: free
     autoDeploy: true
-
-    # 环境变量
     envVars:
       - key: DATABASE
         value: quiz_results.db

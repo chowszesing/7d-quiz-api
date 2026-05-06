@@ -214,14 +214,304 @@
             border-left: 4px solid #f59e0b; line-height: 1.5;
         }
 
-        .footer { text-align: center; padding: 20px; font-size: 12px; color: var(--gray-400); margin-top: 20px; }
-        .footer a { color: var(--gray-400); text-decoration: none; }
+        /* Loading spinner */
         .loading { text-align: center; padding: 60px 20px; }
         .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeInUp 0.5s ease-out; }
+
+        /* ========================================== */
+        /*  PRINT-TO-PDF STYLES — Hidden on screen    */
+        /* ========================================== */
+        #printArea {
+            display: none;
+            width: 100%;
+            background: #ffffff;
+            font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans CN", sans-serif;
+        }
+        #printArea .print-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px 32px;
+            color: #1a1a1a;
+            font-size: 12pt;
+            line-height: 1.6;
+        }
+        #printArea .print-header {
+            border-bottom: 3px solid #1e3a8a;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+        #printArea .print-header h1 {
+            font-size: 22pt;
+            color: #1e3a8a;
+            margin: 0 0 4px;
+        }
+        #printArea .print-header .subtitle {
+            font-size: 10pt;
+            color: #666;
+        }
+        #printArea .print-section-title {
+            font-size: 13pt;
+            color: #1e3a8a;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 6px;
+            margin: 20px 0 10px;
+        }
+        #printArea .print-score-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        #printArea .print-score-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        #printArea .print-score-card .icon { font-size: 18pt; }
+        #printArea .print-score-card .dim-name { font-size: 9pt; color: #64748b; margin: 2px 0; }
+        #printArea .print-score-card .score { font-size: 16pt; font-weight: bold; }
+        #printArea .print-card-list { margin-bottom: 14px; }
+        #printArea .print-card {
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+        }
+        #printArea .print-card.strength { background: #f0fdf4; border-left-color: #10b981; }
+        #printArea .print-card.development { background: #fffbeb; border-left-color: #f59e0b; }
+        #printArea .print-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        #printArea .print-card-header .label { font-size: 12pt; font-weight: bold; }
+        #printArea .print-card-header .score { font-size: 11pt; font-weight: bold; padding: 1px 8px; border-radius: 12px; color: white; margin-left: auto; }
+        #printArea .print-card-desc { font-size: 10pt; color: #475569; margin-bottom: 4px; }
+        #printArea .print-card-traits { font-size: 10pt; color: #64748b; padding-left: 16px; margin: 0; }
+        #printArea .print-card-traits li { margin-bottom: 2px; }
+        #printArea .print-dev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        #printArea .print-dev-grid h4 { font-size: 9pt; color: #94a3b8; margin: 0 0 4px; }
+        #printArea .print-dev-grid ul { font-size: 10pt; color: #475569; margin: 0; padding-left: 14px; }
+        #printArea .print-dev-grid li { margin-bottom: 2px; }
+        #printArea .print-sub-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        #printArea .print-sub-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+        #printArea .print-sub-item .name { font-size: 10pt; font-weight: bold; color: #1e3a8a; margin-bottom: 2px; }
+        #printArea .print-sub-item .score { font-size: 14pt; font-weight: bold; }
+        #printArea .print-sub-item .desc { font-size: 8pt; color: #94a3b8; margin-top: 2px; line-height: 1.3; }
+        #printArea .print-action-item {
+            display: flex;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        #printArea .print-action-item .dot { font-size: 12pt; }
+        #printArea .print-action-item .title { font-size: 10pt; font-weight: bold; }
+        #printArea .print-action-item .action { font-size: 10pt; color: #64748b; }
+        #printArea .print-disclaimer {
+            margin-top: 20px;
+            padding: 10px 14px;
+            background: #fffbeb;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            font-size: 9pt;
+            color: #92400e;
+        }
+        #printArea .print-footer {
+            margin-top: 24px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 9pt;
+            color: #94a3b8;
+        }
+        #printArea .page-break { page-break-before: always; }
+        #printArea .strength .score { background: #059669; }
+        #printArea .development .score { background: #ea580c; }
+        #printArea .action-priority { background: #fffbeb; }
+        #printArea .action-maintain { background: #f0fdf4; }
+
+        /* Persona 人格画像卡 */
+        .persona-card {
+            background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 10px 0 20px;
+            border: 2px solid #c7d2fe;
+            text-align: center;
+        }
+        .persona-card .persona-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+        }
+        .persona-card .persona-metaphor {
+            font-size: 15px;
+            color: #4338ca;
+            margin-bottom: 10px;
+        }
+        .persona-card .persona-meta {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #3730a3;
+        }
+        .persona-card .persona-meta span {
+            background: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: 1px solid #c7d2fe;
+        }
+
+        /* 张力分析卡 */
+        .tension-card {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border-radius: 14px;
+            padding: 18px;
+            margin: 12px 0;
+            border-left: 4px solid #ef4444;
+        }
+        .tension-card .tension-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .tension-card .tension-header .dim-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            color: white;
+        }
+        .tension-card .tension-header .vs { font-size: 12px; color: #94a3b8; font-weight: 600; }
+        .tension-card .tension-conflict {
+            font-size: 14px;
+            color: #7f1d1d;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 10px;
+        }
+        .tension-card .tension-scenario-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #991b1b;
+            margin-bottom: 4px;
+        }
+        .tension-card .tension-inner-os {
+            font-size: 12px;
+            color: #92400e;
+            background: #fffbeb;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 6px 0;
+            font-style: italic;
+        }
+        .tension-card .tension-analysis {
+            font-size: 12px;
+            color: #7f1d1d;
+            line-height: 1.5;
+        }
+        .tension-card .tension-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .tension-card .tension-landmine {
+            flex: 1;
+            background: #fef2f2;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+        .tension-card .tension-landmine .label { color: #dc2626; font-weight: 700; }
+        .tension-card .tension-prevention {
+            flex: 1;
+            background: #f0fdf4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+        .tension-card .tension-prevention .label { color: #16a34a; font-weight: 700; }
+
+        /* 寄语卡 */
+        .closing-card {
+            margin-top: 20px;
+            padding: 18px;
+            border-radius: 14px;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .closing-card.tone-celebrate { background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #065f46; }
+        .closing-card.tone-encourage { background: linear-gradient(135deg, #eef2ff, #dbeafe); color: #1e40af; }
+        .closing-card.tone-support { background: linear-gradient(135deg, #fffbeb, #fef3c7); color: #92400e; }
+
+        /* ========================================== */
+        /*  @media print — hide screen UI completely  */
+        /* ========================================== */
+        @media print {
+            @page {
+                size: A4;
+                margin: 15mm 15mm 15mm 15mm;
+            }
+            html, body {
+                background: #ffffff !important;
+                color: #000 !important;
+                font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans CN", sans-serif !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            /* Hide all screen elements */
+            .hero-bg, .city-silhouette, .main-container, .logo-section,
+            #infoSection, #quizSection, .footer,
+            #resultSection > .result-header,
+            #resultSection .result-header h2,
+            #resultSection .result-header p,
+            #resultSection .result-header button,
+            #resultSection .result-badges,
+            #resultSection .score-grid,
+            #resultSection .report-section > h3,
+            #resultSection .strength-card,
+            #resultSection .dev-card,
+            #resultSection .insight-block,
+            #resultSection .action-item,
+            #resultSection .disclaimer {
+                display: none !important;
+            }
+            /* Show print area */
+            #printArea, #printArea * {
+                display: block !important;
+            }
+            #printArea {
+                display: block !important;
+            }
+        }
     </style>
+
+    <!-- 报告引擎：人格画像 + 张力分析 + 重塑数据 -->
+    <script src="report_engine_data.js"></script>
+    <script src="report_engine.js"></script>
 </head>
 <body>
     <div class="hero-bg"><div class="city-silhouette"></div></div>
@@ -511,52 +801,62 @@
             return { label: '需加强', badge: 'badge-low' };
         }
 
-        function renderResult(scores, name, exp, ind) {
+                function renderResult(scores, name, exp, ind) {
             const title = `${name}${ind ? ' | '+ind : ''}${exp ? ' | '+exp : ''}`;
             document.getElementById('resultTitle').textContent = title;
 
             const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
 
-            // Compute summary stats
             const avgAll = dimOrder.reduce((s, d) => s + scores[d].average, 0) / 8;
             const sorted = dimOrder.map(d => ({ dim: d, score: scores[d].average })).sort((a,b) => b.score - a.score);
             const top3 = sorted.slice(0, 3);
             const bot3 = sorted.slice(-3).reverse();
+            const highDim = sorted[0].dim;
+            const lowDim = sorted[sorted.length-1].dim;
 
-            const getLevelInfo = (score) => {
-                if (score >= 4.0) return { label: '优秀', badge: 'result-badge high', color: '#059669' };
-                if (score >= 3.0) return { label: '良好', badge: 'result-badge mid', color: '#2563eb' };
-                return { label: '待提升', badge: 'result-badge low', color: '#ea580c' };
-            };
-            const getScoreColor = (s) => s >= 4.0 ? '#059669' : s >= 3.0 ? '#2563eb' : '#ea580c';
+            const persona = ReportEngine.matchPersona(scores);
+            const tension = ReportEngine.getTension(highDim, lowDim);
+            const closing = ReportEngine.getClosing(avgAll);
+
+            const getScoreColor = (s) => ReportEngine.getScoreColor(s);
+            const getLevelInfo = (s) => ReportEngine.getLevelInfo(s);
 
             let html = '';
 
-            // ========== 概览：成绩卡网格 ==========
+            // overview badges
             html += '<div class="result-badges">' +
-                `<span class="result-badge" style="background:#eef2ff;color:#1e3a8a">综合评估 ${avgAll.toFixed(1)}</span>` +
-                `<span class="result-badge high">最高 ${sorted[0].dim} ${sorted[0].score.toFixed(1)}</span>` +
-                (sorted[sorted.length-1].score < 3.0 ? `<span class="result-badge low">关注 ${sorted[sorted.length-1].dim} ${sorted[sorted.length-1].score.toFixed(1)}</span>` : '') +
+                '<span class="result-badge" style="background:#eef2ff;color:#1e3a8a">综合评估 ' + avgAll.toFixed(1) + '</span>' +
+                '<span class="result-badge high">最高 ' + DIM_INFO[sorted[0].dim].name + ' ' + sorted[0].score.toFixed(1) + '</span>' +
+                (sorted[sorted.length-1].score < 3.0 ? '<span class="result-badge low">关注 ' + DIM_INFO[sorted[sorted.length-1].dim].name + ' ' + sorted[sorted.length-1].score.toFixed(1) + '</span>' : '') +
             '</div>';
 
-            // Score grid (2-column cards)
+            // Persona card
+            html += '<div class="persona-card fade-in">';
+            html += '<div class="persona-name">' + persona.name + '</div>';
+            html += '<div class="persona-metaphor">' + persona.metaphor + '</div>';
+            html += '<div class="persona-meta">';
+            html += '<span>核心驱动：' + persona.coreDrive + '</span>';
+            html += '<span>成功的定义：' + persona.successDef + '</span>';
+            html += '</div></div>';
+
+            // Score grid
             html += '<div class="score-grid">';
             for (const dim of dimOrder) {
                 const s = scores[dim];
                 const info = DIM_INFO[dim];
                 const level = getLevelInfo(s.average);
                 const pct = (s.average / 5 * 100).toFixed(0);
-                html += `<div class="score-card">
-                    <div class="icon">${info.icon}</div>
-                    <div class="dim-name">${info.name}</div>
-                    <div class="dim-score" style="color:${getScoreColor(s.average)}">${s.average.toFixed(1)}</div>
-                    <div class="dim-level"><span class="${level.badge}">${level.label}</span></div>
-                    <div class="mini-bar" style="width:${pct}%;background:${getScoreColor(s.average)}"></div>
-                </div>`;
+                html += '<div class="score-card">' +
+                    '<div class="icon">' + info.icon + '</div>' +
+                    '<div class="dim-name">' + info.name + '</div>' +
+                    '<div class="dim-score" style="color:' + getScoreColor(s.average) + '">' + s.average.toFixed(1) + '</div>' +
+                    '<div class="dim-level"><span class="' + level.badge + '">' + level.label + '</span></div>' +
+                    '<div class="mini-bar" style="width:' + pct + '%;background:' + getScoreColor(s.average) + '"></div>' +
+                '</div>';
             }
             html += '</div>';
 
-            // ========== 核心优势 ==========
+            // TOP 3 Strengths
             const advantageDesc = {
                 COG: { desc: '你拥有出色的认知加工能力，能够高效处理复杂信息并形成清晰判断。', traits: ['面对大量信息能快速提炼核心', '逻辑推理严谨，能发现论证漏洞', '学习新领域速度快于常人'] },
                 TEC: { desc: '你具备较强的技术适应力，乐于拥抱新工具并能独立解决技术问题。', traits: ['AI和数据工具运用自如', '面对新技术能快速上手', '遇到问题能自主排查解决'] },
@@ -568,102 +868,125 @@
                 LLA: { desc: '你保持持续成长的学习姿态，主动拓展知识边界并能从挫折中提炼教训。', traits: ['定期阅读行业书刊、参加课程', '主动探索本职以外的领域', '能将批评和失败转化为成长养分'] }
             };
 
-            html += '<div class="report-section"><h3>✅ 核心优势 TOP 3</h3>';
+            html += '<div class="report-section"><h3>核心优势 TOP 3</h3>';
             for (const item of top3) {
                 const info = DIM_INFO[item.dim];
                 const ad = advantageDesc[item.dim];
                 const scoreColor = getScoreColor(item.score);
-                html += `<div class="strength-card fade-in">
-                    <div class="card-header">
-                        <span class="dim-icon">${info.icon}</span>
-                        <span class="dim-label" style="color:${info.color}">${info.name}</span>
-                        <span class="score-tag" style="background:${scoreColor}">${item.score.toFixed(1)}分</span>
-                    </div>
-                    <div class="card-desc">${ad.desc}</div>
-                    <ul class="card-traits">${ad.traits.map(t => `<li>${t}</li>`).join('')}</ul>
-                </div>`;
+                html += '<div class="strength-card fade-in">' +
+                    '<div class="card-header">' +
+                        '<span class="dim-icon">' + info.icon + '</span>' +
+                        '<span class="dim-label" style="color:' + info.color + '">' + info.name + '</span>' +
+                        '<span class="score-tag" style="background:' + scoreColor + '">' + item.score.toFixed(1) + '分</span>' +
+                    '</div>' +
+                    '<div class="card-desc">' + ad.desc + '</div>' +
+                    '<ul class="card-traits">' + ad.traits.map(function(t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' +
+                '</div>';
             }
             html += '</div>';
 
-            // ========== 发展空间 ==========
+            // Tension analysis
+            if (tension) {
+                html += '<div class="report-section"><h3>维度张力分析</h3>';
+                html += '<div class="tension-card fade-in">';
+                html += '<div class="tension-header">' +
+                    '<span class="dim-badge" style="background:' + DIM_INFO[highDim].color + '">' + DIM_INFO[highDim].icon + ' ' + DIM_INFO[highDim].name + ' (' + sorted[0].score.toFixed(1) + ')</span>' +
+                    '<span class="vs">VS</span>' +
+                    '<span class="dim-badge" style="background:' + DIM_INFO[lowDim].color + '">' + DIM_INFO[lowDim].icon + ' ' + DIM_INFO[lowDim].name + ' (' + sorted[sorted.length-1].score.toFixed(1) + ')</span>' +
+                '</div>';
+                html += '<div class="tension-conflict">' + tension.conflict + '</div>';
+                html += '<div class="tension-scenario-title">真实职场场景：' + tension.scenario.title + '</div>';
+                html += '<div class="tension-inner-os">内心独白：' + tension.scenario.innerOS + '</div>';
+                html += '<div class="tension-analysis">' + tension.scenario.analysis + '</div>';
+                html += '<div class="tension-footer">' +
+                    '<div class="tension-landmine"><span class="label">隐藏地雷：</span>' + tension.landmine + '</div>' +
+                    '<div class="tension-prevention"><span class="label">预防建议：</span>' + tension.prevention + '</div>' +
+                '</div></div></div>';
+            }
+
+            // Development areas with reframe
             const developmentDesc = {
-                COG: { desc: '认知能力提升后，你在信息密集型岗位上将更具竞争力。', signs: ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'], actions: ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点'] },
-                TEC: { desc: '技术能力补强后，你将更自信地应对数字化工作环境。', signs: ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'], actions: ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧'] },
-                COM: { desc: '表达能力精进后，你在跨部门协作和汇报场景中将更游刃有余。', signs: ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'], actions: ['练习"电梯演讲"：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会'] },
-                SOC: { desc: '社交敏锐度提升后，你在建立人脉网络和冲突处理上将更有优势。', signs: ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'], actions: ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次'] },
-                ORG: { desc: '策划执行能力强化后，你的项目交付质量和时效性将显著提升。', signs: ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'], actions: ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点'] },
-                PRS: { desc: '解决问题能力提升后，你将成为团队中不可替代的关键人物。', signs: ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'], actions: ['遇到问题先连续问5个"为什么"', '练习写"问题分析备忘录"', '每解决一个问题，总结提炼成可复用的方法论'] },
-                MGT: { desc: '管理技能精进后，你将更适合承担需要协调多方资源的复杂项目。', signs: ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'], actions: ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习"委托四步法"'] },
-                LLA: { desc: '持续学习能力强化后，你的职业成长速度将显著快于同龄人。', signs: ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'], actions: ['设定每月读完1本专业书籍的目标', '建立个人知识库', '把每次批评写成"成长反馈卡"'] }
+                COG: { signs: ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'], actions: ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点'] },
+                TEC: { signs: ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'], actions: ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧'] },
+                COM: { signs: ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'], actions: ['练习电梯演讲：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会'] },
+                SOC: { signs: ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'], actions: ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次'] },
+                ORG: { signs: ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'], actions: ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点'] },
+                PRS: { signs: ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'], actions: ['遇到问题先连续问5个为什么', '练习写问题分析备忘录', '每解决一个问题，总结提炼成可复用的方法论'] },
+                MGT: { signs: ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'], actions: ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习委托四步法'] },
+                LLA: { signs: ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'], actions: ['设定每月读完1本专业书籍的目标', '建立个人知识库', '把每次批评写成成长反馈卡'] }
             };
 
-            html += '<div class="report-section"><h3>📈 发展空间（最具成长潜力）</h3>';
+            html += '<div class="report-section"><h3>发展空间（最具成长潜力）</h3>';
             for (const item of bot3) {
                 const info = DIM_INFO[item.dim];
                 const dd = developmentDesc[item.dim];
                 const scoreColor = getScoreColor(item.score);
-                html += `<div class="dev-card fade-in">
-                    <div class="card-header">
-                        <span class="dim-icon">${info.icon}</span>
-                        <span class="dim-label" style="color:#b45309">${info.name}</span>
-                        <span class="score-tag" style="background:${scoreColor}">${item.score.toFixed(1)}分</span>
-                    </div>
-                    <div class="card-desc">${dd.desc}</div>
-                    <div class="dev-grid-2">
-                        <div><h4>🔍 常见表现</h4><ul>${dd.signs.map(t => `<li>${t}</li>`).join('')}</ul></div>
-                        <div><h4>🎯 行动建议</h4><ul>${dd.actions.map(t => `<li>${t}</li>`).join('')}</ul></div>
-                    </div>
-                </div>`;
+                const reframe = ReportEngine.getReframe(item.dim, item.score);
+                const reframeTitle = reframe ? reframe.title : (info.name + '提升方向');
+                const reframeDesc = reframe ? reframe.reframe : (info.name + '提升后，你的职场竞争力将显著增强。');
+                const workplaceTip = reframe ? '<div style="font-size:11px;color:#92400e;margin-top:6px">' + reframe.workplace + '</div>' : '';
+                html += '<div class="dev-card fade-in">' +
+                    '<div class="card-header">' +
+                        '<span class="dim-icon">' + info.icon + '</span>' +
+                        '<span class="dim-label" style="color:#b45309">' + reframeTitle + '</span>' +
+                        '<span class="score-tag" style="background:' + scoreColor + '">' + item.score.toFixed(1) + '分</span>' +
+                    '</div>' +
+                    '<div class="card-desc">' + reframeDesc + '</div>' +
+                    workplaceTip +
+                    '<div class="dev-grid-2">' +
+                        '<div><h4>常见表现</h4><ul>' + dd.signs.map(function(t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>' +
+                        '<div><h4>行动建议</h4><ul>' + dd.actions.map(function(t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>' +
+                    '</div>' +
+                '</div>';
             }
             html += '</div>';
 
-            // ========== 子能力细分 ==========
+            // Sub-abilities
             const subInfo = {
-                COG: [{name:'资讯提炼',desc:'从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。'},{name:'逻辑推理',desc:'面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。'},{name:'快速学习',desc:'在短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。'}],
-                TEC: [{name:'数字生产力',desc:'有效运用AI工具和数据分析工具提升个人和团队的工作效率。'},{name:'技术适应力',desc:'面对新技术或新系统能快速上手，适应变化的能力强于常人。'},{name:'故障排查',desc:'遇到技术问题时能自主排查根本原因，不依赖他人解决问题。'}],
-                COM: [{name:'解码能力',desc:'准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。'},{name:'精炼表达',desc:'用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。'},{name:'口头影响力',desc:'在公开发言和会议中能有效吸引听众注意力和影响决策。'}],
-                SOC: [{name:'情绪觉察',desc:'敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。'},{name:'冲突协调',desc:'在团队分歧和人际冲突中能促进各方达成共识，保持冷静。'},{name:'关系建立',desc:'与不同背景的人建立信任，维护长期人脉网络并保持有效联系。'}],
-                ORG: [{name:'目标规划',desc:'将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。'},{name:'自主执行',desc:'在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。'},{name:'资源管理',desc:'合理分配时间、人力、预算等资源，在有限条件下最大化产出。'}],
-                PRS: [{name:'应变能力',desc:'原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。'},{name:'根源分析',desc:'用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。'},{name:'创新方案',desc:'在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。'}],
-                MGT: [{name:'预期管理',desc:'有效管理上级和团队对任务结果的期望，避免目标与产出的落差。'},{name:'优先级取舍',desc:'多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。'},{name:'授权追踪',desc:'有效分配任务并建立跟进机制，信任团队不过度干预执行过程。'}],
-                LLA: [{name:'知识更新',desc:'保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。'},{name:'主动探索',desc:'跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。'},{name:'挫折转化',desc:'面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。'}]
+                COG: [{name:'资讯提炼',desc:'从大量复杂信息中快速提取关键重点。'},{name:'逻辑推理',desc:'理性分析发现论证漏洞，做出合理判断。'},{name:'快速学习',desc:'短时间内掌握全新技术领域，效率优于同侪。'}],
+                TEC: [{name:'数字生产力',desc:'有效运用AI和数据工具提升工作效率。'},{name:'技术适应力',desc:'面对新技术能快速上手，适应变化能力强。'},{name:'故障排查',desc:'自主排查根本原因，不依赖他人。'}],
+                COM: [{name:'解码能力',desc:'准确理解对方言辞背后的真正意图。'},{name:'精炼表达',desc:'用简洁语言表达复杂概念。'},{name:'口头影响力',desc:'公开发言能吸引听众并影响决策。'}],
+                SOC: [{name:'情绪觉察',desc:'敏锐感知他人情绪细微变化。'},{name:'冲突协调',desc:'在分歧中促进共识，保持冷静。'},{name:'关系建立',desc:'与不同背景的人建立信任，维护人脉。'}],
+                ORG: [{name:'目标规划',desc:'将模糊目标拆解为可衡量步骤。'},{name:'自主执行',desc:'无监督仍维持高标准，不拖延。'},{name:'资源管理',desc:'合理分配资源，最大化目标达成。'}],
+                PRS: [{name:'应变能力',desc:'原方案失败时迅速产出替代方案。'},{name:'根源分析',desc:'用结构化方法深挖根本原因。'},{name:'创新方案',desc:'无SOP时自创有效解决方案。'}],
+                MGT: [{name:'预期管理',desc:'管理上级和团队对结果的期望。'},{name:'优先级取舍',desc:'多任务并行时准确判断轻重缓急。'},{name:'授权追踪',desc:'有效分配任务并建立跟进机制。'}],
+                LLA: [{name:'知识更新',desc:'定期阅读行业书刊、参加课程。'},{name:'主动探索',desc:'跨界探索本职以外的新领域。'},{name:'挫折转化',desc:'批评和失败转化为成长养分。'}]
             };
 
-            html += '<div class="report-section"><h3>🔬 子能力细分详解</h3>';
+            html += '<div class="report-section"><h3>子能力细分详解</h3>';
             for (const dim of dimOrder) {
                 const info = DIM_INFO[dim];
                 const subs = subInfo[dim];
                 const s = scores[dim];
-                const dimQs = order.filter(q => q.dim === dim);
-                const subScores = subs.map((sub, idx) => {
+                const dimQs = order.filter(function(q) { return q.dim === dim; });
+                const subScores = subs.map(function(sub, idx) {
                     const items = dimQs.slice(idx*2, idx*2+2);
-                    const avg = items.reduce((sum, q) => sum + (answers[q.id] || 0), 0) / Math.max(items.length, 1);
-                    return { name: sub.name, desc: sub.desc, avg };
+                    const avg = items.reduce(function(sum, q) { return sum + (answers[q.id] || 0); }, 0) / Math.max(items.length, 1);
+                    return { name: sub.name, desc: sub.desc, avg: avg };
                 });
-                html += `<div class="insight-block">
-                    <div class="header-row">
-                        <span class="dim-label" style="color:${info.color}">${info.icon} ${info.name}</span>
-                        <span class="total-score" style="color:${getScoreColor(s.average)}">${s.average.toFixed(1)}</span>
-                    </div>
-                    <div class="sub-flex">`;
+                html += '<div class="insight-block">' +
+                    '<div class="header-row">' +
+                        '<span class="dim-label" style="color:' + info.color + '">' + info.icon + ' ' + info.name + '</span>' +
+                        '<span class="total-score" style="color:' + getScoreColor(s.average) + '">' + s.average.toFixed(1) + '</span>' +
+                    '</div><div class="sub-flex">';
                 for (const ss of subScores) {
                     const barColor = ss.avg >= 3.5 ? '#10b981' : ss.avg >= 2.5 ? '#f59e0b' : '#ef4444';
-                    html += `<div class="sub-item">
-                        <div class="name" style="color:${info.color}">${ss.name}</div>
-                        <div class="score" style="color:${barColor}">${ss.avg.toFixed(1)}</div>
-                        <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${(ss.avg/5*100).toFixed(0)}%;background:${barColor}"></div></div>
-                        <div class="desc">${ss.desc}</div>
-                    </div>`;
+                    html += '<div class="sub-item">' +
+                        '<div class="name" style="color:' + info.color + '">' + ss.name + '</div>' +
+                        '<div class="score" style="color:' + barColor + '">' + ss.avg.toFixed(1) + '</div>' +
+                        '<div class="mini-bar-bg"><div class="mini-bar-fill" style="width:' + (ss.avg/5*100).toFixed(0) + '%;background:' + barColor + '"></div></div>' +
+                        '<div class="desc">' + ss.desc + '</div>' +
+                    '</div>';
                 }
                 html += '</div></div>';
             }
             html += '</div>';
 
-            // ========== 总结与行动 ==========
-            html += '<div class="report-section"><h3>💡 总结与行动</h3>';
+            // Action plan
+            html += '<div class="report-section"><h3>总结与行动</h3>';
             html += '<p style="font-size:13px;color:var(--secondary);margin-bottom:10px">基于你的评测结果，建议按以下优先级采取行动：</p>';
             html += '<div style="display:grid;gap:6px">';
-            const actionOrder = [...bot3, ...top3.slice(0,2)];
+            const actionOrder = bot3.concat(top3.slice(0,2));
             for (let i = 0; i < actionOrder.length; i++) {
                 const item = actionOrder[i];
                 const info = DIM_INFO[item.dim];
@@ -673,18 +996,23 @@
                 const dot = isPriority ? '🔴' : '🟢';
                 const label = isPriority ? '优先提升' : '持续保持';
                 const action = isPriority ? (dd.actions[0] || '') : '继续在工作中发挥这项优势';
-                html += `<div class="action-item" style="background:${bgColor}">
-                    <span class="icon">${info.icon}</span>
-                    <div class="content">
-                        <div class="title" style="color:${isPriority ? '#b45309' : '#065f46'}">${dot} ${label} · ${info.name} (${item.score.toFixed(1)}分)</div>
-                        <div class="desc">${action}</div>
-                    </div>
-                </div>`;
+                html += '<div class="action-item" style="background:' + bgColor + '">' +
+                    '<span class="icon">' + info.icon + '</span>' +
+                    '<div class="content">' +
+                        '<div class="title" style="color:' + (isPriority ? '#b45309' : '#065f46') + '">' + dot + ' ' + label + ' · ' + info.name + ' (' + item.score.toFixed(1) + '分)</div>' +
+                        '<div class="desc">' + action + '</div>' +
+                    '</div>' +
+                '</div>';
             }
             html += '</div></div>';
 
-            // ========== 免责声明 ==========
-            html += '<div class="disclaimer">📌 本报告基于自评数据，仅供参考。自评可能受个人认知偏差影响，建议结合他人的客观反馈进行综合分析。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。</div>';
+            // Disclaimer
+            html += '<div class="disclaimer">本报告基于自评数据，仅供参考。自评可能受个人认知偏差影响，建议结合他人的客观反馈进行综合分析。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。</div>';
+
+            // Closing message
+            if (closing) {
+                html += '<div class="closing-card tone-' + closing.tone + '">' + closing.message + '</div>';
+            }
 
             document.getElementById('resultContent').innerHTML = html;
         }
@@ -703,9 +1031,223 @@
             console.warn('Local calculation mode — server unavailable');
         }
 
-        function downloadPDF() {
-            if (resultId) window.open('/api/quiz/report_48/' + resultId, '_blank');
-            else alert('暂无报告ID，请重新提交');
+        // ========== Print-to-PDF Engine ==========
+
+                function buildPrintContent(scores, name, exp, ind) {
+            const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
+            const avgAll = dimOrder.reduce((s, d) => s + scores[d].average, 0) / 8;
+            const sorted = dimOrder.map(d => ({ dim: d, score: scores[d].average })).sort((a,b) => b.score - a.score);
+            const top3 = sorted.slice(0, 3);
+            const bot3 = sorted.slice(-3).reverse();
+            const highDim = sorted[0].dim;
+            const lowDim = sorted[sorted.length-1].dim;
+            const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const persona = ReportEngine.matchPersona(scores);
+            const tension = ReportEngine.getTension(highDim, lowDim);
+            const closing = ReportEngine.getClosing(avgAll);
+            const getScoreColor = (s) => ReportEngine.getScoreColor(s);
+
+            const advantageDesc = {
+                COG: { desc: '你拥有出色的认知加工能力，能够高效处理复杂信息并形成清晰判断。', traits: ['面对大量信息能快速提炼核心', '逻辑推理严谨，能发现论证漏洞', '学习新领域速度快于常人'] },
+                TEC: { desc: '你具备较强的技术适应力，乐于拥抱新工具并能独立解决技术问题。', traits: ['AI和数据工具运用自如', '面对新技术能快速上手', '遇到问题能自主排查解决'] },
+                COM: { desc: '你擅长解读他人意图并有效表达自己，在沟通场景中具有影响力。', traits: ['能准确理解言外之意', '复杂概念能用简洁语言说清', '公开发言能影响团队决策'] },
+                SOC: { desc: '你对人际氛围高度敏感，善于在关系网络中建立信任与共识。', traits: ['能敏锐感知他人情绪变化', '擅长协调分歧、促进共识', '容易与不同背景的人建立信任'] },
+                ORG: { desc: '你具备从目标到落地的完整策划执行能力，能在无人监督下保持高标准。', traits: ['能将模糊目标拆解为可衡量步骤', '无人督促仍维持高产出', '善用资源最大化目标达成'] },
+                PRS: { desc: '你擅长在压力下快速找到创新解法，不被既有框架束缚。', traits: ['原方案失败能迅速提出Plan B', '用结构化方法深挖问题根源', '没有SOP时能自创有效方案'] },
+                MGT: { desc: '你具备项目与预期管理能力，能协调多方资源推动目标达成。', traits: ['能管理上下级的期望预期', '多任务并行时准确判断优先级', '能有效授权并建立跟进机制'] },
+                LLA: { desc: '你保持持续成长的学习姿态，主动拓展知识边界并能从挫折中提炼教训。', traits: ['定期阅读行业书刊、参加课程', '主动探索本职以外的领域', '能将批评和失败转化为成长养分'] }
+            };
+            const developmentDesc = {
+                COG: { signs: ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'], actions: ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点'] },
+                TEC: { signs: ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'], actions: ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧'] },
+                COM: { signs: ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'], actions: ['练习电梯演讲：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会'] },
+                SOC: { signs: ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'], actions: ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次'] },
+                ORG: { signs: ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'], actions: ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点'] },
+                PRS: { signs: ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'], actions: ['遇到问题先连续问5个为什么', '练习写问题分析备忘录', '每解决一个问题，总结提炼成可复用的方法论'] },
+                MGT: { signs: ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'], actions: ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习委托四步法'] },
+                LLA: { signs: ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'], actions: ['设定每月读完1本专业书籍的目标', '建立个人知识库', '把每次批评写成成长反馈卡'] }
+            };
+            const subInfo = {
+                COG: [{name:'资讯提炼',desc:'从大量复杂信息中快速提取关键重点。'},{name:'逻辑推理',desc:'理性分析发现论证漏洞，做出合理判断。'},{name:'快速学习',desc:'短时间内掌握全新技术领域，效率优于同侪。'}],
+                TEC: [{name:'数字生产力',desc:'有效运用AI和数据工具提升工作效率。'},{name:'技术适应力',desc:'面对新技术能快速上手，适应变化能力强。'},{name:'故障排查',desc:'自主排查根本原因，不依赖他人。'}],
+                COM: [{name:'解码能力',desc:'准确理解对方言辞背后的真正意图。'},{name:'精炼表达',desc:'用简洁语言表达复杂概念。'},{name:'口头影响力',desc:'公开发言能吸引听众并影响决策。'}],
+                SOC: [{name:'情绪觉察',desc:'敏锐感知他人情绪细微变化。'},{name:'冲突协调',desc:'在分歧中促进共识，保持冷静。'},{name:'关系建立',desc:'与不同背景的人建立信任，维护人脉。'}],
+                ORG: [{name:'目标规划',desc:'将模糊目标拆解为可衡量步骤。'},{name:'自主执行',desc:'无监督仍维持高标准，不拖延。'},{name:'资源管理',desc:'合理分配资源，最大化目标达成。'}],
+                PRS: [{name:'应变能力',desc:'原方案失败时迅速产出替代方案。'},{name:'根源分析',desc:'用结构化方法深挖根本原因。'},{name:'创新方案',desc:'无SOP时自创有效解决方案。'}],
+                MGT: [{name:'预期管理',desc:'管理上级和团队对结果的期望。'},{name:'优先级取舍',desc:'多任务并行时准确判断轻重缓急。'},{name:'授权追踪',desc:'有效分配任务并建立跟进机制。'}],
+                LLA: [{name:'知识更新',desc:'定期阅读行业书刊、参加课程。'},{name:'主动探索',desc:'跨界探索本职以外的新领域。'},{name:'挫折转化',desc:'批评和失败转化为成长养分。'}]
+            };
+            const expLabel = { '应届生':'应届生','1-3年':'1-3年经验','3-5年':'3-5年经验','5-10年':'5-10年经验','10年以上':'10年以上经验' };
+
+            let p = '';
+
+            // Header
+            p += '<div class="print-header">';
+            p += '<h1>8维能力深度评测报告</h1>';
+            p += '<div class="subtitle">' + name + (ind ? ' | ' + ind : '') + (exp ? ' | ' + (expLabel[exp] || exp) : '') + ' &nbsp;|&nbsp; 报告日期：' + today + '</div>';
+            p += '</div>';
+
+            // Persona + overview badges
+            p += '<div style="background:#eef2ff;border-radius:10px;padding:14px;margin-bottom:14px;text-align:center">';
+            p += '<div style="font-size:18pt;font-weight:bold;color:#1e3a8a">' + persona.name + '</div>';
+            p += '<div style="font-size:11pt;color:#4338ca;margin:4px 0">' + persona.metaphor + '</div>';
+            p += '<div style="font-size:10pt;color:#3730a3">核心驱动：' + persona.coreDrive + '</div>';
+            p += '</div>';
+
+            p += '<div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap">';
+            p += '<span style="background:#eef2ff;color:#1e3a8a;padding:3px 12px;border-radius:20px;font-size:10pt;font-weight:600">综合评估 ' + avgAll.toFixed(1) + '</span>';
+            p += '<span style="background:#d1fae5;color:#065f46;padding:3px 12px;border-radius:20px;font-size:10pt;font-weight:600">最高：' + sorted[0].dim + ' ' + sorted[0].score.toFixed(1) + '</span>';
+            if (sorted[sorted.length-1].score < 3.0) {
+                p += '<span style="background:#fff7ed;color:#9a3412;padding:3px 12px;border-radius:20px;font-size:10pt;font-weight:600">关注：' + sorted[sorted.length-1].dim + ' ' + sorted[sorted.length-1].score.toFixed(1) + '</span>';
+            }
+            p += '</div>';
+
+            // Score grid
+            p += '<div class="print-score-grid">';
+            for (const dim of dimOrder) {
+                const s = scores[dim];
+                const info = DIM_INFO[dim];
+                const color = getScoreColor(s.average);
+                p += '<div class="print-score-card">';
+                p += '<div class="icon">' + info.icon + '</div>';
+                p += '<div class="dim-name">' + info.name + '</div>';
+                p += '<div class="score" style="color:' + color + '">' + s.average.toFixed(1) + '</div>';
+                p += '</div>';
+            }
+            p += '</div>';
+
+            // Top 3 strengths (unchanged)
+            p += '<div class="print-section-title">核心优势 TOP 3</div>';
+            for (const item of top3) {
+                const info = DIM_INFO[item.dim];
+                const ad = advantageDesc[item.dim];
+                const color = getScoreColor(item.score);
+                p += '<div class="print-card strength">';
+                p += '<div class="print-card-header">';
+                p += '<span style="font-size:14pt">' + info.icon + '</span>';
+                p += '<span class="label" style="color:#065f46">' + info.name + '</span>';
+                p += '<span class="score" style="background:' + color + '">' + item.score.toFixed(1) + '分</span>';
+                p += '</div>';
+                p += '<div class="print-card-desc">' + ad.desc + '</div>';
+                p += '<ul class="print-card-traits">';
+                for (const t of ad.traits) p += '<li>' + t + '</li>';
+                p += '</ul></div>';
+            }
+
+            // Tension analysis
+            if (tension) {
+                p += '<div class="print-section-title">维度张力分析</div>';
+                p += '<div style="background:#fef2f2;border-radius:10px;padding:12px 14px;margin-bottom:14px;border-left:4px solid #ef4444">';
+                p += '<div style="font-weight:bold;font-size:11pt;margin-bottom:6px">' + DIM_INFO[highDim].icon + ' ' + DIM_INFO[highDim].name + ' (' + sorted[0].score.toFixed(1) + ') ↔ ' + DIM_INFO[lowDim].icon + ' ' + DIM_INFO[lowDim].name + ' (' + sorted[sorted.length-1].score.toFixed(1) + ')</div>';
+                p += '<div style="font-size:9pt;color:#7f1d1d;line-height:1.6;margin-bottom:8px;padding:8px;background:rgba(255,255,255,0.5);border-radius:8px">' + tension.conflict + '</div>';
+                p += '<div style="font-size:9pt;margin-bottom:4px"><strong>场景：</strong>' + tension.scenario.title + '</div>';
+                p += '<div style="font-size:9pt;font-style:italic;color:#92400e;background:#fffbeb;padding:6px 10px;border-radius:6px;margin:4px 0">' + tension.scenario.innerOS + '</div>';
+                p += '<div style="font-size:9pt;color:#7f1d1d;margin:6px 0">' + tension.scenario.analysis + '</div>';
+                p += '<div style="display:flex;gap:8px;margin-top:8px;font-size:9pt">';
+                p += '<div style="flex:1;background:#fef2f2;border-radius:6px;padding:6px 8px"><strong style="color:#dc2626">隐藏地雷：</strong>' + tension.landmine + '</div>';
+                p += '<div style="flex:1;background:#f0fdf4;border-radius:6px;padding:6px 8px"><strong style="color:#16a34a">预防建议：</strong>' + tension.prevention + '</div>';
+                p += '</div></div>';
+            }
+
+            // Development areas with reframe
+            p += '<div class="print-section-title">发展空间（最具成长潜力）</div>';
+            for (const item of bot3) {
+                const info = DIM_INFO[item.dim];
+                const dd = developmentDesc[item.dim];
+                const color = getScoreColor(item.score);
+                const reframe = ReportEngine.getReframe(item.dim, item.score);
+                const reframeTitle = reframe ? reframe.title : (info.name + '提升方向');
+                const reframeDesc = reframe ? reframe.reframe : (info.name + '提升后，你的职场竞争力将显著增强。');
+                p += '<div class="print-card development">';
+                p += '<div class="print-card-header">';
+                p += '<span style="font-size:14pt">' + info.icon + '</span>';
+                p += '<span class="label" style="color:#b45309">' + reframeTitle + '</span>';
+                p += '<span class="score" style="background:' + color + '">' + item.score.toFixed(1) + '分</span>';
+                p += '</div>';
+                p += '<div class="print-card-desc">' + reframeDesc + '</div>';
+                if (reframe) {
+                    p += '<div style="font-size:8pt;color:#92400e;margin-bottom:6px">' + reframe.workplace + '</div>';
+                }
+                p += '<div class="print-dev-grid">';
+                p += '<div><h4>常见表现</h4><ul>';
+                for (const s of dd.signs) p += '<li>' + s + '</li>';
+                p += '</ul></div>';
+                p += '<div><h4>行动建议</h4><ul>';
+                for (const a of dd.actions) p += '<li>' + a + '</li>';
+                p += '</ul></div></div></div>';
+            }
+
+            // Sub-abilities
+            p += '<div class="print-section-title page-break">子能力细分详解</div>';
+            for (const dim of dimOrder) {
+                const info = DIM_INFO[dim];
+                const subs = subInfo[dim];
+                const s = scores[dim];
+                const color = getScoreColor(s.average);
+                const dimQs = order.filter(function(q) { return q.dim === dim; });
+                const subScores = subs.map(function(sub, idx) {
+                    const items = dimQs.slice(idx*2, idx*2+2);
+                    const avg = items.reduce(function(sum, q) { return sum + (answers[q.id] || 0); }, 0) / Math.max(items.length, 1);
+                    return { name: sub.name, desc: sub.desc, avg: avg };
+                });
+                p += '<div style="margin-bottom:12px">';
+                p += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+                p += '<span style="font-size:14pt">' + info.icon + '</span>';
+                p += '<span style="font-weight:bold;font-size:11pt;color:' + info.color + '">' + info.name + '</span>';
+                p += '<span style="font-size:14pt;font-weight:bold;color:' + color + ';margin-left:auto">' + s.average.toFixed(1) + '</span>';
+                p += '</div>';
+                p += '<div class="print-sub-grid">';
+                for (const ss of subScores) {
+                    const barColor = ss.avg >= 3.5 ? '#10b981' : ss.avg >= 2.5 ? '#f59e0b' : '#ef4444';
+                    p += '<div class="print-sub-item">';
+                    p += '<div class="name">' + ss.name + '</div>';
+                    p += '<div class="score" style="color:' + barColor + '">' + ss.avg.toFixed(1) + '</div>';
+                    p += '<div class="desc">' + ss.desc + '</div>';
+                    p += '</div>';
+                }
+                p += '</div></div>';
+            }
+
+            // Action plan
+            p += '<div class="print-section-title">总结与行动</div>';
+            const actionOrder = bot3.concat(top3.slice(0,2));
+            for (let i = 0; i < actionOrder.length; i++) {
+                const item = actionOrder[i];
+                const info = DIM_INFO[item.dim];
+                const dd = developmentDesc[item.dim];
+                const isPriority = i < bot3.length;
+                p += '<div class="print-action-item ' + (isPriority ? 'action-priority' : 'action-maintain') + '">';
+                p += '<span class="dot">' + (isPriority ? '🔴' : '🟢') + '</span>';
+                p += '<div>';
+                p += '<div class="title" style="color:' + (isPriority ? '#b45309' : '#065f46') + '">' + (isPriority ? '优先提升' : '持续保持') + ' · ' + info.name + ' (' + item.score.toFixed(1) + '分)</div>';
+                p += '<div class="action">' + (isPriority ? (dd.actions[0] || '') : '继续在工作中发挥这项优势') + '</div>';
+                p += '</div></div>';
+            }
+
+            // Disclaimer + closing
+            p += '<div class="print-disclaimer">本报告基于自评数据，仅供参考。自评可能受个人认知偏差影响，建议结合他人的客观反馈进行综合分析。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。</div>';
+            if (closing) {
+                p += '<div style="margin-top:16px;padding:12px 14px;background:#eef2ff;border-radius:10px;font-size:9pt;color:#1e40af;line-height:1.6;border-left:4px solid #1e3a8a">' + closing.message + '</div>';
+            }
+            p += '<div class="print-footer">© 2026 Santa Chow · 8维能力深度评测系统 &nbsp;|&nbsp; SantaChow.com</div>';
+
+            document.querySelector('#printArea .print-page').innerHTML = p;
+        }
+
+function downloadPDF() {
+            const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
+            const scores = {};
+            for (const dim of dimOrder) {
+                const items = questions.filter(q => q.dim === dim);
+                const avg = items.reduce((s, q) => s + (answers[q.id] || 0), 0) / items.length;
+                scores[dim] = { average: Math.round(avg*100)/100 };
+            }
+            const name = document.getElementById('userName').value || '匿名用户';
+            const exp = document.getElementById('experience').value;
+            const ind = document.getElementById('industry').value;
+            buildPrintContent(scores, name, exp, ind);
+            setTimeout(() => window.print(), 200);
         }
 
         // Keyboard: Enter to continue
@@ -716,5 +1258,8 @@
             }
         });
     </script>
+
+    <!-- 打印专用内容区 — 屏幕隐藏，仅打印时显示 -->
+    <div id="printArea"><div class="print-page"></div></div>
 </body>
 </html>
