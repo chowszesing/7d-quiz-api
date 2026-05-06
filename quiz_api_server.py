@@ -828,9 +828,76 @@ def generate_pdf(result_id, scores, user_name, industry, experience):
     return generate_pdf_48_v4(result_id, scores, user_name, experience, font_name=CHINESE_FONT)
 
 
+HTML_GATEWAY = """
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8维能力测评 | Santa Chow</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+            background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);
+            min-height:100vh;display:flex;align-items:center;justify-content:center;
+            padding:20px;
+        }
+        .card{
+            background:rgba(255,255,255,0.97);border-radius:20px;
+            padding:50px 40px;max-width:480px;width:100%;
+            box-shadow:0 25px 60px rgba(0,0,0,0.4);
+            text-align:center;
+        }
+        .logo{font-size:12px;letter-spacing:4px;color:#f59e0b;font-weight:600;margin-bottom:8px;}
+        h1{font-size:28px;color:#0f172a;margin-bottom:8px;letter-spacing:1px;}
+        .subtitle{color:#64748b;font-size:15px;margin-bottom:40px;line-height:1.6;}
+        .btn{
+            width:100%;padding:16px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);
+            color:white;border:none;border-radius:12px;font-size:17px;
+            font-weight:600;cursor:pointer;transition:opacity 0.2s;letter-spacing:2px;
+            text-decoration:none;display:inline-block;
+        }
+        .btn:hover{opacity:0.9;}
+        .note{font-size:12px;color:#94a3b8;margin-top:16px;}
+        .features{display:flex;gap:20px;margin-bottom:36px;justify-content:center;}
+        .feature{background:#f8fafc;border-radius:10px;padding:14px 12px;flex:1;}
+        .feature .num{font-size:22px;font-weight:700;color:#1e3a8a;}
+        .feature .txt{font-size:12px;color:#64748b;margin-top:4px;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .card{animation:fadeIn 0.5s ease-out;}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">SANTA CHOW</div>
+        <h1>8维能力测评</h1>
+        <p class="subtitle">48题 · 约10分钟 · 科学评估你的职场核心能力</p>
+        <div class="features">
+            <div class="feature">
+                <div class="num">8</div>
+                <div class="txt">核心维度</div>
+            </div>
+            <div class="feature">
+                <div class="num">48</div>
+                <div class="txt">道测评题</div>
+            </div>
+            <div class="feature">
+                <div class="num">10</div>
+                <div class="txt">分钟完成</div>
+            </div>
+        </div>
+        <a href="/quiz" class="btn">开始答题</a>
+        <p class="note">由 Santa Chow 提供 · 港漂职场竞争力评估</p>
+    </div>
+</body>
+</html>"""
+
+
 def index():
-    """Token 入口页面"""
+    """入口页面"""
     return HTML_GATEWAY
+
 
 @app.route('/quiz')
 def quiz_page():
