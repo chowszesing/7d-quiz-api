@@ -715,46 +715,52 @@ HTML_ADMIN = '''<!DOCTYPE html>
 </body>
 </html>'''
 
-# ============ 数据库函数 ============
-@contextmanager
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
+# ============ 数据库函数（支持 SQLite 和 PostgreSQL）============
+# Railway/PostgreSQL 环境使用 DATABASE_URL 环境变量
+# 本地开发使用 DATABASE 环境变量指定的 SQLite 文件
 
-def init_db():
-    with get_db() as conn:
-        c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS quiz_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT, industry TEXT, experience TEXT,
-            answers TEXT, question_order TEXT, scores TEXT,
-            validity_check INTEGER, submitted_at TEXT,
-            ip_address TEXT, user_agent TEXT)''')
-        c.execute('''CREATE TABLE IF NOT EXISTS quiz_results_48 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT, experience TEXT, industry TEXT,
-            answers TEXT, question_order TEXT, scores TEXT,
-            submitted_at TEXT, ip_address TEXT, user_agent TEXT,
-            access_token TEXT)''')
-        # Token 白名单表
-        c.execute('''CREATE TABLE IF NOT EXISTS access_tokens (
-            token TEXT PRIMARY KEY,
-            used INTEGER DEFAULT 0,
-            assigned_to TEXT,
-            created_at TEXT,
-            used_at TEXT)''')
-
-        # 迁移：给 quiz_results_48 添加 access_token 列（如果不存在）
+# 导入数据库适配器
+try:
+    from db_adapter import get_db, init_db, USE_POSTGRES, json_encode, json_decode, execute_with_pk, get_db_type, get_db_info
+    print(f"[DB] 使用数据库类型: {get_db_type()}")
+except ImportError:
+    # 降级：使用原生 SQLite
+    USE_POSTGRES = False
+    @contextmanager
+    def get_db():
+        conn = sqlite3.connect(DATABASE)
+        conn.row_factory = sqlite3.Row
         try:
-            c.execute("ALTER TABLE quiz_results_48 ADD COLUMN access_token TEXT")
+            yield conn
+        finally:
+            conn.close()
+    def init_db():
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('''CREATE TABLE IF NOT EXISTS quiz_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT, industry TEXT, experience TEXT,
+                answers TEXT, question_order TEXT, scores TEXT,
+                validity_check INTEGER, submitted_at TEXT,
+                ip_address TEXT, user_agent TEXT)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS quiz_results_48 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT, experience TEXT, industry TEXT,
+                answers TEXT, question_order TEXT, scores TEXT,
+                submitted_at TEXT, ip_address TEXT, user_agent TEXT,
+                access_token TEXT)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS access_tokens (
+                token TEXT PRIMARY KEY,
+                used INTEGER DEFAULT 0,
+                assigned_to TEXT,
+                created_at TEXT,
+                used_at TEXT)''')
+            try:
+                c.execute("ALTER TABLE quiz_results_48 ADD COLUMN access_token TEXT")
+            except sqlite3.OperationalError:
+                pass
             conn.commit()
-        except sqlite3.OperationalError:
-            pass  # 列已存在
-        conn.commit()
+    print("[DB] 警告：db_adapter.py 未找到，使用原生 SQLite")
 
 
 # ============ Token 持久化：GitHub Gist 备份/恢复 ============
@@ -2851,18 +2857,21 @@ def admin_init_db():
     init_db()
     with get_db() as conn:
         c = conn.cursor()
-        c.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [r[0] for r in c.fetchall()]
-    return jsonify({'success': True, 'tables': tables, 'message': '数据库初始化完成'})
+        if USE_POSTGRES:
+            c.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+            tables = [r[0] for r in c.fetchall()]
+        else:
+            c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [r[0] for r in c.fetchall()]
+    return jsonify({'success': True, 'tables': tables, 'db_type': get_db_type(), 'message': f'{get_db_type()} 数据库初始化完成'})
 
 # ============ 数据库初始化（模块级别，gunicorn部署也可执行）============
-# Render使用gunicorn启动，不会进入if __name__分支
-# 在模块级别调用确保所有表在首次请求前创建
+# Railway使用gunicorn启动，在模块级别调用确保所有表在首次请求前创建
 try:
     init_db()
-    print(f"数据库初始化完成: {DATABASE}")
+    print(f"[DB] 数据库初始化完成: {get_db_type()} | {get_db_info()}")
 except Exception as e:
-    print(f"数据库初始化警告: {e}")
+    print(f"[DB] 数据库初始化警告: {e}")
 
 # ============ V4 PDF 报告生成 ============
 
