@@ -11,6 +11,7 @@ import sqlite3
 import os
 import io
 import csv
+import urllib.request
 from datetime import datetime
 from contextlib import contextmanager
 
@@ -22,6 +23,18 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+# ============ V3 设计配色方案 ============
+COLOR_PRIMARY = colors.HexColor('#1e3a8a')      # 深蓝 - 主色
+COLOR_SECONDARY = colors.HexColor('#3b82f6')    # 中蓝 - 辅色
+COLOR_ACCENT_GOOD = colors.HexColor('#10b981')   # 绿色 - 优势
+COLOR_ACCENT_WARN = colors.HexColor('#f59e0b')   # 琥珀色 - 发展
+COLOR_BG_LIGHT = colors.HexColor('#f8fafc')      # 浅灰 - 背景
+COLOR_BG_CARD = colors.HexColor('#ffffff')         # 白色 - 卡片
+COLOR_TEXT_DARK = colors.HexColor('#1e293b')      # 深灰 - 主文本
+COLOR_TEXT_MID = colors.HexColor('#64748b')       # 中灰 - 次要文本
+COLOR_BORDER = colors.HexColor('#e2e8f0')         # 边框色
 
 app = Flask(__name__)
 CORS(app)
@@ -41,12 +54,12 @@ FONT_CDN_SOURCES = [
 ]
 
 FONT_LOCAL_PATHS = [
-    # 本地候选（开发者机器）
+    # 项目 fonts/ 目录（包含在 Git 仓库中，推荐方式）
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.otf'),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.otf'),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJKsc-Regular.otf'),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'wqy-microhei.ttc'),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.ttc'),
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'NotoSansCJK-Regular.otf'),
     # Windows 系统字体
     'C:/Windows/Fonts/msyh.ttc',   # 微软雅黑
     'C:/Windows/Fonts/simhei.ttf',  # 黑体
@@ -143,7 +156,21 @@ def register_fonts():
             candidates.append((name, path))
             print(f"  [字体] 找到系统字体: {path}")
 
-    # 3. 递归搜索系统字体目录
+    # 3. 使用 fc-list 探测（Render 等 Linux 环境，最可靠）
+    try:
+        import subprocess
+        result = subprocess.run(['fc-list', ':lang=zh', '-f', '%{file}\n'],
+                               capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                if line and os.path.exists(line) and not any(p == line for _, p in candidates):
+                    name = 'NotoSansSC'
+                    candidates.append((name, line))
+                    print(f"  [字体] fc-list 发现中文字体: {line}")
+    except Exception as e:
+        print(f"  [字体] fc-list 探测失败: {e}")
+
+    # 4. 递归搜索系统字体目录（兜底）
     import glob
     system_font_dirs = [
         '/usr/share/fonts/', '/usr/local/share/fonts/',
@@ -165,7 +192,7 @@ def register_fonts():
                         candidates.append((name, f))
                         print(f"  [字体] 找到系统CJK字体: {f}")
 
-    # 4. 尝试下载（Render 等容器环境）
+    # 5. 尝试下载（Render 等容器环境，最后兜底）
     if not candidates:
         print(f"  [字体] 未找到任何字体，尝试下载...")
         downloaded = download_chinese_font()
@@ -688,29 +715,6 @@ HTML_ADMIN = '''<!DOCTYPE html>
 </body>
 </html>'''
 
-# ============ Token 权限函数 ============
-def validate_token(token):
-    """验证 token 是否有效，返回 (is_valid, message)"""
-    if not token:
-        return False, '缺少访问凭证（token），请使用有效链接访问本页面'
-    with get_db() as conn:
-        c = conn.cursor()
-        c.execute('SELECT used FROM access_tokens WHERE token = ?', (token,))
-        row = c.fetchone()
-        if not row:
-            return False, '访问凭证无效，请联系管理员获取正确链接'
-        if row['used'] == 1:
-            return False, '此访问链接已使用完毕，无法再次提交'
-        return True, 'ok'
-
-def consume_token(token):
-    """标记 token 为已使用"""
-    with get_db() as conn:
-        c = conn.cursor()
-        c.execute('UPDATE access_tokens SET used=1, used_at=? WHERE token=?',
-                  (datetime.now().isoformat(), token))
-        conn.commit()
-
 # ============ 数据库函数 ============
 @contextmanager
 def get_db():
@@ -752,6 +756,9 @@ def init_db():
             pass  # 列已存在
         conn.commit()
 
+
+# ============ Token 持久化：GitHub Gist 备份/恢复 ============
+# Render 容器文件系统非持久化，每次重新部署都会清空数据库。
 def calculate_scores(answers):
     dims = {'COG':{'name':'思维敏锐度','q':[1,2,3,4]},
             'TEC':{'name':'数字应用力','q':[5,6,7,8]},
@@ -813,155 +820,14 @@ def check_validity(answers, expected=31):
     return {'is_valid': True}
 
 def generate_pdf(result_id, scores, user_name, industry, experience):
-    """生成PDF报告，使用中文字体"""
-    buffer = io.BytesIO()
+    """
+    生成PDF报告（8维版 V4设计）
+    包装函数 - 调用 generate_pdf_48_v4()
+    注意：generate_pdf_48_v4() 不使用 industry 参数
+    """
+    return generate_pdf_48_v4(result_id, scores, user_name, experience, font_name=CHINESE_FONT)
 
-    # 确定使用的字体
-    if CHINESE_FONT:
-        font_name = CHINESE_FONT
-    else:
-        raise Exception('中文字体不可用，请联系管理员')
 
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
-    styles = getSampleStyleSheet()
-
-    styles.add(ParagraphStyle(name='ChineseTitle', fontName=font_name, fontSize=20, alignment=1, spaceAfter=20))
-    styles.add(ParagraphStyle(name='ChineseText', fontName=font_name, fontSize=10, spaceAfter=8))
-    styles.add(ParagraphStyle(name='ChineseCenter', fontName=font_name, fontSize=11, alignment=1))
-
-    story = []
-    story.append(Paragraph('7维能力测评报告', styles['ChineseTitle']))
-    story.append(Paragraph(f'<b>{user_name}</b> | {industry} | {experience}', styles['ChineseCenter']))
-    story.append(Spacer(1, 15*mm))
-
-    data = [['维度', '分数', '等级']]
-    for dim, s in scores.items():
-        data.append([s['name'], f"{s['average']:.1f}", s['level']])
-
-    table = Table(data, colWidths=[80*mm, 40*mm, 40*mm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#ddd')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')]),
-    ]))
-    story.append(table)
-    story.append(Spacer(1, 15*mm))
-
-    insights = {
-        'COG': '思维敏锐度反映认知与逻辑能力。',
-        'TEC': '数字应用力体现技术掌握程度。',
-        'COM': '沟通穿透力代表表达与倾听能力。',
-        'SOC': '人际连结力显示社交与情绪智商。',
-        'ORG': '目标驱动力反映规划与执行能力。',
-        'PRS': '应变决策力体现解决问题能力。',
-        'MGT': '团队赋能力显示管理与领导潜力。'
-    }
-    story.append(Paragraph('<b>维度解读</b>', styles['ChineseText']))
-    for dim, s in scores.items():
-        story.append(Paragraph(f'<b>{s["name"]}</b>：{insights.get(dim, "")} 本次测评{s["level"]}。', styles['ChineseText']))
-
-    story.append(Spacer(1, 20*mm))
-    story.append(Paragraph('由 Santa Chow 专业教练提供', styles['ChineseCenter']))
-    story.append(Paragraph(f'Report ID: {result_id} | {datetime.now().strftime("%Y-%m-%d")}', styles['ChineseCenter']))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-# ============ Token 入口页面（简洁美观）============
-HTML_GATEWAY = '''<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8维能力测评 | Santa Chow</title>
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
-            background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);
-            min-height:100vh;display:flex;align-items:center;justify-content:center;
-            padding:20px;
-        }
-        .card{
-            background:rgba(255,255,255,0.97);border-radius:20px;
-            padding:50px 40px;max-width:480px;width:100%;
-            box-shadow:0 25px 60px rgba(0,0,0,0.4);
-            text-align:center;
-        }
-        .logo{font-size:12px;letter-spacing:4px;color:#f59e0b;font-weight:600;margin-bottom:8px;}
-        h1{font-size:28px;color:#0f172a;margin-bottom:8px;letter-spacing:1px;}
-        .subtitle{color:#64748b;font-size:15px;margin-bottom:40px;line-height:1.6;}
-        .form-group{text-align:left;margin-bottom:24px;}
-        label{font-size:14px;font-weight:600;color:#334155;margin-bottom:8px;display:block;}
-        input{
-            width:100%;padding:14px 16px;font-size:16px;
-            border:2px solid #e2e8f0;border-radius:12px;
-            outline:none;transition:border-color 0.2s;
-            letter-spacing:2px;font-family:monospace;
-        }
-        input:focus{border-color:#3b82f6;}
-        .btn{
-            width:100%;padding:16px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);
-            color:white;border:none;border-radius:12px;font-size:17px;
-            font-weight:600;cursor:pointer;transition:opacity 0.2s;letter-spacing:2px;
-        }
-        .btn:hover{opacity:0.9;}
-        .note{font-size:12px;color:#94a3b8;margin-top:16px;}
-        .features{display:flex;gap:20px;margin-bottom:36px;justify-content:center;}
-        .feature{background:#f8fafc;border-radius:10px;padding:14px 12px;flex:1;}
-        .feature .num{font-size:22px;font-weight:700;color:#1e3a8a;}
-        .feature .txt{font-size:12px;color:#64748b;margin-top:4px;}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .card{animation:fadeIn 0.5s ease-out;}
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="logo">SANTA CHOW</div>
-        <h1>8维能力测评</h1>
-        <p class="subtitle">48题 · 约10分钟 · 科学评估你的职场核心能力</p>
-        <div class="features">
-            <div class="feature">
-                <div class="num">8</div>
-                <div class="txt">核心维度</div>
-            </div>
-            <div class="feature">
-                <div class="num">48</div>
-                <div class="txt">道测评题</div>
-            </div>
-            <div class="feature">
-                <div class="num">10</div>
-                <div class="txt">分钟完成</div>
-            </div>
-        </div>
-        <form id="tokenForm" onsubmit="return handleSubmit()">
-            <div class="form-group">
-                <label for="token">请输入您的访问码</label>
-                <input type="text" id="token" name="token" placeholder="例如：8D-001" autocomplete="off" required>
-            </div>
-            <button type="submit" class="btn">开始答题 →</button>
-        </form>
-        <p class="note">访问码由 Santa Chow 提供，如有疑问请联系获取</p>
-    </div>
-    <script>
-        function handleSubmit(){
-            var t=document.getElementById('token').value.trim();
-            if(!t){alert('请输入访问码');return false;}
-            window.location.href='/quiz?token='+encodeURIComponent(t);
-            return false;
-        }
-    </script>
-</body>
-</html>'''
-
-# ============ 路由 ============
-@app.route('/')
 def index():
     """Token 入口页面"""
     return HTML_GATEWAY
@@ -1147,44 +1013,26 @@ def batch_import():
 
 @app.route('/api/quiz/submit_48', methods=['POST'])
 def submit_48():
-    """提交48题8维测评（需Token验证）"""
+    """提交48题8维测评（无需Token，任何人可直接访问）"""
     try:
         data = request.get_json()
         if not data or 'answers' not in data:
             return jsonify({'error': 'Missing answers'}), 400
-
-        # Token 验证
-        token = data.get('token', '')
-        try:
-            is_valid, msg = validate_token(token)
-        except Exception as e:
-            # 安全兜底：表不存在时尝试重新初始化
-            if 'no such table' in str(e):
-                print("检测到数据库表缺失，重新初始化...")
-                init_db()
-                is_valid, msg = validate_token(token)
-            else:
-                raise
-        if not is_valid:
-            return jsonify({'error': msg, 'token_required': True}), 403
 
         scores = calculate_scores_48(data['answers'])
 
         with get_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT INTO quiz_results_48
-                (user_name, experience, industry, answers, question_order, scores, submitted_at, ip_address, user_agent, access_token)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (user_name, experience, industry, answers, question_order, scores, submitted_at, ip_address, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (data.get('name', '匿名用户'), data.get('experience', ''),
                  data.get('industry', ''), json.dumps(data.get('answers', {})),
                  json.dumps(data.get('question_order', [])), json.dumps(scores),
                  datetime.now().isoformat(), request.remote_addr,
-                 request.headers.get('User-Agent', ''), token))
+                 request.headers.get('User-Agent', '')))
             result_id = c.lastrowid
-            conn.commit()  # 确保INSERT提交
-
-        # 消耗 token（独立连接）
-        consume_token(token)
+            conn.commit()
 
         return jsonify({'success': True, 'result_id': result_id, 'scores': scores})
     except Exception as e:
@@ -1193,7 +1041,7 @@ def submit_48():
 
 @app.route('/api/quiz/report_48/<int:result_id>')
 def report_48(result_id):
-    """生成48题PDF报告（不含行业适配分析，V1兼容版）"""
+    """生成48题PDF报告（V4专业设计版）"""
     try:
         with get_db() as conn:
             c = conn.cursor()
@@ -1204,7 +1052,8 @@ def report_48(result_id):
             return jsonify({'error': 'Not found'}), 404
 
         scores = json.loads(row['scores'])
-        pdf_buffer = generate_pdf_48(row['id'], scores, row['user_name'], row['experience'])
+        pdf_buffer = generate_pdf_48_v4(result_id, scores, row['user_name'], row['experience'],
+                                        font_name=CHINESE_FONT or 'Helvetica')
         report_date = datetime.now().strftime("%Y%m%d")
 
         return send_file(pdf_buffer, mimetype='application/pdf',
@@ -1213,7 +1062,8 @@ def report_48(result_id):
     except Exception as e:
         import traceback
         print(f"PDF生成错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None, 'font_name': CHINESE_FONT or 'none'}), 500
+        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None,
+                       'font_name': CHINESE_FONT or 'none'}), 500
 
 
 @app.route('/api/quiz/report_48_v2/<int:result_id>')
@@ -1463,7 +1313,7 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
     # 雷达图 + 总览表并排
     radar_scores = [scores[d]['average'] for d in dim_order]
     radar_dims = [dim_names[d] for d in dim_order]
-    radar_drawing = draw_radar_chart_v2(dim_order, radar_scores, width=210, height=210)
+    radar_drawing = draw_radar_chart_v2(dim_order, radar_scores)  # 使用默认尺寸220x220
 
     # 总览表数据
     table_data = [['维度', '分数', '等级']]
@@ -1843,6 +1693,418 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
     buffer.seek(0)
     return buffer
 
+def generate_pdf_48_v3(result_id, scores, user_name, experience, font_name='Helvetica'):
+    """
+    生成PDF报告V3 - 数据可视化风格
+    改进：
+    1. 增加呼吸感（页边距从20mm增加到25mm）
+    2. 数据可视化（水平柱状图、颜色编码评分条）
+    3. 商业报告风格（专业配色、清晰视觉层级）
+    
+    参数：
+    - font_name: 中文字体名称（由调用方传入，通常是 CHINESE_FONT）
+    """
+    buffer = io.BytesIO()
+    
+    # 页面设置 - 增加边距以提升呼吸感
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        topMargin=25*mm,    # 增加上边距
+        bottomMargin=25*mm,  # 增加下边距
+        leftMargin=20*mm,    # 增加左边距
+        rightMargin=20*mm     # 增加右边距
+    )
+    
+    styles = {}
+    
+    # 自定义样式 - 改进排版（使用传入的 font_name）
+    styles['V3Title'] = ParagraphStyle(
+        name='V3Title',
+        fontName=font_name,
+        fontSize=24,
+        textColor=COLOR_PRIMARY,
+        alignment=TA_CENTER,
+        spaceAfter=12,
+        spaceBefore=6
+    )
+    
+    styles['V3Subtitle'] = ParagraphStyle(
+        name='V3Subtitle',
+        fontName=font_name,
+        fontSize=12,
+        textColor=COLOR_TEXT_MID,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+    
+    styles['V3Section'] = ParagraphStyle(
+        name='V3Section',
+        fontName=font_name,
+        fontSize=16,
+        textColor=COLOR_PRIMARY,
+        spaceBefore=15,
+        spaceAfter=10,
+        backColor=COLOR_BG_LIGHT,
+        borderPadding=8
+    )
+    
+    styles['V3CardTitle'] = ParagraphStyle(
+        name='V3CardTitle',
+        fontName=font_name,
+        fontSize=13,
+        textColor=COLOR_PRIMARY,
+        spaceAfter=6
+    )
+    
+    styles['V3Text'] = ParagraphStyle(
+        name='V3Text',
+        fontName=font_name,
+        fontSize=10,
+        textColor=COLOR_TEXT_DARK,
+        leading=14,
+        spaceAfter=4
+    )
+    
+    styles['V3Muted'] = ParagraphStyle(
+        name='V3Muted',
+        fontName=font_name,
+        fontSize=9,
+        textColor=COLOR_TEXT_MID,
+        leading=12,
+        spaceAfter=4
+    )
+    
+    story = []
+    
+    # ========== 封面区 ==========
+    story.append(Spacer(1, 20*mm))
+    story.append(Paragraph('8维能力测评报告', styles['V3Title']))
+    story.append(Paragraph(f'{user_name}  |  {experience}', styles['V3Subtitle']))
+    story.append(Spacer(1, 10*mm))
+    
+    # ========== 水平柱状图（8维可视化） ==========
+    dim_names = {
+        'COG': '认知能力', 'TEC': '技术掌握', 'COM': '理解表达',
+        'SOC': '社交技能', 'ORG': '策划执行', 'PRS': '解决问题',
+        'MGT': '管理技能', 'LLA': '持续学习'
+    }
+    
+    bar_chart = draw_horizontal_bar_chart(scores, dim_names, width=450, height=220)
+    story.append(bar_chart)
+    story.append(Spacer(1, 10*mm))
+    
+    # ========== 详细评分表（带颜色编码） ==========
+    story.append(Paragraph('详细评分', styles['V3Section']))
+    story.append(Spacer(1, 5*mm))
+    
+    # 排序分数
+    sort_scores = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
+    
+    # 创建带颜色编码的表格
+    table_data = [['维度', '分数', '等级', '可视化']]
+    for dim, s in sort_scores:
+        score_bar = draw_score_bar(s['average'], width=100, height=12)
+        table_data.append([
+            s['name'],
+            f"{s['average']:.1f}",
+            s['level'],
+            score_bar
+        ])
+    
+    score_table = Table(table_data, colWidths=[60*mm, 25*mm, 35*mm, 50*mm])
+    score_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), COLOR_PRIMARY),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, COLOR_BG_LIGHT]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(score_table)
+    story.append(Spacer(1, 10*mm))
+    
+    # ========== 核心优势 TOP 3 ==========
+    story.append(Paragraph('★ 核心优势 TOP 3', styles['V3Section']))
+    story.append(Spacer(1, 8*mm))
+    
+    advantageDescV3 = {
+        'COG': ('认知领跑者',
+                '展现出极强的逻辑构建能力，尤其在处理非结构化信息时——能迅速剥离噪音，直达核心本质。',
+                ['快速提炼复杂信息核心', '发现逻辑论证中的漏洞', '掌握新领域速度快于常人']),
+        'TEC': ('技术适应力强',
+                '对新技术保持开放心态，能快速上手并将新工具转化为生产力，是团队的数字化先锋。',
+                ['AI和数据工具运用自如', '面对新技术快速上手', '遇问题自主排查解决']),
+        'COM': ('沟通影响力强',
+                '在信息传递场景中具有显著影响力——既能精准解读他人隐含意图，也能用简洁语言驱动团队决策。',
+                ['准确理解对方言外之意', '复杂概念简洁化传达', '在会议中主导结论输出']),
+        'SOC': ('高情商社交者',
+                '善于在复杂人际网络中建立信任，尤其在跨部门协作场景中能有效协调分歧、促进共识。',
+                ['敏锐感知团队情绪变化', '在冲突中促进各方达成共识', '与不同背景人士建立长期信任']),
+        'ORG': ('高效执行者',
+                '具备从目标到落地的完整策划执行能力，能在无外部监督下维持高标准，确保任务按时交付。',
+                ['将模糊目标转化为清晰行动计划', '无人督促仍保持高效产出', '合理分配时间与资源']),
+        'PRS': ('创新解决者',
+                '擅长在压力下快速找到创新解法，原方案遇阻时能迅速切换视角，构建替代性解决方案。',
+                ['原方案失败时迅速产出Plan B', '用结构化方法深挖问题根源', '无SOP时自创有效方案']),
+        'MGT': ('团队赋能者',
+                '具备项目与预期管理能力，能有效协调多方资源，在交付结果与上级期望之间建立清晰桥梁。',
+                ['管理上下级期望落差', '多任务并行时准确判断优先级', '有效授权并建立跟进机制']),
+        'LLA': ('持续成长者',
+                '保持主动学习姿态，定期拓展知识边界并能从批评与挫折中提炼教训，职场成熟度提升速度高于同龄人。',
+                ['定期阅读行业书刊、参加课程', '跨界探索本职以外新领域', '将批评转化为成长养分']),
+    }
+    
+    top3 = sort_scores[:3]
+    top3_cards = []
+    
+    for dim, s in top3:
+        title, desc, traits = advantageDescV3.get(dim, (s['name'], '你最突出的能力领域。', []))
+        score_color = get_score_color_v3(s['average'])
+        
+        card_content = [
+            Paragraph(f'<b>{title}</b>  <font color="{score_color.hexval()}">{s["average"]:.1f}分</font>',
+                      styles['V3CardTitle']),
+            Spacer(1, 3*mm),
+            Paragraph(desc, styles['V3Muted']),
+            Spacer(1, 3*mm),
+        ]
+        for t in traits[:3]:
+            card_content.append(Paragraph(f'• {t}', styles['V3Text']))
+        
+        top3_cards.append(card_content)
+    
+    # 创建卡片
+    def make_v3_card(content_list, bg_color=COLOR_BG_CARD):
+        inner = Table([[c] for c in content_list], colWidths=[75*mm])
+        inner.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), bg_color),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('ROUNDEDCORNERS', [6]),
+            ('LINEBELOW', (0, -1), (-1, -1), 0.5, COLOR_BORDER),
+        ]))
+        return inner
+    
+    card1 = make_v3_card(top3_cards[0], COLOR_ACCENT_GOOD.clone(alpha=0.1))
+    card2 = make_v3_card(top3_cards[1], COLOR_ACCENT_GOOD.clone(alpha=0.1))
+    card3 = make_v3_card(top3_cards[2], COLOR_ACCENT_GOOD.clone(alpha=0.1))
+    
+    cards_row = Table([[card1, card2, card3]], colWidths=[80*mm, 80*mm, 80*mm])
+    cards_row.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(cards_row)
+    story.append(Spacer(1, 10*mm))
+    
+    # ========== 发展空间 BOTTOM 3 ==========
+    story.append(Paragraph('🌱 发展空间（最具成长潜力的领域）', styles['V3Section']))
+    story.append(Spacer(1, 5*mm))
+    story.append(Paragraph(
+        '为了实现从"优秀"到"卓越"的跨越，建议重点关注以下领域：',
+        styles['V3Text']
+    ))
+    story.append(Spacer(1, 5*mm))
+    
+    developmentDescV3 = {
+        'COG': ('认知能力',
+                '在信息密集型岗位上更具竞争力的关键在于认知加工效率的进一步提升。',
+                '面对大量新信息时容易迷失重点，难以快速形成清晰结论。',
+                '用思维导图整理复杂问题结构；每日阅读后用3句话自测信息提炼准确度。',
+                '每周选取1篇深度文章，写出"一句话核心观点+3个支撑细节"'),
+        'TEC': ('技术掌握',
+                '补强数字化工具使用深度后，你将更自信地应对复杂技术环境，减少对团队的依赖。',
+                '部分AI工具尚未深度使用；新系统上手需要比别人更长时间。',
+                '每周用2小时深入学习1个新工具，记录使用技巧到个人工具库。',
+                '遇到技术问题先自行排查30分钟，再决定是否求助'),
+        'COM': ('理解表达',
+                '精进表达技巧后，你在跨部门协作、汇报和外部沟通场景中将更游刃有余。',
+                '在接受模糊指令时，未能第一时间反向对齐（Check-back）交付标准，导致后期返工。',
+                '练习"电梯演讲"——30秒内说清一个复杂观点；写完报告后检查是否只需3句话总结。',
+                '每次汇报后复盘"哪些信息听众记住了，哪些遗漏了"'),
+        'SOC': ('社交技能',
+                '提升人际敏锐度和冲突处理能力后，你将成为团队中不可或缺的协调枢纽。',
+                '偶尔未能及时感知他人情绪；面对人际冲突倾向回避而非直面。',
+                '每周主动发起1次1对1交流；会议中观察每位发言者的情绪状态变化。',
+                '每次冲突后写"情绪复盘卡"——触发点、自己反应、改进点'),
+        'ORG': ('策划执行',
+                '强化自我驱动的策划执行能力后，你的项目交付质量和时效性将显著提升。',
+                '无外部截止日期驱动时，容易陷入"等待完美时机"的拖延陷阱。',
+                '番茄工作法（25分钟专注+5分钟休息）；为每项任务设定比截止日期早1天的内部节点。',
+                '每周日规划下周TOP 3优先任务，完成后打勾确认'),
+        'PRS': ('解决问题',
+                '提升应变决策能力后，你将成为团队中不可替代的关键人物，能够在危机中带领团队找到破局点。',
+                '当既定业务流程受到突发政策或技术限制阻断时，容易陷入局部细节纠缠，缺乏全局破局策略。',
+                '每周针对1个业务难题绘制"逻辑树"（MECE原则）；练习"5 Whys 追问法"问到底。',
+                '在项目总结中增加"意外应对机制"模块，刻意练习预案设计能力'),
+        'MGT': ('管理技能',
+                '精进管理技能后，你将更适合承担需要协调多方资源的复杂项目，成为团队信赖的桥梁。',
+                '在接受模糊指令时，未能第一时间反向对齐（Check-back）交付标准，导致后期返工成本增加。',
+                '用SMART原则拆解每个目标；接受任务后第一时间复述理解并等待确认。',
+                '每周主动与上级对齐一次预期；练习"委托四步法"：说目标→给资源→少干预→做复盘'),
+        'LLA': ('持续学习',
+                '建立系统化的学习机制后，你的职业成长速度将显著快于同龄人，形成独特的专业壁垒。',
+                '学习时间主要在工作需求驱动下发生，缺乏主动探索的规划性。',
+                '设定每月读完1本专业书籍的目标；建立个人知识库（笔记+标签系统）。',
+                '把每次批评写成"成长反馈卡"——事实→感受→教训→行动'),
+    }
+    
+    bot3 = sort_scores[-3:][::-1]  # 倒数3个，反转顺序（最弱的在最后）
+    dev_cards = []
+    
+    for dim, s in bot3:
+        title = s['name']
+        vals = developmentDescV3.get(dim, None)
+        if vals:
+            _, _, scenario, tool_tip, habit = vals
+        else:
+            scenario, tool_tip, habit = '建议优先投入提升资源。', '', ''
+        
+        score_color = get_score_color_v3(s['average'])
+        
+        card_content = [
+            Paragraph(f'<b>{title}</b>  <font color="{score_color.hexval()}">{s["average"]:.1f}分</font>',
+                      styles['V3CardTitle']),
+            Spacer(1, 3*mm),
+            Paragraph(f'<i>{scenario}</i>', styles['V3Muted']),
+            Spacer(1, 2*mm),
+            Paragraph(f'<b>思维工具</b>：{tool_tip}', styles['V3Text']),
+            Paragraph(f'<b>复盘习惯</b>：{habit}', styles['V3Text']),
+        ]
+        dev_cards.append(card_content)
+    
+    # 创建发展卡片（暖色背景）
+    def make_dev_card(content_list):
+        inner = Table([[c] for c in content_list], colWidths=[75*mm])
+        inner.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), COLOR_ACCENT_WARN.clone(alpha=0.1)),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('ROUNDEDCORNERS', [6]),
+            ('LINEBELOW', (0, -1), (-1, -1), 0.5, COLOR_BORDER),
+        ]))
+        return inner
+    
+    dev_card1 = make_dev_card(dev_cards[0])
+    dev_card2 = make_dev_card(dev_cards[1])
+    dev_card3 = make_dev_card(dev_cards[2])
+    
+    dev_cards_row = Table([[dev_card1, dev_card2, dev_card3]], colWidths=[80*mm, 80*mm, 80*mm])
+    dev_cards_row.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(dev_cards_row)
+    story.append(Spacer(1, 10*mm))
+    
+    # ========== 子能力详解 ==========
+    story.append(Paragraph('子能力详解（8维×3项）', styles['V3Section']))
+    story.append(Spacer(1, 5*mm))
+    
+    subInfo = {
+        'COG': [
+            ('信息提炼', '从大量复杂信息中快速识别核心要素，剥离无关噪音。'),
+            ('逻辑推理', '基于给定前提进行严密的逻辑推导，发现论证中的漏洞。'),
+            ('快速学习', '在新领域中迅速掌握核心概念和方法论，缩短学习曲线。'),
+        ],
+        'TEC': [
+            ('数字工具', '熟练使用各类数字化工具和平台，提升工作效率。'),
+            ('技术适应', '面对新技术和系统时能快速上手并转化为生产力。'),
+            ('故障排查', '遇到技术问题时能自主排查并找到解决方案。'),
+        ],
+        'COM': [
+            ('解码能力', '准确理解他人的言外之意和隐含需求。'),
+            ('精炼表达', '用简洁清晰的语言传达复杂概念，避免信息过载。'),
+            ('口头影响', '在会议和演讲中能有效引导讨论方向并促成决策。'),
+        ],
+        'SOC': [
+            ('情绪觉察', '敏锐感知自己和他人的情绪变化，理解情绪背后的原因。'),
+            ('冲突协调', '在团队分歧和人际冲突中能促进各方达成共识，保持冷静。'),
+            ('关系建立', '与不同背景的人建立信任，维护长期人脉网络并保持有效联系。'),
+        ],
+        'ORG': [
+            ('目标规划', '将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。'),
+            ('自主执行', '在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。'),
+            ('资源管理', '合理分配时间、人力、预算等资源，在有限条件下最大化产出。'),
+        ],
+        'PRS': [
+            ('应变能力', '原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。'),
+            ('根源分析', '用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。'),
+            ('创新方案', '在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。'),
+        ],
+        'MGT': [
+            ('预期管理', '有效管理上级和团队对任务结果的期望，避免目标与产出的落差。'),
+            ('优先级取舍', '多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。'),
+            ('授权追踪', '有效分配任务并建立跟进机制，信任团队不过度干预执行过程。'),
+        ],
+        'LLA': [
+            ('知识更新', '保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。'),
+            ('主动探索', '跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。'),
+            ('挫折转化', '面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。'),
+        ],
+    }
+    
+    for dim, s in sort_scores:
+        subs = subInfo.get(dim, [])
+        story.append(Paragraph(f'<b>{s["name"]}</b>（{s["average"]:.1f}分 · {s["level"]}）', styles['V3CardTitle']))
+        for sub_name, sub_desc in subs:
+            story.append(Paragraph(f'• <b>{sub_name}</b>：{sub_desc}', styles['V3Text']))
+        story.append(Spacer(1, 5*mm))
+    
+    story.append(Spacer(1, 10*mm))
+    
+    # ========== 页脚 ==========
+    story.append(Paragraph(
+        f'Report ID: 8D-{result_id}  |  Santa Chow 8维能力评测系统  |  2026',
+        styles['V3Muted']
+    ))
+    
+    # 生成PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+if __name__ == '__main__':
+    # 测试代码
+    test_scores = {
+        'COG': {'name': '认知能力', 'average': 4.2, 'level': '优秀'},
+        'TEC': {'name': '技术掌握', 'average': 3.8, 'level': '良好'},
+        'COM': {'name': '理解表达', 'average': 4.5, 'level': '优秀'},
+        'SOC': {'name': '社交技能', 'average': 3.2, 'level': '中等'},
+        'ORG': {'name': '策划执行', 'average': 4.0, 'level': '良好'},
+        'PRS': {'name': '解决问题', 'average': 3.5, 'level': '良好'},
+        'MGT': {'name': '管理技能', 'average': 3.0, 'level': '中等'},
+        'LLA': {'name': '持续学习', 'average': 4.3, 'level': '优秀'},
+    }
+    
+    print("开始生成V3测试PDF...")
+    buffer = generate_pdf_48_v3(
+        result_id='test_v3_final',
+        scores=test_scores,
+        user_name='测试用户',
+        experience='3-5年',
+        font_name='Helvetica'  # 测试用，实际使用时传入 CHINESE_FONT
+    )
+    
+    output_file = 'test_report_v3_final.pdf'
+    with open(output_file, 'wb') as f:
+        f.write(buffer.getvalue())
+    
+    print(f"✅ V3最终版PDF已生成: {output_file}")
+    print(f"   文件大小: {buffer.tell() / 1024:.1f} KB")
+
+
 
 def generate_pdf_48(result_id, scores, user_name, experience):
     """生成48题PDF报告（V1兼容版）"""
@@ -2186,6 +2448,242 @@ try:
     print(f"数据库初始化完成: {DATABASE}")
 except Exception as e:
     print(f"数据库初始化警告: {e}")
+
+# ============ V4 PDF 报告生成 ============
+
+def generate_pdf_48_v4(result_id, scores, user_name, experience, font_name='Helvetica'):
+    """
+    生成 8 维能力测评报告 V4
+    设计：封面页 + 概览页 + 详细页，专业蓝绿配色。
+    与 generate_pdf_48_v3 签名兼容，直接替换使用。
+    """
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.graphics.shapes import Drawing, Rect, String
+    from reportlab.graphics.charts.piecharts import Pie
+    import io
+
+    # 字体兜底：若无中文字体，改用 Helvetica（英文可显示）
+    if not font_name:
+        font_name = 'Helvetica'
+        print('[PDF] 警告：无中文字体，PDF中文将显示异常')
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=15*mm, rightMargin=15*mm,
+        topMargin=15*mm, bottomMargin=15*mm
+    )
+
+    def ps(name, **kwargs):
+        fn = kwargs.pop('fontName', font_name)  # 允许覆盖默认字体
+        return ParagraphStyle(name, fontName=fn, **kwargs)
+
+    story = []
+    dim_names = {
+        'COG': '认知能力', 'TEC': '技术能力', 'COM': '表达能力',
+        'SOC': '社交能力', 'ORG': '策划执行', 'PRS': '解决问题',
+        'MGT': '管理能力', 'LLA': '持续学习'
+    }
+
+    def score_color(s):
+        if s >= 4.0: return COLOR_ACCENT_GOOD
+        if s >= 3.0: return COLOR_SECONDARY
+        if s >= 2.0: return COLOR_ACCENT_WARN
+        return colors.HexColor('#ef4444')
+
+    # ─── 封面页 ───
+    story.append(Spacer(1, 28*mm))
+    story.append(Paragraph("8 维 能 力 测 评 报 告", ps('CT', fontName=font_name+'-Bold',
+        fontSize=26, textColor=COLOR_PRIMARY, alignment=TA_CENTER, spaceAfter=6)))
+    story.append(Paragraph("8-Dimensional Competency Assessment Report",
+        ps('CS', fontName=font_name, fontSize=11,
+           textColor=COLOR_SECONDARY, alignment=TA_CENTER, spaceAfter=35)))
+
+    info = [["姓名", user_name or '—'], ["经验", experience or '—'],
+            ["报告ID", f"8D-{result_id}"], ["日期", datetime.now().strftime('%Y-%m-%d')]]
+    t = Table(info, colWidths=[80, 210])
+    t.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (0,-1), font_name+'-Bold'),
+        ('FONTNAME', (1,0), (1,-1), font_name),
+        ('FONTSIZE', (0,0), (-1,-1), 11),
+        ('TEXTCOLOR', (0,0), (0,-1), COLOR_PRIMARY),
+        ('TEXTCOLOR', (1,0), (1,-1), COLOR_TEXT_DARK),
+        ('TOPPADDING', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 9),
+        ('LINEBELOW', (0,-1), (-1,-1), 1, COLOR_BORDER),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 25*mm))
+    bar = Table([[""]], colWidths=[290], rowHeights=[50])
+    bar.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), COLOR_PRIMARY),
+                              ('TOPPADDING', (0,0), (-1,-1), 0),
+                              ('BOTTOMPADDING', (0,0), (-1,-1), 0)]))
+    story.append(bar)
+    story.append(PageBreak())
+
+    # ─── 概览页 ───
+    # 综合评分块
+    all_scores = [v['average'] for v in scores.values()] if scores else []
+    avg = sum(all_scores) / len(all_scores) if all_scores else 0
+    label = "优秀" if avg >= 4.0 else "良好" if avg >= 3.0 else "中等"
+
+    sb = Table([
+        [Paragraph(f"<b>{avg:.1f}</b>", ps('BS', fontName=font_name+'-Bold',
+            fontSize=52, textColor=score_color(avg), alignment=TA_CENTER, leading=56))],
+        [Paragraph(label, ps('SL', fontSize=15, textColor=COLOR_TEXT_MID, alignment=TA_CENTER))],
+        [Paragraph("综合评分", ps('SS', fontSize=10, textColor=COLOR_TEXT_MID, alignment=TA_CENTER))],
+    ], colWidths=[170])
+    sb.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), COLOR_BG_LIGHT),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 10)]))
+
+    # 优/弱分布
+    top3 = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)[:3]
+    bot3 = sorted(scores.items(), key=lambda x: x[1]['average'])[:3]
+    db = Table([["优势维度", "待提升维度"], [f"TOP {len(top3)}", f"BOTTOM {len(bot3)}"]],
+               colWidths=[85, 85])
+    db.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (0,-1), COLOR_ACCENT_GOOD),
+        ('BACKGROUND', (1,0), (1,-1), COLOR_ACCENT_WARN),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,-1), font_name+'-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 9), ('FONTSIZE', (0,1), (-1,1), 18),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+    ]))
+
+    ov = Table([[sb, db]], colWidths=['50%', '50%'])
+    ov.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                            ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
+    story.append(ov)
+    story.append(Spacer(1, 6*mm))
+
+    # 8维柱状图
+    if scores:
+        bh = 22; gap = 7; lw = 85; sw = 35
+        maxw = 440 - lw - sw - 15
+        ch = Drawing(440, len(scores)*(bh+gap)+5)
+        sorted_s = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
+        for i, (dim, s) in enumerate(sorted_s):
+            y = len(scores)*(bh+gap) - (i+1)*(bh+gap)
+            ch.add(String(5, y+bh/2, dim_names.get(dim, dim),
+                          fontSize=9, fillColor=COLOR_TEXT_DARK))
+            bw = (s['average']/5.0)*maxw
+            ch.add(Rect(lw, y, bw, bh, fillColor=score_color(s['average']), strokeColor=None))
+            ch.add(String(lw+bw+4, y+bh/2, f"{s['average']:.1f}",
+                          fontSize=9, fillColor=COLOR_TEXT_DARK))
+        story.append(ch)
+
+    story.append(PageBreak())
+
+    # ─── TOP 3 优势 ───
+    story.append(Paragraph("核心优势 TOP 3", ps('TT', fontName=font_name+'-Bold',
+        fontSize=15, textColor=COLOR_ACCENT_GOOD, spaceAfter=10)))
+    for i, (dim, s) in enumerate(top3):
+        desc = s.get('description', '')
+        ct = Table([[Paragraph(f"<b>TOP {i+1}  {dim_names.get(dim, dim)}</b>",
+                               ps('ct', fontName=font_name+'-Bold', fontSize=12,
+                                  textColor=COLOR_ACCENT_GOOD)),
+                     Paragraph(f"<b>{s['average']:.1f}</b>/5.0",
+                               ps('cs', fontName=font_name+'-Bold', fontSize=13,
+                                  textColor=COLOR_ACCENT_GOOD, alignment=TA_RIGHT))],
+                    [Paragraph(desc, ps('cd', fontName=font_name, fontSize=10,
+                                        textColor=COLOR_TEXT_DARK)), ""]],
+                   colWidths=[340, 100])
+        ct.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), COLOR_BG_LIGHT),
+            ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12),
+            ('LINEBELOW', (0,0), (-1,0), 1.5, COLOR_ACCENT_GOOD),
+            ('SPAN', (0,1), (1,1)),
+        ]))
+        story.append(ct); story.append(Spacer(1, 5))
+
+    story.append(Spacer(1, 5*mm))
+
+    # ─── BOTTOM 3 发展区 ───
+    story.append(Paragraph("待提升领域", ps('DT', fontName=font_name+'-Bold',
+        fontSize=15, textColor=COLOR_ACCENT_WARN, spaceAfter=10)))
+    for i, (dim, s) in enumerate(bot3):
+        desc = s.get('description', '')
+        ct = Table([[Paragraph(f"<b>{dim_names.get(dim, dim)}</b>",
+                               ps('dt', fontName=font_name+'-Bold', fontSize=12,
+                                  textColor=COLOR_ACCENT_WARN)),
+                     Paragraph(f"<b>{s['average']:.1f}</b>/5.0",
+                               ps('ds', fontName=font_name+'-Bold', fontSize=13,
+                                  textColor=COLOR_ACCENT_WARN, alignment=TA_RIGHT))],
+                    [Paragraph(desc, ps('dd', fontName=font_name, fontSize=10,
+                                        textColor=COLOR_TEXT_DARK)), ""]],
+                   colWidths=[340, 100])
+        ct.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#fffbeb')),
+            ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING', (0,0), (-1,-1), 12), ('RIGHTPADDING', (0,0), (-1,-1), 12),
+            ('LINEBELOW', (0,0), (-1,0), 1.5, COLOR_ACCENT_WARN),
+            ('SPAN', (0,1), (1,1)),
+        ]))
+        story.append(ct); story.append(Spacer(1, 5))
+
+    story.append(PageBreak())
+
+    # ─── 各维度详细 ───
+    story.append(Paragraph("各维度能力详解", ps('LTT', fontName=font_name+'-Bold',
+        fontSize=15, textColor=COLOR_PRIMARY, spaceAfter=10)))
+
+    sub_names = {
+        'COG': ['信息提炼','逻辑推理','快速学习'],
+        'TEC': ['数字生产力','技术适应力','故障排查'],
+        'COM': ['解码能力','精炼表达','口头影响力'],
+        'SOC': ['情绪觉察','冲突协调','关系建立'],
+        'ORG': ['目标规划','高标准执行','资源管理'],
+        'PRS': ['Plan B产出','根源分析','创新方案'],
+        'MGT': ['任务预期管理','优先级取舍','授权追踪'],
+        'LLA': ['知识更新','主动探索','挫折转化'],
+    }
+
+    for dim, s in scores.items():
+        subs = s.get('sub_abilities', [])
+        rows = [[Paragraph(f"<b>{dim_names.get(dim, dim)}</b>",
+                           ps('dn', fontName=font_name+'-Bold', fontSize=11,
+                              textColor=COLOR_PRIMARY)),
+                 Paragraph(f"{s['average']:.1f}/5",
+                           ps('ds2', fontName=font_name+'-Bold', fontSize=11,
+                              textColor=score_color(s['average']), alignment=TA_RIGHT))]]
+        for j, sub in enumerate(subs):
+            rows.append([Paragraph(sub_names.get(dim, ['—']*3)[j] if j < len(sub_names.get(dim, [])) else '—',
+                                   ps('sl', fontName=font_name, fontSize=9,
+                                      textColor=COLOR_TEXT_MID, leading=12)),
+                         Paragraph(f"{sub.get('score', 0):.1f}",
+                                   ps('ss2', fontName=font_name, fontSize=9,
+                                      textColor=COLOR_TEXT_DARK, alignment=TA_RIGHT))])
+        t = Table(rows, colWidths=[390, 50])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), COLOR_BG_LIGHT),
+            ('BACKGROUND', (0,1), (-1,-1), COLOR_BG_CARD),
+            ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('LEFTPADDING', (0,0), (-1,-1), 8), ('RIGHTPADDING', (0,0), (-1,-1), 8),
+            ('LINEBELOW', (0,0), (-1,0), 1, COLOR_PRIMARY),
+            ('LINEBELOW', (0,-1), (-1,-1), 0.5, COLOR_BORDER),
+        ]))
+        story.append(t); story.append(Spacer(1, 3))
+
+    # ─── 页脚 ───
+    story.append(Spacer(1, 8*mm))
+    ft = Table([["© 2026 Santa Chow 香港求职咨询  |  8维能力测评报告"]], colWidths=[440])
+    ft.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), COLOR_PRIMARY),
+        ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+        ('FONTNAME', (0,0), (-1,-1), font_name),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7)]))
+    story.append(ft)
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 # ============ 主函数 ============
 if __name__ == '__main__':

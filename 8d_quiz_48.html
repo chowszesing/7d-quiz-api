@@ -383,34 +383,6 @@
         let answers = {};
         let order = [];
         let resultId = null;
-        let accessToken = null;
-
-        // ========== Token 权限检查 ==========
-        function checkToken() {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('token');
-            if (!token) {
-                document.getElementById('infoSection').innerHTML = `
-                    <div style="text-align:center;padding:40px 20px">
-                        <div style="font-size:48px;margin-bottom:16px">🔒</div>
-                        <h2 style="color:#1e3a8a;margin-bottom:12px">访问权限验证</h2>
-                        <p style="color:#475569;line-height:1.6;margin-bottom:20px">
-                            本测评系统需要通过有效链接访问。<br>
-                            请确认您使用的是完整链接地址。<br>
-                            如有问题，请联系 Santa Chow 获取正确链接。
-                        </p>
-                        <p style="font-size:12px;color:#94a3b8">错误码：MISSING_TOKEN</p>
-                    </div>`;
-                return false;
-            }
-            accessToken = token;
-            return true;
-        }
-
-        // 页面加载时立即检查 Token
-        if (!checkToken()) {
-            // 阻止继续，但先保留表单以便显示错误
-        }
 
         // Shuffle
         function shuffle(arr) {
@@ -423,7 +395,6 @@
         }
 
         function startQuiz() {
-            if (!accessToken) { alert('缺少访问凭证，请使用有效链接访问'); return; }
             const exp = document.getElementById('experience').value;
             if (!exp) { alert('请选择工作经验'); return; }
             // Build order: shuffle each dimension's questions to keep dimension grouping
@@ -509,8 +480,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name, experience: exp, industry: ind,
-                        answers, question_order: order.map(q => q.id),
-                        token: accessToken
+                        answers, question_order: order.map(q => q.id)
                     })
                 });
 
@@ -734,7 +704,7 @@
         }
 
         function downloadPDF() {
-            if (resultId) window.open('/api/quiz/report_48_v2/' + resultId, '_blank');
+            if (resultId) window.open('/api/quiz/report_48/' + resultId, '_blank');
             else alert('暂无报告ID，请重新提交');
         }
 
