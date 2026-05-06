@@ -976,8 +976,9 @@ def submit_48():
                  datetime.now().isoformat(), request.remote_addr,
                  request.headers.get('User-Agent', ''), token))
             result_id = c.lastrowid
+            conn.commit()  # 确保INSERT提交
 
-        # 消耗 token
+        # 消耗 token（独立连接）
         consume_token(token)
 
         return jsonify({'success': True, 'result_id': result_id, 'scores': scores})
