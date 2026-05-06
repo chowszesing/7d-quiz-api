@@ -894,6 +894,7 @@ HTML_GATEWAY = """
 </html>"""
 
 
+@app.route('/')
 def index():
     """入口页面"""
     return HTML_GATEWAY
@@ -901,34 +902,27 @@ def index():
 
 @app.route('/quiz')
 def quiz_page():
-    """8维能力测评答题页面"""
-    token = request.args.get('token', '')
-    if not token:
-        return HTML_GATEWAY  # 无 token 跳转回入口
-    # 读取 quiz HTML，注入 token
+    """8维能力测评答题页面（无需token，直接访问）"""
     quiz_path = os.path.join(os.path.dirname(__file__), '8d_quiz_48.html')
     try:
         with open(quiz_path, 'r', encoding='utf-8') as f:
-            html = f.read()
-        # 将 token 注入页面（前端 JS 会从 URL 读取 ?token=）
-        return html
+            return f.read()
     except FileNotFoundError:
         return jsonify({'error': 'Quiz page not found'}), 404
 
 @app.route('/8d_quiz_48.html')
 def quiz_legacy():
-    """兼容旧链接，自动跳转"""
-    token = request.args.get('token', '')
-    if token:
-        return quiz_page()
-    return HTML_GATEWAY
+    """兼容旧链接，直接展示问卷"""
+    quiz_path = os.path.join(os.path.dirname(__file__), '8d_quiz_48.html')
+    try:
+        with open(quiz_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return jsonify({'error': 'Quiz page not found'}), 404
 
 @app.route('/quiz48')
 def quiz48():
     """Alias for the quiz"""
-    token = request.args.get('token', '')
-    if not token:
-        return HTML_GATEWAY
     quiz_path = os.path.join(os.path.dirname(__file__), '8d_quiz_48.html')
     try:
         with open(quiz_path, 'r', encoding='utf-8') as f:
