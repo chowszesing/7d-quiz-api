@@ -392,93 +392,205 @@ HTML_ADMIN = '''<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 | 7维能力测评</title>
+    <title>管理后台 | 8维能力测评</title>
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f7fa;color:#333}
-        .container{max-width:1200px;margin:0 auto;padding:20px}
-        .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;border-radius:12px;margin-bottom:20px}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;background:#f5f7fa;color:#333}
+        .container{max-width:1300px;margin:0 auto;padding:20px}
+        .header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;padding:20px;border-radius:12px;margin-bottom:20px}
         .header h1{font-size:24px;margin-bottom:5px}
+        .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+        .tab{padding:10px 20px;background:white;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;border:2px solid transparent;transition:all 0.2s}
+        .tab.active{background:#1e3a8a;color:white}
         .card{background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
-        .card h2{font-size:16px;color:#667eea;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #667eea}
-        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px}
+        .card h2{font-size:16px;color:#1e3a8a;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #1e3a8a}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:20px}
         .stat-box{background:#f8f9fc;padding:20px;border-radius:10px;text-align:center}
-        .stat-value{font-size:32px;font-weight:700;color:#667eea}
+        .stat-value{font-size:32px;font-weight:700;color:#1e3a8a}
         .stat-label{font-size:12px;color:#888;margin-top:5px}
         table{width:100%;border-collapse:collapse}
-        th,td{padding:12px;text-align:left;border-bottom:1px solid #eee}
-        th{background:#f8f9fc;font-weight:600;color:#667eea}
+        th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
+        th{background:#f8f9fc;font-weight:600;color:#1e3a8a;white-space:nowrap}
         tr:hover{background:#f8f9fc}
-        .badge{padding:4px 8px;border-radius:12px;font-size:11px}
-        .badge-valid{background:#d4edda;color:#155724}
-        .badge-invalid{background:#f8d7da;color:#721c24}
-        .btn{padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer}
-        .btn:hover{background:#5a6fd6}
+        .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+        .badge-green{background:#d1fae5;color:#065f46}
+        .badge-red{background:#fee2e2;color:#991b1b}
+        .badge-yellow{background:#fef3c7;color:#92400e}
+        .btn{padding:8px 14px;background:#1e3a8a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+        .btn:hover{background:#2563eb}
+        .btn-sm{padding:5px 10px;font-size:12px}
+        .btn-red{background:#ef4444}.btn-red:hover{background:#dc2626}
+        .btn-green{background:#10b981}.btn-green:hover{background:#059669}
         .import-section{border:2px dashed #ddd;padding:30px;text-align:center;border-radius:12px;margin-top:20px}
-        .import-section input{margin:10px 0}
+        .token-input{display:inline-block;padding:8px 12px;border:1px solid #ddd;border-radius:6px;width:120px}
+        .msg{background:#f0f9ff;border-left:4px solid #1e3a8a;padding:12px 16px;border-radius:6px;margin:10px 0;font-size:13px}
+        .token-list{max-height:300px;overflow-y:auto}
+        .hidden{display:none}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚙️ 7维能力测评 - 管理后台</h1>
-            <p>数据管理 | 批量导入 | 报告下载</p>
+            <h1>⚙️ 8维能力测评 - 管理后台</h1>
+            <p>数据管理 | Token权限 | 报告下载</p>
         </div>
-        <div class="stats-grid" id="stats"></div>
-        <div class="card">
-            <h2>📋 测评记录</h2>
-            <div style="margin-bottom:15px">
-                <input type="text" id="searchName" placeholder="搜索姓名..." style="padding:8px;border:1px solid #ddd;border-radius:6px;width:200px">
-                <select id="filterIndustry" style="padding:8px;border:1px solid #ddd;border-radius:6px"><option value="">所有行业</option></select>
-                <button class="btn" onclick="loadData()">搜索</button>
-                <a href="/api/quiz/export" class="btn" style="background:#27ae60;margin-left:10px">📥 导出CSV</a>
-            </div>
-            <div style="overflow-x:auto">
-                <table><thead><tr><th>ID</th><th>姓名</th><th>行业</th><th>年限</th><th>提交时间</th><th>有效性</th><th>操作</th></tr></thead><tbody id="tableBody"></tbody></table>
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('records')">📋 48题记录</div>
+            <div class="tab" onclick="showTab('tokens')">🔑 Token管理</div>
+            <div class="tab" onclick="showTab('import')">📤 批量导入</div>
+        </div>
+
+        <!-- 48题记录 -->
+        <div id="tab-records">
+            <div class="stats-grid" id="stats48"></div>
+            <div class="card">
+                <h2>📋 48题测评记录（含Token来源）</h2>
+                <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap">
+                    <input type="text" id="searchName" placeholder="搜索姓名..." style="padding:8px;border:1px solid #ddd;border-radius:6px;width:160px">
+                    <select id="filterIndustry48" style="padding:8px;border:1px solid #ddd;border-radius:6px"><option value="">所有行业</option></select>
+                    <button class="btn" onclick="load48()">搜索</button>
+                    <a href="/api/quiz/list_48" class="btn" style="background:#10b981">📥 导出记录</a>
+                </div>
+                <div style="overflow-x:auto">
+                    <table><thead><tr><th>ID</th><th>姓名</th><th>行业</th><th>年限</th><th>Token</th><th>提交时间</th><th>操作</th></tr></thead><tbody id="table48"></tbody></table>
+                </div>
             </div>
         </div>
-        <div class="card">
-            <h2>📤 批量导入（离线问卷）</h2>
-            <div class="import-section">
-                <p>上传CSV文件批量导入测评结果</p>
-                <p style="font-size:12px;color:#888;margin:10px 0">格式：name, industry, experience, q1-q31（每题1-5分）</p>
-                <input type="file" id="csvFile" accept=".csv">
-                <button class="btn" onclick="importCSV()" style="margin-top:10px">导入</button>
-                <div id="importResult" style="margin-top:10px"></div>
+
+        <!-- Token管理 -->
+        <div id="tab-tokens" class="hidden">
+            <div class="stats-grid" id="statsTokens"></div>
+            <div class="card">
+                <h2>🔑 生成访问Token</h2>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:15px">
+                    <div>
+                        <label style="font-size:12px;color:#888">数量</label><br>
+                        <input type="number" id="genCount" value="20" min="1" max="300" class="token-input" style="width:80px">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:#888">前缀</label><br>
+                        <input type="text" id="genPrefix" value="8D" maxlength="10" class="token-input" style="width:80px">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:#888">分配给（选填）</label><br>
+                        <input type="text" id="genAssign" placeholder="如：香港大学MBA班" class="token-input" style="width:180px">
+                    </div>
+                    <div style="margin-top:18px"><button class="btn btn-green" onclick="generateTokens()">生成</button></div>
+                </div>
+                <div id="genResult" class="msg" style="display:none"></div>
+            </div>
+            <div class="card">
+                <h2>📋 Token列表</h2>
+                <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap">
+                    <select id="filterTokenUsed" onchange="loadTokens()" style="padding:8px;border:1px solid #ddd;border-radius:6px">
+                        <option value="">全部</option><option value="0">未使用</option><option value="1">已使用</option>
+                    </select>
+                    <button class="btn" onclick="loadTokens()">刷新</button>
+                    <a href="/api/token/export" class="btn" style="background:#10b981">📥 导出CSV</a>
+                </div>
+                <div class="token-list" style="overflow-x:auto">
+                    <table><thead><tr><th>Token</th><th>状态</th><th>分配给</th><th>创建时间</th><th>使用时间</th><th>操作</th></tr></thead><tbody id="tableTokens"></tbody></table>
+                </div>
             </div>
         </div>
-        <div style="text-align:center;margin-top:20px"><a href="/" style="color:#667eea">← 返回首页</a></div>
+
+        <!-- 批量导入 -->
+        <div id="tab-import" class="hidden">
+            <div class="card">
+                <h2>📤 批量导入（离线问卷）</h2>
+                <div class="import-section">
+                    <p>上传CSV文件批量导入测评结果</p>
+                    <p style="font-size:12px;color:#888;margin:10px 0">格式：name, industry, experience, q1-q31（每题1-5分）</p>
+                    <input type="file" id="csvFile" accept=".csv">
+                    <button class="btn" onclick="importCSV()" style="margin-top:10px">导入</button>
+                    <div id="importResult" style="margin-top:10px"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align:center;margin-top:20px"><a href="/" style="color:#1e3a8a">← 返回首页</a></div>
     </div>
     <script>
         const API='';
-        async function loadStats(){
-            const res=await fetch(API+'/api/quiz/all?limit=1000');
-            const data=await res.json();
-            const valid=data.results.filter(r=>r.validity_check).length;
-            document.getElementById('stats').innerHTML=`
-                <div class="stat-box"><div class="stat-value">${data.results.length}</div><div class="stat-label">总记录数</div></div>
-                <div class="stat-box"><div class="stat-value">${valid}</div><div class="stat-label">有效记录</div></div>
-                <div class="stat-box"><div class="stat-value">${data.results.length-valid}</div><div class="stat-label">无效记录</div></div>
-                <div class="stat-box"><div class="stat-value">${data.industries.length}</div><div class="stat-label">行业数</div></div>`;
-            const industries=[...new Set(data.results.map(r=>r.industry))];
-            document.getElementById('filterIndustry').innerHTML='<option value="">所有行业</option>'+industries.map(i=>`<option value="${i}">${i}</option>`).join('');
-            renderTable(data.results);
+        function showTab(name){
+            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+            document.querySelectorAll('[id^=tab-]').forEach(t=>t.classList.add('hidden'));
+            document.getElementById('tab-'+name).classList.remove('hidden');
+            event.target.classList.add('active');
         }
-        function renderTable(results){
-            document.getElementById('tableBody').innerHTML=results.slice(0,100).map(r=>`
-                <tr>
-                    <td>${r.id}</td><td>${r.user_name}</td><td>${r.industry}</td><td>${r.experience}</td>
-                    <td>${new Date(r.submitted_at).toLocaleDateString()}</td>
-                    <td><span class="badge ${r.validity_check?'badge-valid':'badge-invalid'}">${r.validity_check?'有效':'无效'}</span></td>
-                    <td><button class="btn" onclick="window.open('${API}/api/quiz/report/${r.id}','_blank')">PDF</button></td>
-                </tr>`).join('');
-        }
-        async function loadData(){
+        async function load48(){
             const name=document.getElementById('searchName').value;
-            const industry=document.getElementById('filterIndustry').value;
-            const res=await fetch(API+`/api/quiz/all?name=${name}&industry=${industry}&limit=100`);
+            const res=await fetch(API+'/api/quiz/list_48?limit=200');
             const data=await res.json();
-            renderTable(data.results);
+            document.getElementById('stats48').innerHTML=`
+                <div class="stat-box"><div class="stat-value">${data.count}</div><div class="stat-label">48题总记录</div></div>
+                <div class="stat-box"><div class="stat-value">${data.results.filter(r=>r.access_token).length}</div><div class="stat-label">Token来源</div></div>`;
+            const industries=[...new Set(data.results.map(r=>r.industry||''))].filter(Boolean);
+            document.getElementById('filterIndustry48').innerHTML='<option value="">所有行业</option>'+
+                industries.map(i=>`<option value="${i}">${i}</option>`).join('');
+            const filtered=data.results.filter(r=>!name||(r.user_name||'').includes(name));
+            document.getElementById('table48').innerHTML=filtered.map(r=>`
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.user_name||'匿名'}</td>
+                    <td>${r.industry||'-'}</td>
+                    <td>${r.experience||'-'}</td>
+                    <td><span style="font-size:11px;color:#1e3a8a;font-family:monospace">${r.access_token||'无'}</span></td>
+                    <td>${r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-'}</td>
+                    <td><button class="btn btn-sm" onclick="window.open('${API}/api/quiz/report_48/${r.id}','_blank')">PDF</button></td>
+                </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:#888">暂无记录</td></tr>';
+        }
+        async function loadTokens(){
+            const used=document.getElementById('filterTokenUsed').value;
+            const res=await fetch(API+'/api/token/list?used='+used);
+            const data=await res.json();
+            document.getElementById('statsTokens').innerHTML=`
+                <div class="stat-box"><div class="stat-value">${data.total}</div><div class="stat-label">总Token数</div></div>
+                <div class="stat-box"><div class="stat-value" style="color:#10b981">${data.available}</div><div class="stat-label">可用</div></div>
+                <div class="stat-box"><div class="stat-value" style="color:#ef4444">${data.used}</div><div class="stat-label">已使用</div></div>`;
+            document.getElementById('tableTokens').innerHTML=data.tokens.map(t=>`
+                <tr>
+                    <td><span style="font-family:monospace;font-size:13px">${t.token}</span></td>
+                    <td><span class="badge ${t.used?'badge-red':'badge-green'}">${t.used?'已使用':'未使用'}</span></td>
+                    <td style="font-size:12px;color:#666">${t.assigned_to||'-'}</td>
+                    <td style="font-size:12px">${t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</td>
+                    <td style="font-size:12px">${t.used_at ? new Date(t.used_at).toLocaleDateString() : '-'}</td>
+                    <td>
+                        ${!t.used ? `<button class="btn btn-sm" onclick="resetToken('${t.token}')" style="background:#f59e0b">重置</button>` : ''}
+                        <button class="btn btn-sm btn-red" onclick="deleteToken('${t.token}')">删除</button>
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无Token，请先生成</td></tr>';
+        }
+        async function generateTokens(){
+            const count=parseInt(document.getElementById('genCount').value);
+            const prefix=document.getElementById('genPrefix').value.trim()||'8D';
+            const assigned=document.getElementById('genAssign').value.trim();
+            const res=await fetch(API+'/api/token/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({count,prefix,assigned_to:assigned})});
+            const data=await res.json();
+            const el=document.getElementById('genResult');
+            if(data.success){
+                el.style.display='block';
+                el.style.background='#d1fae5';
+                el.style.borderColor='#065f46';
+                el.innerHTML=`<b>成功生成 ${data.created_count} 个Token：</b><br>`+
+                    data.tokens.map(t=>`<span style="font-family:monospace;background:#fff;padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-size:12px">${t}</span>`).join(' ');
+                loadTokens();
+            }else{
+                el.style.display='block';
+                el.style.background='#fee2e2';
+                el.innerHTML=`<b style="color:#991b1b">错误：${data.error}</b>`;
+            }
+        }
+        async function deleteToken(token){
+            if(!confirm('确认删除 Token: '+token+'？'))return;
+            await fetch(API+'/api/token/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+            loadTokens();
+        }
+        async function resetToken(token){
+            if(!confirm('重置 Token: '+token+' 为未使用？'))return;
+            await fetch(API+'/api/token/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+            loadTokens();
         }
         async function importCSV(){
             const file=document.getElementById('csvFile').files[0];
@@ -488,14 +600,37 @@ HTML_ADMIN = '''<!DOCTYPE html>
             try{
                 const res=await fetch(API+'/api/quiz/batch-import',{method:'POST',body:formData});
                 const data=await res.json();
-                document.getElementById('importResult').innerHTML=`<b style="color:${data.success?'green':'red'}">${data.message}</b> 成功: ${data.success_count||0} 失败: ${data.fail_count||0}`;
-                if(data.success)loadStats();
-            }catch(e){document.getElementById('importResult').innerHTML=`<b style="color:red">导入失败: ${e.message}</b>`}
+                document.getElementById('importResult').innerHTML=
+                    `<b style="color:${data.success?'#065f46':'#991b1b'}">${data.message}</b> 成功: ${data.success_count||0} 失败: ${data.fail_count||0}`;
+            }catch(e){document.getElementById('importResult').innerHTML=`<b style="color:#991b1b">导入失败: ${e.message}</b>`}
         }
-        loadStats();
+        load48();
     </script>
 </body>
 </html>'''
+
+# ============ Token 权限函数 ============
+def validate_token(token):
+    """验证 token 是否有效，返回 (is_valid, message)"""
+    if not token:
+        return False, '缺少访问凭证（token），请使用有效链接访问本页面'
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute('SELECT used FROM access_tokens WHERE token = ?', (token,))
+        row = c.fetchone()
+        if not row:
+            return False, '访问凭证无效，请联系管理员获取正确链接'
+        if row['used'] == 1:
+            return False, '此访问链接已使用完毕，无法再次提交'
+        return True, 'ok'
+
+def consume_token(token):
+    """标记 token 为已使用"""
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute('UPDATE access_tokens SET used=1, used_at=? WHERE token=?',
+                  (datetime.now().isoformat(), token))
+        conn.commit()
 
 # ============ 数据库函数 ============
 @contextmanager
@@ -520,7 +655,15 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_name TEXT, experience TEXT, industry TEXT,
             answers TEXT, question_order TEXT, scores TEXT,
-            submitted_at TEXT, ip_address TEXT, user_agent TEXT)''')
+            submitted_at TEXT, ip_address TEXT, user_agent TEXT,
+            access_token TEXT)''')
+        # Token 白名单表
+        c.execute('''CREATE TABLE IF NOT EXISTS access_tokens (
+            token TEXT PRIMARY KEY,
+            used INTEGER DEFAULT 0,
+            assigned_to TEXT,
+            created_at TEXT,
+            used_at TEXT)''')
         conn.commit()
 
 def calculate_scores(answers):
@@ -801,25 +944,34 @@ def batch_import():
 
 @app.route('/api/quiz/submit_48', methods=['POST'])
 def submit_48():
-    """提交48题8维测评"""
+    """提交48题8维测评（需Token验证）"""
     try:
         data = request.get_json()
         if not data or 'answers' not in data:
             return jsonify({'error': 'Missing answers'}), 400
+
+        # Token 验证
+        token = data.get('token', '')
+        is_valid, msg = validate_token(token)
+        if not is_valid:
+            return jsonify({'error': msg, 'token_required': True}), 403
 
         scores = calculate_scores_48(data['answers'])
 
         with get_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT INTO quiz_results_48
-                (user_name, experience, industry, answers, question_order, scores, submitted_at, ip_address, user_agent)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (user_name, experience, industry, answers, question_order, scores, submitted_at, ip_address, user_agent, access_token)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (data.get('name', '匿名用户'), data.get('experience', ''),
                  data.get('industry', ''), json.dumps(data.get('answers', {})),
                  json.dumps(data.get('question_order', [])), json.dumps(scores),
                  datetime.now().isoformat(), request.remote_addr,
-                 request.headers.get('User-Agent', '')))
+                 request.headers.get('User-Agent', ''), token))
             result_id = c.lastrowid
+
+        # 消耗 token
+        consume_token(token)
 
         return jsonify({'success': True, 'result_id': result_id, 'scores': scores})
     except Exception as e:
@@ -872,21 +1024,21 @@ def generate_pdf_48(result_id, scores, user_name, experience):
     story = []
 
     # Title
-    story.append(Paragraph('8維能力深度評測報告', styles['CTitle']))
-    story.append(Paragraph(f'<b>{user_name}</b> | {experience} | 評測日期: {datetime.now().strftime("%Y-%m-%d")}', styles['CSub']))
+    story.append(Paragraph('8维能力深度评测报告', styles['CTitle']))
+    story.append(Paragraph(f'<b>{user_name}</b> | {experience} | 评测日期: {datetime.now().strftime("%Y-%m-%d")}', styles['CSub']))
     story.append(Spacer(1, 10*mm))
 
     # Dimension order
     dim_order = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA']
     dim_names = {
-        'COG':'認知能力','TEC':'技術掌握','COM':'理解表達','SOC':'社交技能',
-        'ORG':'策劃執行','PRS':'解決問題','MGT':'管理技能','LLA':'持續學習'
+        'COG':'认知能力','TEC':'技术掌握','COM':'理解表达','SOC':'社交技能',
+        'ORG':'策划执行','PRS':'解决问题','MGT':'管理技能','LLA':'持续学习'
     }
     dim_icons = {'COG':'🧠','TEC':'💻','COM':'💬','SOC':'🤝','ORG':'🎯','PRS':'⚡','MGT':'👥','LLA':'📚'}
 
     # Score table
-    story.append(Paragraph('📊 能力分數總覽', styles['CSection']))
-    data = [['維度', '分數', '等級']]
+    story.append(Paragraph('📊 能力分数总览', styles['CSection']))
+    data = [['维度', '分数', '等级']]
     sort_scores = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
     for dim, s in sort_scores:
         data.append([f"{dim_icons.get(dim,'')} {s['name']}", f"{s['average']:.1f}", s['level']])
@@ -907,40 +1059,40 @@ def generate_pdf_48(result_id, scores, user_name, experience):
     story.append(Spacer(1, 8*mm))
 
     # Top 3 strengths
-    story.append(Paragraph('✅ 核心優勢', styles['CSection']))
+    story.append(Paragraph('✅ 核心优势', styles['CSection']))
     top3 = sort_scores[:3]
     for dim, s in top3:
-        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — 這是你最突出的能力領域。', styles['CText']))
+        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — 这是你最突出的能力领域。', styles['CText']))
     story.append(Spacer(1, 5*mm))
 
     # Bottom 3 development areas (NO industry matching)
-    story.append(Paragraph('📈 發展空間', styles['CSection']))
+    story.append(Paragraph('📈 发展空间', styles['CSection']))
     bot3 = sort_scores[-3:][::-1]
     tips_map = {
-        'COG':'可加強結構化思維訓練，多練習歸納總結。',
-        'TEC':'建議每週投入固定時間學習新工具，遇到問題先自行排查。',
-        'COM':'練習用一句話概括複雜概念，多參與需要公開表達的場合。',
-        'SOC':'主動發起1對1交流，練習在對話中感知他人情緒。',
-        'ORG':'養成每週規劃習慣，善用任務管理工具提升執行力。',
-        'PRS':'遇到問題先問三次「為什麼」，練習在壓力下列出備選方案。',
-        'MGT':'練習用SMART原則設定目標，主動爭取協調機會。',
-        'LLA':'設定每月學習目標並追蹤進度，建立個人知識管理系統。'
+        'COG':'可加强结构化思维训练，多练习归纳总结。',
+        'TEC':'建议每周投入固定时间学习新工具，遇到问题先自行排查。',
+        'COM':'练习用一句话概括复杂概念，多参与需要公开表达的场合。',
+        'SOC':'主动发起1对1交流，练习在对话中感知他人情绪。',
+        'ORG':'养成每周规划习惯，善用任务管理工具提升执行力。',
+        'PRS':'遇到问题先问三次「为什么」，练习在压力下列出备选方案。',
+        'MGT':'练习用SMART原则设定目标，主动争取协调机会。',
+        'LLA':'设定每月学习目标并追踪进度，建立个人知识管理系统。'
     }
     for dim, s in bot3:
-        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — {tips_map.get(dim, "建議優先投入提升資源。")}', styles['CText']))
+        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — {tips_map.get(dim, "建议优先投入提升资源。")}', styles['CText']))
     story.append(Spacer(1, 8*mm))
 
     # Detailed dimension insights
-    story.append(Paragraph('🔍 維度詳解', styles['CSection']))
+    story.append(Paragraph('🔍 维度详解', styles['CSection']))
     insights_map = {
-        'COG': '反映資訊提煉（快速抓重點）、邏輯推理（分析判斷）、快速學習（掌握新知）三項子能力。',
-        'TEC': '反映數字生產力（AI/數據工具）、技術適應力（上手新系統）、故障排查（自行解決問題）三項子能力。',
-        'COM': '反映解碼能力（理解意圖）、精煉表達（簡潔清晰）、口頭影響力（會議主導）三項子能力。',
-        'SOC': '反映情緒覺察（敏銳感知）、衝突協調（共識建立）、關係建立（信任與網絡）三項子能力。',
-        'ORG': '反映目標規劃（行動拆解）、自主執行（無人監督高標準）、資源管理（預算時間人分配）三項子能力。',
-        'PRS': '反映應變能力（Plan B即時產出）、根源分析（結構化診斷）、創新方案（無SOP自創解法）三項子能力。',
-        'MGT': '反映預期管理（上下級期望控管）、優先級取捨（輕重緩急判斷）、授權追蹤（分配與跟進）三項子能力。',
-        'LLA': '反映知識更新（行業書刊課程）、主動探索（跨界好奇心）、挫折轉化（從失敗提煉教訓）三項子能力。'
+        'COG': '反映资讯提炼（快速抓重点）、逻辑推理（分析判断）、快速学习（掌握新知）三项子能力。',
+        'TEC': '反映数字生产力（AI/数据工具）、技术适应力（上手新系统）、故障排查（自行解决问题）三项子能力。',
+        'COM': '反映解码能力（理解意图）、精炼表达（简洁清晰）、口头影响力（会议主导）三项子能力。',
+        'SOC': '反映情绪觉察（敏锐感知）、冲突协调（共识建立）、关系建立（信任与网络）三项子能力。',
+        'ORG': '反映目标规划（行动拆解）、自主执行（无人监督高标准）、资源管理（预算时间人分配）三项子能力。',
+        'PRS': '反映应变能力（Plan B即时产出）、根源分析（结构化诊断）、创新方案（无SOP自创解法）三项子能力。',
+        'MGT': '反映预期管理（上下级期望控管）、优先级取舍（轻重缓急判断）、授权追踪（分配与跟进）三项子能力。',
+        'LLA': '反映知识更新（行业书刊课程）、主动探索（跨界好奇心）、挫折转化（从失败提炼教训）三项子能力。'
     }
     for dim, s in sort_scores:
         insight = insights_map.get(dim, '')
@@ -950,13 +1102,160 @@ def generate_pdf_48(result_id, scores, user_name, experience):
     story.append(Spacer(1, 15*mm))
 
     # Disclaimer (no industry reference)
-    story.append(Paragraph('📌 本報告基於自評數據，僅供參考。如需一對一專業求職定位諮詢，請聯繫 Santa Chow 教練。', styles['CFooter']))
+    story.append(Paragraph('📌 本报告基于自评数据，仅供参考。如需一对一专业求职定位咨询，请联系 Santa Chow 教练。', styles['CFooter']))
     story.append(Spacer(1, 5*mm))
-    story.append(Paragraph(f'Report ID: 8D-{result_id} | Santa Chow 8維能力評測系統', styles['CFooter']))
+    story.append(Paragraph(f'Report ID: 8D-{result_id} | Santa Chow 8维能力评测系统', styles['CFooter']))
 
     doc.build(story)
     buffer.seek(0)
     return buffer
+
+# ============ Token 管理 API ============
+@app.route('/api/token/generate', methods=['POST'])
+def generate_tokens():
+    """批量生成 Token（管理员接口）"""
+    try:
+        data = request.get_json()
+        count = min(int(data.get('count', 10)), 500)  # 最多500个
+        prefix = data.get('prefix', '8D').upper()
+        assigned_to = data.get('assigned_to', '')
+
+        with get_db() as conn:
+            c = conn.cursor()
+            created = []
+            for i in range(1, count + 1):
+                # 自动找最大序号，避免重复
+                c.execute('SELECT token FROM access_tokens WHERE token LIKE ? ORDER BY token DESC LIMIT 1',
+                          (f'{prefix}-%',))
+                existing = c.fetchall()
+                if existing:
+                    last_num = int(existing[0]['token'].split('-')[-1])
+                    token = f'{prefix}-{last_num + i:03d}'
+                else:
+                    token = f'{prefix}-{i:03d}'
+                c.execute('''INSERT OR IGNORE INTO access_tokens (token, assigned_to, created_at)
+                              VALUES (?, ?, ?)''',
+                          (token, assigned_to, datetime.now().isoformat()))
+                if c.rowcount > 0:
+                    created.append(token)
+
+            # 如果上面的逻辑产生重复，改用简单递增
+            if len(created) < count:
+                c.execute('SELECT COUNT(*) as cnt FROM access_tokens')
+                existing_count = c.fetchone()['cnt']
+                for i in range(len(created), count):
+                    token = f'{prefix}-{existing_count + i + 1:03d}'
+                    c.execute('''INSERT OR IGNORE INTO access_tokens (token, assigned_to, created_at)
+                                  VALUES (?, ?, ?)''',
+                              (token, assigned_to, datetime.now().isoformat()))
+                    if c.rowcount > 0:
+                        created.append(token)
+            conn.commit()
+
+        return jsonify({
+            'success': True,
+            'created_count': len(created),
+            'tokens': created,
+            'message': f'成功生成 {len(created)} 个Token'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/token/list')
+def list_tokens():
+    """列出所有 Token"""
+    try:
+        used_filter = request.args.get('used', '')  # ''=全部, '0'=未用, '1'=已用
+        with get_db() as conn:
+            c = conn.cursor()
+            if used_filter == '0':
+                c.execute('SELECT * FROM access_tokens WHERE used=0 ORDER BY created_at DESC')
+            elif used_filter == '1':
+                c.execute('SELECT * FROM access_tokens WHERE used=1 ORDER BY used_at DESC')
+            else:
+                c.execute('SELECT * FROM access_tokens ORDER BY created_at DESC')
+            rows = c.fetchall()
+
+        total = len(rows)
+        used = sum(1 for r in rows if r['used'] == 1)
+        return jsonify({
+            'tokens': [dict(r) for r in rows],
+            'total': total,
+            'used': used,
+            'available': total - used
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/token/delete', methods=['POST'])
+def delete_token():
+    """删除 Token"""
+    try:
+        data = request.get_json()
+        token = data.get('token', '')
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('DELETE FROM access_tokens WHERE token=?', (token,))
+            conn.commit()
+        return jsonify({'success': True, 'deleted': token})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/token/reset', methods=['POST'])
+def reset_token():
+    """重置 Token（标记为未使用）"""
+    try:
+        data = request.get_json()
+        token = data.get('token', '')
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('UPDATE access_tokens SET used=0, used_at=NULL WHERE token=?', (token,))
+            conn.commit()
+        return jsonify({'success': True, 'reset': token})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/token/export')
+def export_tokens():
+    """导出 Token 列表为 CSV"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM access_tokens ORDER BY created_at DESC')
+            rows = c.fetchall()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Token', '状态', '分配给', '创建时间', '使用时间'])
+        for r in rows:
+            writer.writerow([
+                r['token'],
+                '已使用' if r['used'] == 1 else '未使用',
+                r['assigned_to'] or '',
+                r['created_at'] or '',
+                r['used_at'] or ''
+            ])
+        output.seek(0)
+        return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
+                        mimetype='text/csv',
+                        as_attachment=True,
+                        download_name=f'access_tokens_{datetime.now().strftime("%Y%m%d")}.csv')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============ 48题列表（含Token来源）============
+@app.route('/api/quiz/list_48')
+def list_48():
+    """列出48题提交记录（含来源Token）"""
+    try:
+        limit = int(request.args.get('limit', 100))
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_48 ORDER BY id DESC LIMIT ?', (limit,))
+            rows = c.fetchall()
+        return jsonify({'results': [dict(r) for r in rows], 'count': len(rows)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ============ 主函数 ============
 if __name__ == '__main__':

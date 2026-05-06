@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,7 +18,7 @@
             --gray-400: #94a3b8;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans HK", "PingFang HK", "Microsoft YaHei", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", "Noto Sans SC", "PingFang SC", sans-serif;
             background: var(--dark);
             min-height: 100vh;
             overflow-x: hidden;
@@ -133,23 +133,23 @@
     <div class="main-container">
         <div class="logo-section">
             <div class="logo">✦ SANTA CHOW</div>
-            <h1>8維能力深度評測</h1>
-            <p>48道情境題 · 精準定位你的職場核心競爭力</p>
-            <div class="tagline">耗時約 8-10 分鐘</div>
+            <h1>8维能力深度评测</h1>
+            <p>48道情境题 · 精准定位你的职场核心竞争力</p>
+            <div class="tagline">耗时约 8-10 分钟</div>
         </div>
 
         <div class="card" id="infoSection">
-            <div class="info-title">📋 開始評測前</div>
-            <div class="info-subtitle">請填寫以下基本資料 · 測評結果將用於後續常模對比</div>
+            <div class="info-title">📋 开始评测前</div>
+            <div class="info-subtitle">请填写以下基本资料 · 测评结果将用于后续常模对比</div>
             <div class="form-group">
-                <label>姓名 (選填)</label>
+                <label>姓名 (选填)</label>
                 <input type="text" id="userName" placeholder="你的名字">
             </div>
             <div class="form-group">
-                <label>工作經驗 *</label>
+                <label>工作经验 *</label>
                 <select id="experience">
-                    <option value="">請選擇...</option>
-                    <option value="應屆生">應屆生</option>
+                    <option value="">请选择...</option>
+                    <option value="应届生">应届生</option>
                     <option value="1-3年">1-3年</option>
                     <option value="3-5年">3-5年</option>
                     <option value="5-10年">5-10年</option>
@@ -157,24 +157,24 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>當前/目標行業 (選填)</label>
+                <label>当前/目标行业 (选填)</label>
                 <select id="industry">
-                    <option value="">請選擇...</option>
-                    <option value="銀行/金融">銀行/金融</option>
-                    <option value="投資銀行">投資銀行</option>
-                    <option value="四大審計">四大審計</option>
-                    <option value="管理諮詢">管理諮詢</option>
-                    <option value="科技/互聯網">科技/互聯網</option>
-                    <option value="保險">保險</option>
-                    <option value="房地產">房地產</option>
+                    <option value="">请选择...</option>
+                    <option value="银行/金融">银行/金融</option>
+                    <option value="投资银行">投资银行</option>
+                    <option value="四大审计">四大审计</option>
+                    <option value="管理咨询">管理咨询</option>
+                    <option value="科技/互联网">科技/互联网</option>
+                    <option value="保险">保险</option>
+                    <option value="房地产">房地产</option>
                     <option value="零售/快消">零售/快消</option>
-                    <option value="政府/公共事業">政府/公共事業</option>
+                    <option value="政府/公共事业">政府/公共事业</option>
                     <option value="教育">教育</option>
-                    <option value="醫療/製藥">醫療/製藥</option>
+                    <option value="医疗/制药">医疗/制药</option>
                     <option value="其他">其他</option>
                 </select>
             </div>
-            <button class="btn btn-primary" onclick="startQuiz()" style="width:100%;justify-content:center;margin-top:10px">開始評測 →</button>
+            <button class="btn btn-primary" onclick="startQuiz()" style="width:100%;justify-content:center;margin-top:10px">开始评测 →</button>
         </div>
 
         <div class="card hidden" id="quizSection">
@@ -184,96 +184,96 @@
             </div>
             <div id="questionContainer"></div>
             <div class="nav-buttons">
-                <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()">← 上一題</button>
-                <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">下一題 →</button>
+                <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()">← 上一题</button>
+                <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">下一题 →</button>
             </div>
         </div>
 
         <div class="card hidden" id="resultSection">
             <div class="result-header">
-                <h2>🎯 評測完成！</h2>
+                <h2>🎯 评测完成！</h2>
                 <p id="resultTitle"></p>
-                <button class="btn btn-secondary" onclick="downloadPDF()" style="margin-top:16px">📄 下載PDF報告</button>
-                <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:8px">重新評測</button>
+                <button class="btn btn-secondary" onclick="downloadPDF()" style="margin-top:16px">📄 下载PDF报告</button>
+                <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:8px">重新评测</button>
             </div>
             <div id="resultContent"></div>
         </div>
 
         <div class="footer">
-            <p>© 2026 <a href="#">Santa Chow</a> · 8維能力深度評測系統</p>
-            <p style="margin-top:4px">數據僅用於常模統計，不涉及個人隱私</p>
+            <p>© 2026 <a href="#">Santa Chow</a> · 8维能力深度评测系统</p>
+            <p style="margin-top:4px">数据仅用于常模统计，不涉及个人隐私</p>
         </div>
     </div>
 
     <script>
         const DIM_INFO = {
-            COG: { name: '認知能力', icon: '🧠', color: '#3b82f6' },
-            TEC: { name: '技術掌握', icon: '💻', color: '#10b981' },
-            COM: { name: '理解表達', icon: '💬', color: '#f59e0b' },
+            COG: { name: '认知能力', icon: '🧠', color: '#3b82f6' },
+            TEC: { name: '技术掌握', icon: '💻', color: '#10b981' },
+            COM: { name: '理解表达', icon: '💬', color: '#f59e0b' },
             SOC: { name: '社交技能', icon: '🤝', color: '#ef4444' },
-            ORG: { name: '策劃執行', icon: '🎯', color: '#8b5cf6' },
-            PRS: { name: '解決問題', icon: '⚡', color: '#ec4899' },
+            ORG: { name: '策划执行', icon: '🎯', color: '#8b5cf6' },
+            PRS: { name: '解决问题', icon: '⚡', color: '#ec4899' },
             MGT: { name: '管理技能', icon: '👥', color: '#14b8a6' },
-            LLA: { name: '持續學習', icon: '📚', color: '#f97316' }
+            LLA: { name: '持续学习', icon: '📚', color: '#f97316' }
         };
 
         const questions = [
             // === COG 认知能力 (1-6) ===
-            { id: 1, dim: 'COG', text: '我能從大量複雜資訊中，快速提取關鍵重點。' },
-            { id: 2, dim: 'COG', text: '我擅長用圖表或結構化方式呈現複雜資訊。' },
-            { id: 3, dim: 'COG', text: '面對矛盾資訊時，我能理性分析並做出合理判斷。' },
-            { id: 4, dim: 'COG', text: '我能發現論證中的邏輯漏洞或不一致之處。' },
-            { id: 5, dim: 'COG', text: '我能在短時間內掌握一個全新的知識領域。' },
-            { id: 6, dim: 'COG', text: '相較於同儕，我學習新事物的速度明顯更快。' },
+            { id: 1, dim: 'COG', text: '我能从大量复杂资讯中，快速提取关键重点。' },
+            { id: 2, dim: 'COG', text: '我擅长用图表或结构化方式呈现复杂资讯。' },
+            { id: 3, dim: 'COG', text: '面对矛盾资讯时，我能理性分析并做出合理判断。' },
+            { id: 4, dim: 'COG', text: '我能发现论证中的逻辑漏洞或不一致之处。' },
+            { id: 5, dim: 'COG', text: '我能在短时间内掌握一个全新的知识领域。' },
+            { id: 6, dim: 'COG', text: '相较于同侪，我学习新事物的速度明显更快。' },
             // === TEC 技术掌握能力 (7-12) ===
-            { id: 7, dim: 'TEC', text: '我熟練使用AI工具（ChatGPT、Claude等）提升工作效率。' },
-            { id: 8, dim: 'TEC', text: '我能有效運用數據分析工具（Excel/Tableau等）處理工作數據。' },
-            { id: 9, dim: 'TEC', text: '面對新技術或新系統，我能快速上手適應。' },
-            { id: 10, dim: 'TEC', text: '我樂於嘗試新工具來優化現有工作流程。' },
-            { id: 11, dim: 'TEC', text: '遇到技術問題時，我能有條理地排查根本原因。' },
-            { id: 12, dim: 'TEC', text: '我不依賴他人，能自行解決大部分技術難題。' },
+            { id: 7, dim: 'TEC', text: '我熟练使用AI工具（ChatGPT、Claude等）提升工作效率。' },
+            { id: 8, dim: 'TEC', text: '我能有效运用数据分析工具（Excel/Tableau等）处理工作数据。' },
+            { id: 9, dim: 'TEC', text: '面对新技术或新系统，我能快速上手适应。' },
+            { id: 10, dim: 'TEC', text: '我乐于尝试新工具来优化现有工作流程。' },
+            { id: 11, dim: 'TEC', text: '遇到技术问题时，我能有条理地排查根本原因。' },
+            { id: 12, dim: 'TEC', text: '我不依赖他人，能自行解决大部分技术难题。' },
             // === COM 理解及表达能力 (13-18) ===
-            { id: 13, dim: 'COM', text: '我能準確理解對方言辭背後的真正意圖。' },
-            { id: 14, dim: 'COM', text: '閱讀複雜文件時，我能快速掌握核心要點。' },
-            { id: 15, dim: 'COM', text: '我擅長用簡潔語言說清楚複雜概念。' },
-            { id: 16, dim: 'COM', text: '我的書面表達（郵件、報告）邏輯清晰、重點突出。' },
-            { id: 17, dim: 'COM', text: '公開發言時，我能有效吸引聽眾注意力。' },
-            { id: 18, dim: 'COM', text: '在會議中，我的發言常能被採納或影響決策。' },
+            { id: 13, dim: 'COM', text: '我能准确理解对方言辞背后的真正意图。' },
+            { id: 14, dim: 'COM', text: '阅读复杂文件时，我能快速掌握核心要点。' },
+            { id: 15, dim: 'COM', text: '我擅长用简洁语言说清楚复杂概念。' },
+            { id: 16, dim: 'COM', text: '我的书面表达（邮件、报告）逻辑清晰、重点突出。' },
+            { id: 17, dim: 'COM', text: '公开发言时，我能有效吸引听众注意力。' },
+            { id: 18, dim: 'COM', text: '在会议中，我的发言常能被采纳或影响决策。' },
             // === SOC 社交技能 (19-24) ===
-            { id: 19, dim: 'SOC', text: '我能敏銳察覺身邊人情緒變化的細微訊號。' },
-            { id: 20, dim: 'SOC', text: '我能根據對方情緒狀態適當調整溝通方式。' },
-            { id: 21, dim: 'SOC', text: '團隊出現分歧時，我能協助各方找到共識。' },
-            { id: 22, dim: 'SOC', text: '面對人際衝突，我能冷靜處理而不情緒化。' },
-            { id: 23, dim: 'SOC', text: '我容易與不同背景的人建立信任關係。' },
-            { id: 24, dim: 'SOC', text: '我善於維護長期人脈網絡並保持有效聯繫。' },
+            { id: 19, dim: 'SOC', text: '我能敏锐察觉身边人情绪变化的细微讯号。' },
+            { id: 20, dim: 'SOC', text: '我能根据对方情绪状态适当调整沟通方式。' },
+            { id: 21, dim: 'SOC', text: '团队出现分歧时，我能协助各方找到共识。' },
+            { id: 22, dim: 'SOC', text: '面对人际冲突，我能冷静处理而不情绪化。' },
+            { id: 23, dim: 'SOC', text: '我容易与不同背景的人建立信任关系。' },
+            { id: 24, dim: 'SOC', text: '我善于维护长期人脉网络并保持有效联系。' },
             // === ORG 策划及执行能力 (25-30) ===
-            { id: 25, dim: 'ORG', text: '我能將模糊目標拆解為清晰可衡量的行動步驟。' },
-            { id: 26, dim: 'ORG', text: '我習慣在項目開始前制定詳細計劃和時間表。' },
-            { id: 27, dim: 'ORG', text: '沒有上級監督時，我仍能維持高標準完成任務。' },
-            { id: 28, dim: 'ORG', text: '我很少因為拖延而導致任務逾期。' },
-            { id: 29, dim: 'ORG', text: '我能合理分配時間、人力、預算等資源以達成目標。' },
-            { id: 30, dim: 'ORG', text: '我善於在有限資源下權衡取捨以最大化產出。' },
+            { id: 25, dim: 'ORG', text: '我能将模糊目标拆解为清晰可衡量的行动步骤。' },
+            { id: 26, dim: 'ORG', text: '我习惯在项目开始前制定详细计划和时间表。' },
+            { id: 27, dim: 'ORG', text: '没有上级监督时，我仍能维持高标准完成任务。' },
+            { id: 28, dim: 'ORG', text: '我很少因为拖延而导致任务逾期。' },
+            { id: 29, dim: 'ORG', text: '我能合理分配时间、人力、预算等资源以达成目标。' },
+            { id: 30, dim: 'ORG', text: '我善于在有限资源下权衡取舍以最大化产出。' },
             // === PRS 解决问题能力 (31-36) ===
-            { id: 31, dim: 'PRS', text: '當原定方案失敗時，我能迅速提出替代方案。' },
-            { id: 32, dim: 'PRS', text: '面對突發狀況，我能快速調整策略應對變化。' },
-            { id: 33, dim: 'PRS', text: '解決問題時，我會深挖根本原因而非只處理表面。' },
-            { id: 34, dim: 'PRS', text: '我擅長用結構化方法（如5 Whys、魚骨圖）分析問題。' },
-            { id: 35, dim: 'PRS', text: '沒有現成流程時，我能自行設計有效解決方案。' },
-            { id: 36, dim: 'PRS', text: '我常提出別人想不到的創意解決方法。' },
+            { id: 31, dim: 'PRS', text: '当原定方案失败时，我能迅速提出替代方案。' },
+            { id: 32, dim: 'PRS', text: '面对突发状况，我能快速调整策略应对变化。' },
+            { id: 33, dim: 'PRS', text: '解决问题时，我会深挖根本原因而非只处理表面。' },
+            { id: 34, dim: 'PRS', text: '我擅长用结构化方法（如5 Whys、鱼骨图）分析问题。' },
+            { id: 35, dim: 'PRS', text: '没有现成流程时，我能自行设计有效解决方案。' },
+            { id: 36, dim: 'PRS', text: '我常提出别人想不到的创意解决方法。' },
             // === MGT 管理技能 (37-42) ===
-            { id: 37, dim: 'MGT', text: '我能有效管理上級對任務結果的期望。' },
-            { id: 38, dim: 'MGT', text: '我能清晰設定團隊成員的工作目標和標準。' },
-            { id: 39, dim: 'MGT', text: '多項任務並行時，我能準確判斷輕重緩急。' },
-            { id: 40, dim: 'MGT', text: '我敢於拒絕次要任務以確保關鍵目標達成。' },
-            { id: 41, dim: 'MGT', text: '我能有效分配任務並建立跟進機制確保執行。' },
-            { id: 42, dim: 'MGT', text: '我信任團隊成員的能力，不過度干預執行過程。' },
+            { id: 37, dim: 'MGT', text: '我能有效管理上级对任务结果的期望。' },
+            { id: 38, dim: 'MGT', text: '我能清晰设定团队成员的工作目标和标准。' },
+            { id: 39, dim: 'MGT', text: '多项任务并行时，我能准确判断轻重缓急。' },
+            { id: 40, dim: 'MGT', text: '我敢于拒绝次要任务以确保关键目标达成。' },
+            { id: 41, dim: 'MGT', text: '我能有效分配任务并建立跟进机制确保执行。' },
+            { id: 42, dim: 'MGT', text: '我信任团队成员的能力，不过度干预执行过程。' },
             // === LLA 持续学习能力 (43-48) ===
-            { id: 43, dim: 'LLA', text: '我保持定期閱讀行業書刊或參加課程的習慣。' },
-            { id: 44, dim: 'LLA', text: '我關注行業最新動態並主動學習新知識。' },
-            { id: 45, dim: 'LLA', text: '我會主動探索本職以外的新領域。' },
-            { id: 46, dim: 'LLA', text: '我經常因為好奇心學習一些暫時用不到的東西。' },
-            { id: 47, dim: 'LLA', text: '遇到失敗時，我會反思並從中提煉教訓。' },
-            { id: 48, dim: 'LLA', text: '批評意見對我而言是成長機會而非打擊。' }
+            { id: 43, dim: 'LLA', text: '我保持定期阅读行业书刊或参加课程的习惯。' },
+            { id: 44, dim: 'LLA', text: '我关注行业最新动态并主动学习新知识。' },
+            { id: 45, dim: 'LLA', text: '我会主动探索本职以外的新领域。' },
+            { id: 46, dim: 'LLA', text: '我经常因为好奇心学习一些暂时用不到的东西。' },
+            { id: 47, dim: 'LLA', text: '遇到失败时，我会反思并从中提炼教训。' },
+            { id: 48, dim: 'LLA', text: '批评意见对我而言是成长机会而非打击。' }
         ];
 
         const OPTIONS = [
@@ -288,6 +288,34 @@
         let answers = {};
         let order = [];
         let resultId = null;
+        let accessToken = null;
+
+        // ========== Token 权限检查 ==========
+        function checkToken() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            if (!token) {
+                document.getElementById('infoSection').innerHTML = `
+                    <div style="text-align:center;padding:40px 20px">
+                        <div style="font-size:48px;margin-bottom:16px">🔒</div>
+                        <h2 style="color:#1e3a8a;margin-bottom:12px">访问权限验证</h2>
+                        <p style="color:#475569;line-height:1.6;margin-bottom:20px">
+                            本测评系统需要通过有效链接访问。<br>
+                            请确认您使用的是完整链接地址。<br>
+                            如有问题，请联系 Santa Chow 获取正确链接。
+                        </p>
+                        <p style="font-size:12px;color:#94a3b8">错误码：MISSING_TOKEN</p>
+                    </div>`;
+                return false;
+            }
+            accessToken = token;
+            return true;
+        }
+
+        // 页面加载时立即检查 Token
+        if (!checkToken()) {
+            // 阻止继续，但先保留表单以便显示错误
+        }
 
         // Shuffle
         function shuffle(arr) {
@@ -300,8 +328,9 @@
         }
 
         function startQuiz() {
+            if (!accessToken) { alert('缺少访问凭证，请使用有效链接访问'); return; }
             const exp = document.getElementById('experience').value;
-            if (!exp) { alert('請選擇工作經驗'); return; }
+            if (!exp) { alert('请选择工作经验'); return; }
             // Build order: shuffle each dimension's questions to keep dimension grouping
             const dims = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
             order = [];
@@ -327,7 +356,7 @@
             document.getElementById('prevBtn').disabled = currentQ === 0;
 
             const dimInfo = DIM_INFO[q.dim];
-            const nextLabel = currentQ === total - 1 ? '提交評測 ✓' : '下一題 →';
+            const nextLabel = currentQ === total - 1 ? '提交评测 ✓' : '下一题 →';
 
             let optHtml = OPTIONS.map((o, i) => {
                 const checked = answers[q.id] === o.val ? 'checked' : '';
@@ -345,7 +374,7 @@
                 <div class="question-card">
                     <div class="question-meta">
                         <span class="question-dimension" style="background:${dimInfo.color}22;color:${dimInfo.color}">${dimInfo.icon} ${dimInfo.name}</span>
-                        <span class="question-number">第 ${currentQ+1} / ${total} 題</span>
+                        <span class="question-number">第 ${currentQ+1} / ${total} 题</span>
                     </div>
                     <div class="question-text">${q.text}</div>
                     <div class="options-grid">${optHtml}</div>
@@ -354,7 +383,7 @@
 
         function nextQuestion() {
             const selected = document.querySelector('input[name="ans"]:checked');
-            if (!selected) { alert('請選擇一個選項'); return; }
+            if (!selected) { alert('请选择一个选项'); return; }
             answers[order[currentQ].id] = parseInt(selected.value);
             if (currentQ < order.length - 1) {
                 currentQ++;
@@ -373,9 +402,9 @@
         async function submitQuiz() {
             document.getElementById('quizSection').classList.add('hidden');
             document.getElementById('resultSection').classList.remove('hidden');
-            document.getElementById('resultContent').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>正在計算評測結果...</p></div>';
+            document.getElementById('resultContent').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>正在计算评测结果...</p></div>';
 
-            const name = document.getElementById('userName').value || '匿名用戶';
+            const name = document.getElementById('userName').value || '匿名用户';
             const exp = document.getElementById('experience').value;
             const ind = document.getElementById('industry').value;
 
@@ -385,9 +414,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name, experience: exp, industry: ind,
-                        answers, question_order: order.map(q => q.id)
+                        answers, question_order: order.map(q => q.id),
+                        token: accessToken
                     })
                 });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    document.getElementById('resultContent').innerHTML = `
+                        <div style="text-align:center;padding:40px">
+                            <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+                            <h2 style="color:#991b1b;margin-bottom:12px">提交失败</h2>
+                            <p style="color:#475569;line-height:1.6">${err.error || '未知错误'}</p>
+                            <p style="font-size:12px;color:#94a3b8;margin-top:16px">请联系 Santa Chow 获取新的访问链接</p>
+                        </div>`;
+                    return;
+                }
                 const data = await res.json();
                 resultId = data.result_id;
                 renderResult(data.scores, name, exp, ind);
@@ -398,10 +440,10 @@
         }
 
         function getLevel(score) {
-            if (score >= 4.0) return { label: '優秀', badge: 'badge-high' };
+            if (score >= 4.0) return { label: '优秀', badge: 'badge-high' };
             if (score >= 3.0) return { label: '良好', badge: 'badge-mid' };
             if (score >= 2.0) return { label: '待提升', badge: 'badge-low' };
-            return { label: '需加強', badge: 'badge-low' };
+            return { label: '需加强', badge: 'badge-low' };
         }
 
         function renderResult(scores, name, exp, ind) {
@@ -409,7 +451,7 @@
             document.getElementById('resultTitle').textContent = title;
 
             const dimOrder = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
-            let tableHtml = '<table class="score-table"><tr><th>維度</th><th>分數</th><th>等級</th><th>分布</th></tr>';
+            let tableHtml = '<table class="score-table"><tr><th>维度</th><th>分数</th><th>等级</th><th>分布</th></tr>';
             for (const dim of dimOrder) {
                 const s = scores[dim];
                 const info = DIM_INFO[dim];
@@ -429,33 +471,33 @@
             const top3 = sorted.slice(0, 3);
             const bot3 = sorted.slice(-3).reverse();
 
-            let insightHtml = '<div class="report-section"><h3>📊 能力畫像</h3><p style="font-size:14px;color:var(--secondary);margin-bottom:16px">你的8維能力分布如下，分數越高代表自評越強。</p>' + tableHtml + '</div>';
+            let insightHtml = '<div class="report-section"><h3>📊 能力画像</h3><p style="font-size:14px;color:var(--secondary);margin-bottom:16px">你的8维能力分布如下，分数越高代表自评越强。</p>' + tableHtml + '</div>';
 
-            insightHtml += '<div class="report-section"><h3>✅ 核心優勢</h3><ul>';
+            insightHtml += '<div class="report-section"><h3>✅ 核心优势</h3><ul>';
             for (const item of top3) {
                 const info = DIM_INFO[item.dim];
-                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 這是你最突出的能力領域</li>`;
+                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 这是你最突出的能力领域</li>`;
             }
             insightHtml += '</ul></div>';
 
-            insightHtml += '<div class="report-section"><h3>📈 發展空間</h3><ul>';
+            insightHtml += '<div class="report-section"><h3>📈 发展空间</h3><ul>';
             for (const item of bot3) {
                 const info = DIM_INFO[item.dim];
-                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 建議優先投入提升資源</li>`;
+                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 建议优先投入提升资源</li>`;
             }
             insightHtml += '</ul></div>';
 
             // Sub-dimension breakdown
-            insightHtml += '<div class="report-section"><h3>🔍 子能力細分</h3>';
+            insightHtml += '<div class="report-section"><h3>🔍 子能力细分</h3>';
             const subInfo = {
-                COG: ['資訊提煉', '邏輯推理', '快速學習'],
-                TEC: ['數字生產力', '技術適應力', '故障排查'],
-                COM: ['解碼能力', '精煉表達', '口頭影響力'],
-                SOC: ['情緒覺察', '衝突協調', '關係建立'],
-                ORG: ['目標規劃', '自主執行', '資源管理'],
-                PRS: ['應變能力', '根源分析', '創新方案'],
-                MGT: ['預期管理', '優先級取捨', '授權追蹤'],
-                LLA: ['知識更新', '主動探索', '挫折轉化']
+                COG: ['资讯提炼', '逻辑推理', '快速学习'],
+                TEC: ['数字生产力', '技术适应力', '故障排查'],
+                COM: ['解码能力', '精炼表达', '口头影响力'],
+                SOC: ['情绪觉察', '冲突协调', '关系建立'],
+                ORG: ['目标规划', '自主执行', '资源管理'],
+                PRS: ['应变能力', '根源分析', '创新方案'],
+                MGT: ['预期管理', '优先级取舍', '授权追踪'],
+                LLA: ['知识更新', '主动探索', '挫折转化']
             };
             for (const dim of dimOrder) {
                 const info = DIM_INFO[dim];
@@ -488,18 +530,18 @@
             insightHtml += '</div>';
 
             // Improvement guidance (NO industry matching)
-            insightHtml += '<div class="report-section"><h3>💡 提升建議</h3><ul>';
+            insightHtml += '<div class="report-section"><h3>💡 提升建议</h3><ul>';
             for (const item of bot3) {
                 const info = DIM_INFO[item.dim];
                 const tips = {
-                    COG: '• 每天閱讀一篇分析性文章，練習總結核心論點\n• 嘗試用思維導圖整理複雜問題',
-                    TEC: '• 每週花2小時學習一個新工具\n• 遇到問題先自行嘗試排查30分鐘',
-                    COM: '• 練習用一句話概括複雜概念\n• 多參與需要公開表達的場合',
-                    SOC: '• 主動發起1對1咖啡聊天空\n• 練習在會議中詢問他人感受',
-                    ORG: '• 每週日規劃下週任務清單\n• 使用番茄工作法提升執行力',
-                    PRS: '• 遇到問題先問三次「為什麼」\n• 練習在壓力下冷靜列出備選方案',
-                    MGT: '• 練習用SMART原則設定目標\n• 主動爭取小型團隊協調機會',
-                    LLA: '• 設定每月學習目標並追蹤進度\n• 建立個人知識管理系統'
+                    COG: '• 每天阅读一篇分析性文章，练习总结核心论点\n• 尝试用思维导图整理复杂问题',
+                    TEC: '• 每周花2小时学习一个新工具\n• 遇到问题先自行尝试排查30分钟',
+                    COM: '• 练习用一句话概括复杂概念\n• 多参与需要公开表达的场合',
+                    SOC: '• 主动发起1对1咖啡聊天空\n• 练习在会议中询问他人感受',
+                    ORG: '• 每周日规划下周任务清单\n• 使用番茄工作法提升执行力',
+                    PRS: '• 遇到问题先问三次「为什么」\n• 练习在压力下冷静列出备选方案',
+                    MGT: '• 练习用SMART原则设定目标\n• 主动争取小型团队协调机会',
+                    LLA: '• 设定每月学习目标并追踪进度\n• 建立个人知识管理系统'
                 };
                 insightHtml += `<li><strong>${info.name}</strong><br><span style="font-size:12px;color:var(--gray-400)">${tips[item.dim].replace(/\n/g, '<br>')}</span></li>`;
             }
@@ -507,7 +549,7 @@
 
             // Disclaimer
             insightHtml += '<div style="margin-top:24px;padding:12px;background:#fef3c7;border-radius:12px;font-size:12px;color:#92400e">';
-            insightHtml += '📌 本報告基於自評數據，僅供參考。如需一對一專業求職定位諮詢，請聯繫 Santa Chow 教練獲取個人化指導。';
+            insightHtml += '📌 本报告基于自评数据，仅供参考。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。';
             insightHtml += '</div>';
 
             document.getElementById('resultContent').innerHTML = insightHtml;
@@ -529,7 +571,7 @@
 
         function downloadPDF() {
             if (resultId) window.open('/api/quiz/report_48/' + resultId, '_blank');
-            else alert('暫無報告ID，請重新提交');
+            else alert('暂无报告ID，请重新提交');
         }
 
         // Keyboard: Enter to continue
