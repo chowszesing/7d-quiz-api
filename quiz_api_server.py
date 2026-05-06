@@ -664,6 +664,13 @@ def init_db():
             assigned_to TEXT,
             created_at TEXT,
             used_at TEXT)''')
+
+        # 迁移：给 quiz_results_48 添加 access_token 列（如果不存在）
+        try:
+            c.execute("ALTER TABLE quiz_results_48 ADD COLUMN access_token TEXT")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # 列已存在
         conn.commit()
 
 def calculate_scores(answers):
@@ -1122,34 +1129,26 @@ def generate_tokens():
 
         with get_db() as conn:
             c = conn.cursor()
+            # 找当前最大序号
+            c.execute('SELECT token FROM access_tokens WHERE token LIKE ? ORDER BY token DESC LIMIT 1',
+                      (f'{prefix}-%',))
+            existing = c.fetchall()
+            if existing:
+                try:
+                    last_num = int(existing[0]['token'].split('-')[-1])
+                except ValueError:
+                    last_num = 0
+            else:
+                last_num = 0
+
             created = []
             for i in range(1, count + 1):
-                # 自动找最大序号，避免重复
-                c.execute('SELECT token FROM access_tokens WHERE token LIKE ? ORDER BY token DESC LIMIT 1',
-                          (f'{prefix}-%',))
-                existing = c.fetchall()
-                if existing:
-                    last_num = int(existing[0]['token'].split('-')[-1])
-                    token = f'{prefix}-{last_num + i:03d}'
-                else:
-                    token = f'{prefix}-{i:03d}'
+                token = f'{prefix}-{last_num + i:03d}'
                 c.execute('''INSERT OR IGNORE INTO access_tokens (token, assigned_to, created_at)
                               VALUES (?, ?, ?)''',
                           (token, assigned_to, datetime.now().isoformat()))
                 if c.rowcount > 0:
                     created.append(token)
-
-            # 如果上面的逻辑产生重复，改用简单递增
-            if len(created) < count:
-                c.execute('SELECT COUNT(*) as cnt FROM access_tokens')
-                existing_count = c.fetchone()['cnt']
-                for i in range(len(created), count):
-                    token = f'{prefix}-{existing_count + i + 1:03d}'
-                    c.execute('''INSERT OR IGNORE INTO access_tokens (token, assigned_to, created_at)
-                                  VALUES (?, ?, ?)''',
-                              (token, assigned_to, datetime.now().isoformat()))
-                    if c.rowcount > 0:
-                        created.append(token)
             conn.commit()
 
         return jsonify({
@@ -1260,4 +1259,8 @@ def list_48():
 # ============ 主函数 ============
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=PORT)
+    # debug=True 会在文件变化时自动重载（开发用）；但注意debug模式的重载器
+    # 会在子进程中执行实际请求，可能导致数据库文件句柄问题。
+    # Render部署时会用 gunicorn，不会遇到此问题。
+    app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true',
+             host='0.0.0.0', port=PORT, use_reloader=False)
