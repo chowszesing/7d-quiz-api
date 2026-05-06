@@ -30,84 +30,163 @@ CORS(app)
 DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
 PORT = int(os.environ.get('PORT', 5000))
 
+# ============ 中文字体下载（Render 容器内无字体时使用）============
+FONT_DOWNLOAD_DIR = '/tmp'  # Render 容器 /tmp 可写
+
+FONT_CDN_SOURCES = [
+    # Noto Sans SC 简体中文子集（推荐，最小 ~1.5MB）
+    'https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf',
+    # Noto Sans SC TTF 版本
+    'https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/07_NotoSansSC.zip',
+]
+
+FONT_LOCAL_PATHS = [
+    # 本地候选（开发者机器）
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.otf'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJKsc-Regular.otf'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'wqy-microhei.ttc'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.ttc'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'NotoSansCJK-Regular.otf'),
+    # Windows 系统字体
+    'C:/Windows/Fonts/msyh.ttc',   # 微软雅黑
+    'C:/Windows/Fonts/simhei.ttf',  # 黑体
+    'C:/Windows/Fonts/simsun.ttc', # 宋体
+]
+
+FONT_SYSTEM_EXPLICIT = [
+    ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto-cjk/NotoSansCJKsc-Regular.otf'),
+    ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto/NotoSansSC-Regular.otf'),
+    ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
+    ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
+    ('DroidSansFallback', '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'),
+    ('NotoSansHant', '/usr/share/fonts/opentype/noto/NotoSansHant-Regular.otf'),
+    ('SimHei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
+]
+
+FONT_FILENAME = 'NotoSansSC-Regular.otf'
+
+def download_chinese_font():
+    """从 CDN 下载中文字体到 /tmp，返回字体路径，失败返回 None"""
+    import urllib.request
+    import zipfile
+
+    target_path = os.path.join(FONT_DOWNLOAD_DIR, FONT_FILENAME)
+    if os.path.exists(target_path):
+        print(f"  [字体] 使用已下载字体: {target_path}")
+        return target_path
+
+    print(f"  [字体] 尝试下载 Noto Sans SC 字体到 {target_path}...")
+
+    # 方案1：直接下载 OTF
+    otf_url = 'https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf'
+    try:
+        req = urllib.request.Request(otf_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = resp.read()
+        with open(target_path, 'wb') as f:
+            f.write(data)
+        print(f"  [字体] 下载成功: {len(data)} bytes -> {target_path}")
+        return target_path
+    except Exception as e:
+        print(f"  [字体] OTF 下载失败: {e}")
+
+    # 方案2：下载 zip 并解压
+    zip_url = 'https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/07_NotoSansSC.zip'
+    try:
+        req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = resp.read()
+        zip_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC.zip')
+        with open(zip_path, 'wb') as f:
+            f.write(data)
+        print(f"  [字体] ZIP 下载成功: {len(data)} bytes")
+        # 解压
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zf:
+                for name in zf.namelist():
+                    if 'NotoSansSC-Regular.otf' in name or 'NotoSansSC-Regular.ttc' in name:
+                        zf.extract(name, FONT_DOWNLOAD_DIR)
+                        extracted = os.path.join(FONT_DOWNLOAD_DIR, name)
+                        # 重命名到标准名
+                        import shutil
+                        shutil.move(extracted, target_path)
+                        print(f"  [字体] 解压成功: {name} -> {target_path}")
+                        return target_path
+        except Exception as e2:
+            print(f"  [字体] 解压失败: {e2}")
+        os.remove(zip_path)
+    except Exception as e:
+        print(f"  [字体] ZIP 下载失败: {e}")
+
+    print(f"  [字体] 所有下载方案均失败")
+    return None
+
 # ============ 中文字体注册 ============
 def register_fonts():
     """注册中文字体，支持PDF中文输出；返回可用字体名称，失败返回None"""
-    
-    # 首先尝试应用目录下的字体文件（优先）
+
     app_dir = os.path.dirname(os.path.abspath(__file__))
-    local_fonts = [
-        os.path.join(app_dir, 'fonts', 'NotoSansCJK-Regular.otf'),
-        os.path.join(app_dir, 'fonts', 'NotoSansCJKsc-Regular.otf'),
-        os.path.join(app_dir, 'fonts', 'wqy-microhei.ttc'),
-        os.path.join(app_dir, 'fonts', 'NotoSansCJK-Regular.ttc'),
-        os.path.join(app_dir, 'NotoSansCJK-Regular.otf'),
-    ]
-    
-    # Ubuntu/Render 字体目录（递归搜索）
-    system_font_dirs = [
-        '/usr/share/fonts/',
-        '/usr/local/share/fonts/',
-        '/opt/fonts/',
-        os.path.expanduser('~/.fonts/'),
-    ]
-    
-    # 所有候选字体（按优先级排列）
-    font_candidates = []
-    
-    # 1. 本地字体（最高优先级）
-    for path in local_fonts:
+
+    # 候选字体来源
+    candidates = []
+
+    # 1. 本地字体文件（开发者机器）
+    for path in FONT_LOCAL_PATHS:
         if os.path.exists(path):
-            name = os.path.splitext(os.path.basename(path))[0].replace('-', '').replace('_', '')
-            font_candidates.append((name, path))
-    
-    # 2. 搜索系统字体目录
+            name = os.path.splitext(os.path.basename(path))[0].replace('-', '').replace('_', '').replace(' ', '')
+            candidates.append((name, path))
+            print(f"  [字体] 找到本地字体: {path}")
+
+    # 2. 系统显式路径
+    for name, path in FONT_SYSTEM_EXPLICIT:
+        if os.path.exists(path) and not any(f == path for _, f in candidates):
+            candidates.append((name, path))
+            print(f"  [字体] 找到系统字体: {path}")
+
+    # 3. 递归搜索系统字体目录
     import glob
+    system_font_dirs = [
+        '/usr/share/fonts/', '/usr/local/share/fonts/',
+        '/opt/fonts/', os.path.expanduser('~/.fonts/'),
+    ]
     for font_dir in system_font_dirs:
         if not os.path.exists(font_dir):
             continue
         for ext in ['*.ttf', '*.otf', '*.ttc']:
             for f in glob.glob(os.path.join(font_dir, '**', ext), recursive=True):
                 basename = os.path.basename(f).lower()
-                # 跳过不支持中文的西方字体
                 skip_patterns = ['dejavu', 'liberation', 'ubuntu', 'freefont', 'glyphicons', 'fontawesome']
                 if any(p in basename for p in skip_patterns):
                     continue
-                # 只选择可能包含中文的字体
                 cjk_patterns = ['cjk', 'noto', 'wqy', 'chinese', 'zh', 'sc', 'tc', 'hans', 'hant', 'droid', 'source']
                 if any(p in basename for p in cjk_patterns):
-                    name = os.path.splitext(os.path.basename(f))[0].replace('-', '').replace('_', '')
-                    font_candidates.append((name, f))
-    
-    # 3. 显式候选路径（WQY 系列）
-    explicit_paths = [
-        ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
-        ('WenQuanYiZenHei', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
-        ('WenQuanYiMicroheiTTF', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf'),
-        ('NotoSansCJK', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'),
-        ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto-cjk/NotoSansCJKsc-Regular.otf'),
-        ('NotoSansCJKTC', '/usr/share/fonts/opentype/noto-cjk/NotoSansCJKtc-Regular.otf'),
-        ('NotoSansSC', '/usr/share/fonts/opentype/noto/NotoSansSC-Regular.otf'),
-        ('NotoSansHant', '/usr/share/fonts/opentype/noto/NotoSansHant-Regular.otf'),
-        ('DroidSansFallback', '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'),
-        ('SimHei', 'C:/Windows/Fonts/simhei.ttf'),
-        ('SimSun', 'C:/Windows/Fonts/simsun.ttc'),
-        # 常见中文TTF
-        ('ChineseTTF', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
-    ]
-    
-    for name, path in explicit_paths:
-        if os.path.exists(path):
-            # 检查是否已在列表中
-            if not any(f == path for _, f in font_candidates):
-                font_candidates.append((name, path))
-    
-    # 尝试注册每个候选字体
+                    name = os.path.splitext(os.path.basename(f))[0].replace('-', '').replace('_', '').replace(' ', '')
+                    if not any(f == f for _, f in candidates):
+                        candidates.append((name, f))
+                        print(f"  [字体] 找到系统CJK字体: {f}")
+
+    # 4. 尝试下载（Render 等容器环境）
+    if not candidates:
+        print(f"  [字体] 未找到任何字体，尝试下载...")
+        downloaded = download_chinese_font()
+        if downloaded:
+            name = 'NotoSansSC'
+            candidates.append((name, downloaded))
+
+    # 去重
+    seen_paths = set()
+    unique_candidates = []
+    for name, path in candidates:
+        if path not in seen_paths:
+            seen_paths.add(path)
+            unique_candidates.append((name, path))
+    candidates = unique_candidates
+
     print(f"\n{'='*50}")
-    print(f"开始字体注册，共 {len(font_candidates)} 个候选")
+    print(f"开始字体注册，共 {len(candidates)} 个候选")
     print(f"{'='*50}")
-    
-    for name, path in font_candidates:
+
+    for name, path in candidates:
         try:
             font = TTFont(name, path)
             pdfmetrics.registerFont(font)
@@ -118,7 +197,7 @@ def register_fonts():
         except Exception as e:
             print(f"  ✗ 失败: {name} ({path}): {e}")
             continue
-    
+
     print(f"⚠️ 警告: 未找到中文字体，PDF中文将显示异常")
     print(f"{'='*50}\n")
     return None
@@ -977,7 +1056,7 @@ def report(result_id):
     except Exception as e:
         import traceback
         print(f"PDF生成错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None}), 500
+        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None, 'font_name': CHINESE_FONT or 'none'}), 500
 
 @app.route('/api/quiz/all')
 def get_all():
@@ -1125,7 +1204,7 @@ def report_48(result_id):
     except Exception as e:
         import traceback
         print(f"PDF生成错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None}), 500
+        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None, 'font_name': CHINESE_FONT or 'none'}), 500
 
 
 def generate_pdf_48(result_id, scores, user_name, experience):
@@ -1144,31 +1223,29 @@ def generate_pdf_48(result_id, scores, user_name, experience):
     styles.add(ParagraphStyle(name='CSub', fontName=font_name, fontSize=11, alignment=1, spaceAfter=16, textColor=colors.HexColor('#475569')))
     styles.add(ParagraphStyle(name='CText', fontName=font_name, fontSize=10, spaceAfter=6, leading=16))
     styles.add(ParagraphStyle(name='CSection', fontName=font_name, fontSize=13, spaceAfter=8, spaceBefore=10, textColor=colors.HexColor('#1e3a8a')))
+    styles.add(ParagraphStyle(name='CSubsection', fontName=font_name, fontSize=11, spaceAfter=4, spaceBefore=6, textColor=colors.HexColor('#334155')))
     styles.add(ParagraphStyle(name='CFooter', fontName=font_name, fontSize=9, alignment=1, textColor=colors.HexColor('#94a3b8')))
+    styles.add(ParagraphStyle(name='CAlert', fontName=font_name, fontSize=9, spaceAfter=4, leading=14, textColor=colors.HexColor('#92400e')))
 
     story = []
 
     # Title
     story.append(Paragraph('8维能力深度评测报告', styles['CTitle']))
     story.append(Paragraph(f'<b>{user_name}</b> | {experience} | 评测日期: {datetime.now().strftime("%Y-%m-%d")}', styles['CSub']))
-    story.append(Spacer(1, 10*mm))
+    story.append(Spacer(1, 6*mm))
 
     # Dimension order
     dim_order = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA']
-    dim_names = {
-        'COG':'认知能力','TEC':'技术掌握','COM':'理解表达','SOC':'社交技能',
-        'ORG':'策划执行','PRS':'解决问题','MGT':'管理技能','LLA':'持续学习'
-    }
-    dim_icons = {'COG':'🧠','TEC':'💻','COM':'💬','SOC':'🤝','ORG':'🎯','PRS':'⚡','MGT':'👥','LLA':'📚'}
+    dim_icons = {'COG':'[C]','TEC':'[T]','COM':'[M]','SOC':'[S]','ORG':'[O]','PRS':'[P]','MGT':'[G]','LLA':'[L]'}
 
     # Score table
-    story.append(Paragraph('📊 能力分数总览', styles['CSection']))
+    story.append(Paragraph('能力分数总览', styles['CSection']))
     data = [['维度', '分数', '等级']]
     sort_scores = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
     for dim, s in sort_scores:
-        data.append([f"{dim_icons.get(dim,'')} {s['name']}", f"{s['average']:.1f}", s['level']])
+        data.append([s['name'], f"{s['average']:.1f}", s['level']])
 
-    table = Table(data, colWidths=[80*mm, 40*mm, 60*mm])
+    table = Table(data, colWidths=[70*mm, 40*mm, 60*mm])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -1181,54 +1258,134 @@ def generate_pdf_48(result_id, scores, user_name, experience):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4ff')]),
     ]))
     story.append(table)
-    story.append(Spacer(1, 8*mm))
+    story.append(Spacer(1, 6*mm))
 
-    # Top 3 strengths
-    story.append(Paragraph('✅ 核心优势', styles['CSection']))
+    # ========== 核心优势（带文字描述）==========
+    advantageDesc = {
+        'COG': ('你拥有出色的认知加工能力，能够高效处理复杂信息并形成清晰判断。',
+                 ['面对大量信息能快速提炼核心', '逻辑推理严谨，能发现论证漏洞', '学习新领域速度快于常人']),
+        'TEC': ('你具备较强的技术适应力，乐于拥抱新工具并能独立解决技术问题。',
+                 ['AI和数据工具运用自如', '面对新技术能快速上手', '遇到问题能自主排查解决']),
+        'COM': ('你擅长解读他人意图并有效表达自己，在沟通场景中具有影响力。',
+                 ['能准确理解言外之意', '复杂概念能用简洁语言说清', '公开发言能影响团队决策']),
+        'SOC': ('你对人际氛围高度敏感，善于在关系网络中建立信任与共识。',
+                 ['能敏锐感知他人情绪变化', '擅长协调分歧、促进共识', '容易与不同背景的人建立信任']),
+        'ORG': ('你具备从目标到落地的完整策划执行能力，能在无人监督下保持高标准。',
+                 ['能将模糊目标拆解为可衡量步骤', '无人督促仍维持高产出', '善用资源最大化目标达成']),
+        'PRS': ('你擅长在压力下快速找到创新解法，不被既有框架束缚。',
+                 ['原方案失败能迅速提出Plan B', '用结构化方法深挖问题根源', '没有SOP时能自创有效方案']),
+        'MGT': ('你具备项目与预期管理能力，能协调多方资源推动目标达成。',
+                 ['能管理上下级的期望预期', '多任务并行时准确判断优先级', '能有效授权并建立跟进机制']),
+        'LLA': ('你保持持续成长的学习姿态，主动拓展知识边界并能从挫折中提炼教训。',
+                 ['定期阅读行业书刊、参加课程', '主动探索本职以外的领域', '能将批评和失败转化为成长养分']),
+    }
+
     top3 = sort_scores[:3]
+    story.append(Paragraph('核心优势（TOP 3）', styles['CSection']))
     for dim, s in top3:
-        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — 这是你最突出的能力领域。', styles['CText']))
-    story.append(Spacer(1, 5*mm))
+        desc, traits = advantageDesc.get(dim, ('你最突出的能力领域。', []))
+        story.append(Paragraph(f'<b>{s["name"]}</b> — {s["average"]:.1f}分', styles['CSubsection']))
+        story.append(Paragraph(desc, styles['CText']))
+        for t in traits:
+            story.append(Paragraph(f'· {t}', styles['CText']))
+        story.append(Spacer(1, 3*mm))
+    story.append(Spacer(1, 3*mm))
 
-    # Bottom 3 development areas (NO industry matching)
-    story.append(Paragraph('📈 发展空间', styles['CSection']))
-    bot3 = sort_scores[-3:][::-1]
-    tips_map = {
-        'COG':'可加强结构化思维训练，多练习归纳总结。',
-        'TEC':'建议每周投入固定时间学习新工具，遇到问题先自行排查。',
-        'COM':'练习用一句话概括复杂概念，多参与需要公开表达的场合。',
-        'SOC':'主动发起1对1交流，练习在对话中感知他人情绪。',
-        'ORG':'养成每周规划习惯，善用任务管理工具提升执行力。',
-        'PRS':'遇到问题先问三次「为什么」，练习在压力下列出备选方案。',
-        'MGT':'练习用SMART原则设定目标，主动争取协调机会。',
-        'LLA':'设定每月学习目标并追踪进度，建立个人知识管理系统。'
+    # ========== 发展空间（带文字描述）==========
+    developmentDesc = {
+        'COG': ('认知能力提升后，你在信息密集型岗位上将更具竞争力。',
+                 ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'],
+                 ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点']),
+        'TEC': ('技术能力补强后，你将更自信地应对数字化工作环境。',
+                 ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'],
+                 ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧']),
+        'COM': ('表达能力精进后，你在跨部门协作和汇报场景中将更游刃有余。',
+                 ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'],
+                 ['练习"电梯演讲"：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会']),
+        'SOC': ('社交敏锐度提升后，你在建立人脉网络和冲突处理上将更有优势。',
+                 ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'],
+                 ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次']),
+        'ORG': ('策划执行能力强化后，你的项目交付质量和时效性将显著提升。',
+                 ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'],
+                 ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点']),
+        'PRS': ('解决问题能力提升后，你将成为团队中不可替代的关键人物。',
+                 ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'],
+                 ['遇到问题先连续问5个"为什么"', '练习写"问题分析备忘录"（现象→原因→方案）', '每解决一个问题，总结提炼成可复用的方法论']),
+        'MGT': ('管理技能精进后，你将更适合承担需要协调多方资源的复杂项目。',
+                 ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'],
+                 ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习"委托四步法"：说目标→给资源→少干预→做复盘']),
+        'LLA': ('持续学习能力强化后，你的职业成长速度将显著快于同龄人。',
+                 ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'],
+                 ['设定每月读完1本专业书籍的目标', '建立个人知识库（笔记+标签系统）', '把每次批评写成"成长反馈卡"，提炼教训']),
     }
+
+    bot3 = sort_scores[-3:][::-1]
+    story.append(Paragraph('发展空间（最具成长潜力的领域）', styles['CSection']))
     for dim, s in bot3:
-        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b> ({s["average"]:.1f}分) — {tips_map.get(dim, "建议优先投入提升资源。")}', styles['CText']))
+        desc, signs, actions = developmentDesc.get(dim, ('建议优先投入提升资源。', [], []))
+        story.append(Paragraph(f'<b>{s["name"]}</b> — {s["average"]:.1f}分', styles['CSubsection']))
+        story.append(Paragraph(desc, styles['CText']))
+        story.append(Paragraph('常见表现：' + '；'.join(signs), styles['CText']))
+        story.append(Paragraph('行动建议：' + '；'.join(actions), styles['CText']))
+        story.append(Spacer(1, 3*mm))
+    story.append(Spacer(1, 3*mm))
+
+    # ========== 子能力详解（24项）==========
+    subInfo = {
+        'COG': [
+            ('资讯提炼', '从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。'),
+            ('逻辑推理', '面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。'),
+            ('快速学习', '在短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。'),
+        ],
+        'TEC': [
+            ('数字生产力', '有效运用AI工具和数据分析工具提升个人和团队的工作效率。'),
+            ('技术适应力', '面对新技术或新系统能快速上手，适应变化的能力强于常人。'),
+            ('故障排查', '遇到技术问题时能自主排查根本原因，不依赖他人解决问题。'),
+        ],
+        'COM': [
+            ('解码能力', '准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。'),
+            ('精炼表达', '用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。'),
+            ('口头影响力', '在公开发言和会议中能有效吸引听众注意力和影响决策。'),
+        ],
+        'SOC': [
+            ('情绪觉察', '敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。'),
+            ('冲突协调', '在团队分歧和人际冲突中能促进各方达成共识，保持冷静。'),
+            ('关系建立', '与不同背景的人建立信任，维护长期人脉网络并保持有效联系。'),
+        ],
+        'ORG': [
+            ('目标规划', '将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。'),
+            ('自主执行', '在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。'),
+            ('资源管理', '合理分配时间、人力、预算等资源，在有限条件下最大化产出。'),
+        ],
+        'PRS': [
+            ('应变能力', '原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。'),
+            ('根源分析', '用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。'),
+            ('创新方案', '在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。'),
+        ],
+        'MGT': [
+            ('预期管理', '有效管理上级和团队对任务结果的期望，避免目标与产出的落差。'),
+            ('优先级取舍', '多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。'),
+            ('授权追踪', '有效分配任务并建立跟进机制，信任团队不过度干预执行过程。'),
+        ],
+        'LLA': [
+            ('知识更新', '保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。'),
+            ('主动探索', '跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。'),
+            ('挫折转化', '面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。'),
+        ],
+    }
+
+    story.append(Paragraph('子能力详解（8维×3项）', styles['CSection']))
+    for dim, s in sort_scores:
+        subs = subInfo.get(dim, [])
+        story.append(Paragraph(f'<b>{s["name"]}</b>（{s["average"]:.1f}分 · {s["level"]}）', styles['CSubsection']))
+        for sub_name, sub_desc in subs:
+            story.append(Paragraph(f'· <b>{sub_name}</b>：{sub_desc}', styles['CText']))
+        story.append(Spacer(1, 2*mm))
     story.append(Spacer(1, 8*mm))
 
-    # Detailed dimension insights
-    story.append(Paragraph('🔍 维度详解', styles['CSection']))
-    insights_map = {
-        'COG': '反映资讯提炼（快速抓重点）、逻辑推理（分析判断）、快速学习（掌握新知）三项子能力。',
-        'TEC': '反映数字生产力（AI/数据工具）、技术适应力（上手新系统）、故障排查（自行解决问题）三项子能力。',
-        'COM': '反映解码能力（理解意图）、精炼表达（简洁清晰）、口头影响力（会议主导）三项子能力。',
-        'SOC': '反映情绪觉察（敏锐感知）、冲突协调（共识建立）、关系建立（信任与网络）三项子能力。',
-        'ORG': '反映目标规划（行动拆解）、自主执行（无人监督高标准）、资源管理（预算时间人分配）三项子能力。',
-        'PRS': '反映应变能力（Plan B即时产出）、根源分析（结构化诊断）、创新方案（无SOP自创解法）三项子能力。',
-        'MGT': '反映预期管理（上下级期望控管）、优先级取舍（轻重缓急判断）、授权追踪（分配与跟进）三项子能力。',
-        'LLA': '反映知识更新（行业书刊课程）、主动探索（跨界好奇心）、挫折转化（从失败提炼教训）三项子能力。'
-    }
-    for dim, s in sort_scores:
-        insight = insights_map.get(dim, '')
-        story.append(Paragraph(f'<b>{dim_icons.get(dim,"")} {s["name"]}</b>（{s["average"]:.1f}分·{s["level"]}）', styles['CText']))
-        if insight:
-            story.append(Paragraph(f'　{insight}', styles['CText']))
-    story.append(Spacer(1, 15*mm))
-
-    # Disclaimer (no industry reference)
-    story.append(Paragraph('📌 本报告基于自评数据，仅供参考。如需一对一专业求职定位咨询，请联系 Santa Chow 教练。', styles['CFooter']))
-    story.append(Spacer(1, 5*mm))
+    # Disclaimer
+    story.append(Paragraph('本报告基于自评数据，仅供参考。如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。', styles['CAlert']))
+    story.append(Spacer(1, 3*mm))
     story.append(Paragraph(f'Report ID: 8D-{result_id} | Santa Chow 8维能力评测系统', styles['CFooter']))
 
     doc.build(story)

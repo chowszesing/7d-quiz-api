@@ -473,31 +473,169 @@
 
             let insightHtml = '<div class="report-section"><h3>📊 能力画像</h3><p style="font-size:14px;color:var(--secondary);margin-bottom:16px">你的8维能力分布如下，分数越高代表自评越强。</p>' + tableHtml + '</div>';
 
-            insightHtml += '<div class="report-section"><h3>✅ 核心优势</h3><ul>';
+            // ========== 核心优势（带文字描述）==========
+            const advantageDesc = {
+                COG: {
+                    desc: '你拥有出色的认知加工能力，能够高效处理复杂信息并形成清晰判断。',
+                    traits: ['面对大量信息能快速提炼核心', '逻辑推理严谨，能发现论证漏洞', '学习新领域速度快于常人']
+                },
+                TEC: {
+                    desc: '你具备较强的技术适应力，乐于拥抱新工具并能独立解决技术问题。',
+                    traits: ['AI和数据工具运用自如', '面对新技术能快速上手', '遇到问题能自主排查解决']
+                },
+                COM: {
+                    desc: '你擅长解读他人意图并有效表达自己，在沟通场景中具有影响力。',
+                    traits: ['能准确理解言外之意', '复杂概念能用简洁语言说清', '公开发言能影响团队决策']
+                },
+                SOC: {
+                    desc: '你对人际氛围高度敏感，善于在关系网络中建立信任与共识。',
+                    traits: ['能敏锐感知他人情绪变化', '擅长协调分歧、促进共识', '容易与不同背景的人建立信任']
+                },
+                ORG: {
+                    desc: '你具备从目标到落地的完整策划执行能力，能在无人监督下保持高标准。',
+                    traits: ['能将模糊目标拆解为可衡量步骤', '无人督促仍维持高产出', '善用资源最大化目标达成']
+                },
+                PRS: {
+                    desc: '你擅长在压力下快速找到创新解法，不被既有框架束缚。',
+                    traits: ['原方案失败能迅速提出Plan B', '用结构化方法深挖问题根源', '没有SOP时能自创有效方案']
+                },
+                MGT: {
+                    desc: '你具备项目与预期管理能力，能协调多方资源推动目标达成。',
+                    traits: ['能管理上下级的期望预期', '多任务并行时准确判断优先级', '能有效授权并建立跟进机制']
+                },
+                LLA: {
+                    desc: '你保持持续成长的学习姿态，主动拓展知识边界并能从挫折中提炼教训。',
+                    traits: ['定期阅读行业书刊、参加课程', '主动探索本职以外的领域', '能将批评和失败转化为成长养分']
+                }
+            };
+
+            insightHtml += '<div class="report-section"><h3>✅ 核心优势</h3><p style="font-size:13px;color:var(--gray-400);margin-bottom:16px">以下是你最突出的3项能力，是你个人品牌的核心组成。</p>';
             for (const item of top3) {
                 const info = DIM_INFO[item.dim];
-                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 这是你最突出的能力领域</li>`;
+                const ad = advantageDesc[item.dim];
+                insightHtml += `<div style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid ${info.color}">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                        <span style="font-size:22px">${info.icon}</span>
+                        <strong style="font-size:17px;color:${info.color}">${info.name}</strong>
+                        <span style="margin-left:auto;background:${info.color};color:white;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:700">${item.score.toFixed(1)}分</span>
+                    </div>
+                    <p style="font-size:13px;color:var(--secondary);margin-bottom:10px">${ad.desc}</p>
+                    <ul style="margin:0;padding-left:20px;font-size:12px;color:var(--gray-400)">${ad.traits.map(t => `<li style="margin-bottom:3px">${t}</li>`).join('')}</ul>
+                </div>`;
             }
-            insightHtml += '</ul></div>';
+            insightHtml += '</div>';
 
-            insightHtml += '<div class="report-section"><h3>📈 发展空间</h3><ul>';
+            // ========== 发展空间（带文字描述）==========
+            const developmentDesc = {
+                COG: {
+                    desc: '认知能力提升后，你在信息密集型岗位上将更具竞争力。',
+                    signs: ['信息多时容易迷失重点', '面对新领域需要较长时间适应', '复杂分析有时难以形成清晰结论'],
+                    actions: ['每天练习写100字资讯摘要', '用思维导图整理复杂问题结构', '阅读后强迫自己复述核心观点']
+                },
+                TEC: {
+                    desc: '技术能力补强后，你将更自信地应对数字化工作环境。',
+                    signs: ['部分AI工具尚未深度使用', '遇到技术问题倾向求助而非自行排查', '新系统上手需要比别人更长时间'],
+                    actions: ['每周用2小时深入学习一个新工具', '遇到问题先自行排查30分钟再求助', '建立个人工具库，记录使用技巧']
+                },
+                COM: {
+                    desc: '表达能力精进后，你在跨部门协作和汇报场景中将更游刃有余。',
+                    signs: ['有时难以用一句话说清复杂概念', '书面表达逻辑偶有跳跃', '在大型会议中影响力有限'],
+                    actions: ['练习"电梯演讲"：30秒说清一个观点', '写完报告后检查是否只需3句话总结', '主动争取主持小型会议的机会']
+                },
+                SOC: {
+                    desc: '社交敏锐度提升后，你在建立人脉网络和冲突处理上将更有优势。',
+                    signs: ['偶尔未能及时感知他人情绪', '面对人际冲突倾向回避', '人脉网络主要局限在工作范围内'],
+                    actions: ['每周主动发起1次1对1交流', '在会议中关注每位发言者的情绪状态', '维护人脉清单，每季度主动联系一次']
+                },
+                ORG: {
+                    desc: '策划执行能力强化后，你的项目交付质量和时效性将显著提升。',
+                    signs: ['有时计划赶不上变化', '没有外部截止日期时容易拖延', '多任务并行时偶有遗漏'],
+                    actions: ['每周日规划下周TOP 3优先任务', '使用番茄工作法（25分钟专注+5分钟休息）', '为每个任务设定比截止日期早1天的内部节点']
+                },
+                PRS: {
+                    desc: '解决问题能力提升后，你将成为团队中不可替代的关键人物。',
+                    signs: ['Plan A失败时需要较长时间切换', '有时只解决表面问题而非根本', '面对无先例的问题感到无从下手'],
+                    actions: ['遇到问题先连续问5个"为什么"', '练习写"问题分析备忘录"（现象→原因→方案）', '每解决一个问题，总结提炼成可复用的方法论']
+                },
+                MGT: {
+                    desc: '管理技能精进后，你将更适合承担需要协调多方资源的复杂项目。',
+                    signs: ['有时上级期望与实际产出有落差', '多任务并行时难以取舍', '授权后容易过度干预'],
+                    actions: ['用SMART原则拆解每个目标', '每周主动与上级对齐一次预期', '练习"委托四步法"：说目标→给资源→少干预→做复盘']
+                },
+                LLA: {
+                    desc: '持续学习能力强化后，你的职业成长速度将显著快于同龄人。',
+                    signs: ['学习时间主要在工作需求驱动下发生', '缺乏系统化的知识管理方法', '批评意见有时会带来情绪而非反思'],
+                    actions: ['设定每月读完1本专业书籍的目标', '建立个人知识库（笔记+标签系统）', '把每次批评写成"成长反馈卡"，提炼教训']
+                }
+            };
+
+            insightHtml += '<div class="report-section"><h3>📈 发展空间</h3><p style="font-size:13px;color:var(--gray-400);margin-bottom:16px">以下是你最具成长潜力的3个领域，有针对性的练习可快速提升。</p>';
             for (const item of bot3) {
                 const info = DIM_INFO[item.dim];
-                insightHtml += `<li><strong>${info.icon} ${info.name}</strong> (${item.score.toFixed(1)}分) — 建议优先投入提升资源</li>`;
+                const dd = developmentDesc[item.dim];
+                insightHtml += `<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid #f59e0b">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                        <span style="font-size:22px">${info.icon}</span>
+                        <strong style="font-size:17px;color:#b45309">${info.name}</strong>
+                        <span style="margin-left:auto;background:#f59e0b;color:white;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:700">${item.score.toFixed(1)}分</span>
+                    </div>
+                    <p style="font-size:13px;color:var(--secondary);margin-bottom:10px">${dd.desc}</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div>
+                            <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:4px">🔍 常见表现</div>
+                            <ul style="margin:0;padding-left:16px;font-size:12px;color:var(--secondary)">${dd.signs.map(t => `<li style="margin-bottom:2px">${t}</li>`).join('')}</ul>
+                        </div>
+                        <div>
+                            <div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:4px">🎯 行动建议</div>
+                            <ul style="margin:0;padding-left:16px;font-size:12px;color:var(--secondary)">${dd.actions.map(t => `<li style="margin-bottom:2px">${t}</li>`).join('')}</ul>
+                        </div>
+                    </div>
+                </div>`;
             }
-            insightHtml += '</ul></div>';
+            insightHtml += '</div>';
 
-            // Sub-dimension breakdown
-            insightHtml += '<div class="report-section"><h3>🔍 子能力细分</h3>';
+            // ========== 子能力细分（带文字描述）==========
             const subInfo = {
-                COG: ['资讯提炼', '逻辑推理', '快速学习'],
-                TEC: ['数字生产力', '技术适应力', '故障排查'],
-                COM: ['解码能力', '精炼表达', '口头影响力'],
-                SOC: ['情绪觉察', '冲突协调', '关系建立'],
-                ORG: ['目标规划', '自主执行', '资源管理'],
-                PRS: ['应变能力', '根源分析', '创新方案'],
-                MGT: ['预期管理', '优先级取舍', '授权追踪'],
-                LLA: ['知识更新', '主动探索', '挫折转化']
+                COG: [
+                    { name: '资讯提炼', desc: '从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。' },
+                    { name: '逻辑推理', desc: '面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。' },
+                    { name: '快速学习', desc: '在短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。' }
+                ],
+                TEC: [
+                    { name: '数字生产力', desc: '有效运用AI工具和数据分析工具提升个人和团队的工作效率。' },
+                    { name: '技术适应力', desc: '面对新技术或新系统能快速上手，适应变化的能力强于常人。' },
+                    { name: '故障排查', desc: '遇到技术问题时能自主排查根本原因，不依赖他人解决问题。' }
+                ],
+                COM: [
+                    { name: '解码能力', desc: '准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。' },
+                    { name: '精炼表达', desc: '用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。' },
+                    { name: '口头影响力', desc: '在公开发言和会议中能有效吸引听众注意力和影响决策。' }
+                ],
+                SOC: [
+                    { name: '情绪觉察', desc: '敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。' },
+                    { name: '冲突协调', desc: '在团队分歧和人际冲突中能促进各方达成共识，保持冷静。' },
+                    { name: '关系建立', desc: '与不同背景的人建立信任，维护长期人脉网络并保持有效联系。' }
+                ],
+                ORG: [
+                    { name: '目标规划', desc: '将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。' },
+                    { name: '自主执行', desc: '在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。' },
+                    { name: '资源管理', desc: '合理分配时间、人力、预算等资源，在有限条件下最大化产出。' }
+                ],
+                PRS: [
+                    { name: '应变能力', desc: '原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。' },
+                    { name: '根源分析', desc: '用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。' },
+                    { name: '创新方案', desc: '在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。' }
+                ],
+                MGT: [
+                    { name: '预期管理', desc: '有效管理上级和团队对任务结果的期望，避免目标与产出的落差。' },
+                    { name: '优先级取舍', desc: '多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。' },
+                    { name: '授权追踪', desc: '有效分配任务并建立跟进机制，信任团队不过度干预执行过程。' }
+                ],
+                LLA: [
+                    { name: '知识更新', desc: '保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。' },
+                    { name: '主动探索', desc: '跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。' },
+                    { name: '挫折转化', desc: '面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。' }
+                ]
             };
             for (const dim of dimOrder) {
                 const info = DIM_INFO[dim];
@@ -509,43 +647,47 @@
                 const subScores = subs.map((sub, idx) => {
                     const items = dimQs.slice(idx*2, idx*2+2);
                     const avg = items.reduce((sum, q) => sum + (answers[q.id] || 0), 0) / Math.max(items.length, 1);
-                    return { sub, avg };
+                    return { name: sub.name, desc: sub.desc, avg };
                 });
                 insightHtml += `<div class="insight-block">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                         <strong style="color:${info.color}">${info.icon} ${info.name}</strong>
                         <span style="font-weight:700;font-size:16px">${s.average.toFixed(1)}</span>
                     </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:8px">`;
+                    <div style="display:flex;flex-wrap:wrap;gap:10px">`;
                 for (const ss of subScores) {
                     const pct = (ss.avg / 5 * 100).toFixed(0);
                     const barColor = ss.avg >= 3.5 ? '#10b981' : ss.avg >= 2.5 ? '#f59e0b' : '#ef4444';
-                    insightHtml += `<div style="flex:1;min-width:100px;background:white;border-radius:8px;padding:8px;text-align:center">
-                        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">${ss.sub}</div>
-                        <div style="font-size:16px;font-weight:700;color:${barColor}">${ss.avg.toFixed(1)}</div>
+                    insightHtml += `<div style="flex:1;min-width:110px;background:white;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:12px;font-weight:700;color:${info.color};margin-bottom:4px">${ss.name}</div>
+                        <div style="font-size:18px;font-weight:700;color:${barColor};margin-bottom:6px">${ss.avg.toFixed(1)}</div>
+                        <div style="height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px"></div></div>
+                        <div style="font-size:10px;color:var(--gray-400);line-height:1.4">${ss.desc}</div>
                     </div>`;
                 }
                 insightHtml += '</div></div>';
             }
             insightHtml += '</div>';
 
-            // Improvement guidance (NO industry matching)
-            insightHtml += '<div class="report-section"><h3>💡 提升建议</h3><ul>';
-            for (const item of bot3) {
+            // Improvement guidance — now integrated into 发展空间, simplified
+            insightHtml += '<div class="report-section"><h3>💡 总结与行动</h3>';
+            insightHtml += '<p style="font-size:13px;color:var(--secondary);margin-bottom:16px">基于你的评测结果，建议按以下优先级采取行动：</p>';
+            insightHtml += '<div style="display:grid;gap:10px">';
+            const actionOrder = [...bot3, ...top3.slice(0,2)];
+            for (let i = 0; i < actionOrder.length; i++) {
+                const item = actionOrder[i];
                 const info = DIM_INFO[item.dim];
-                const tips = {
-                    COG: '• 每天阅读一篇分析性文章，练习总结核心论点\n• 尝试用思维导图整理复杂问题',
-                    TEC: '• 每周花2小时学习一个新工具\n• 遇到问题先自行尝试排查30分钟',
-                    COM: '• 练习用一句话概括复杂概念\n• 多参与需要公开表达的场合',
-                    SOC: '• 主动发起1对1咖啡聊天空\n• 练习在会议中询问他人感受',
-                    ORG: '• 每周日规划下周任务清单\n• 使用番茄工作法提升执行力',
-                    PRS: '• 遇到问题先问三次「为什么」\n• 练习在压力下冷静列出备选方案',
-                    MGT: '• 练习用SMART原则设定目标\n• 主动争取小型团队协调机会',
-                    LLA: '• 设定每月学习目标并追踪进度\n• 建立个人知识管理系统'
-                };
-                insightHtml += `<li><strong>${info.name}</strong><br><span style="font-size:12px;color:var(--gray-400)">${tips[item.dim].replace(/\n/g, '<br>')}</span></li>`;
+                const dd = developmentDesc[item.dim];
+                const priority = i < bot3.length ? '🔴 优先提升' : '🟢 持续保持';
+                insightHtml += `<div style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:${i < bot3.length ? '#fffbeb' : '#f0fdf4'};border-radius:10px">
+                    <span style="font-size:18px;flex-shrink:0">${info.icon}</span>
+                    <div>
+                        <div style="font-size:12px;color:${info.color};font-weight:700;margin-bottom:2px">${priority} · ${info.name} (${item.score.toFixed(1)}分)</div>
+                        <div style="font-size:12px;color:var(--gray-400)">${i < bot3.length ? dd.actions[0] : '继续在工作中发挥这项优势'}</div>
+                    </div>
+                </div>`;
             }
-            insightHtml += '</ul></div>';
+            insightHtml += '</div></div>';
 
             // Disclaimer
             insightHtml += '<div style="margin-top:24px;padding:12px;background:#fef3c7;border-radius:12px;font-size:12px;color:#92400e">';
