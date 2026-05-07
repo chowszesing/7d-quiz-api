@@ -1722,8 +1722,18 @@ def draw_radar_chart_v2(dims, scores, width=220, height=220):
     return d
 
 
+# ============ V3 报告颜色常量（现代信息图表风格） ============
+COLOR_V3_BLUE = colors.HexColor('#1e88e5')    # 主蓝
+COLOR_V3_ORANGE = colors.HexColor('#ff9800')   # 辅橙
+COLOR_V3_LIGHT_BLUE = colors.HexColor('#e3f2fd')  # 浅蓝背景
+COLOR_V3_LIGHT_ORANGE = colors.HexColor('#fff3e0')  # 浅橙背景
+COLOR_V3_WHITE = colors.white
+COLOR_V3_DARK = colors.HexColor('#212121')     # 深灰文字
+COLOR_V3_GRAY = colors.HexColor('#757575')    # 中灰文字
+COLOR_V3_LIGHT_GRAY = colors.HexColor('#f5f5f5')  # 浅灰背景
+
 def generate_pdf_48_v2(result_id, scores, user_name, experience):
-    """生成 V2 版 PDF 报告 — 整合雷达图、颜色编码、场景化举例"""
+    """生成 V2 版 PDF 报告 — 现代信息图表风格（主蓝+辅橙配色）"""
     buffer = io.BytesIO()
 
     if CHINESE_FONT:
@@ -1731,68 +1741,459 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
     else:
         raise Exception('中文字体不可用')
 
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=15*mm, bottomMargin=15*mm,
-                            leftMargin=15*mm, rightMargin=15*mm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=12*mm, bottomMargin=12*mm,
+                            leftMargin=12*mm, rightMargin=12*mm)
     styles = getSampleStyleSheet()
 
-    # V2 样式定义
-    styles.add(ParagraphStyle(name='V2Title', fontName=font_name, fontSize=22,
-                               alignment=1, spaceAfter=6, textColor=COLOR_EXCELLENT))
-    styles.add(ParagraphStyle(name='V2Sub', fontName=font_name, fontSize=11,
-                               alignment=1, spaceAfter=4, textColor=COLOR_TEXT_MUTED))
-    styles.add(ParagraphStyle(name='V2Section', fontName=font_name, fontSize=13,
-                               spaceAfter=8, spaceBefore=8, textColor=COLOR_EXCELLENT))
-    styles.add(ParagraphStyle(name='V2CardTitle', fontName=font_name, fontSize=12,
-                               spaceAfter=4, textColor=COLOR_TEXT_DARK))
-    styles.add(ParagraphStyle(name='V2Text', fontName=font_name, fontSize=9.5,
-                               spaceAfter=4, leading=14, textColor=COLOR_TEXT_DARK))
-    styles.add(ParagraphStyle(name='V2Muted', fontName=font_name, fontSize=9,
-                               spaceAfter=3, leading=13, textColor=COLOR_TEXT_MUTED))
-    styles.add(ParagraphStyle(name='V2Footer', fontName=font_name, fontSize=8,
-                               alignment=1, textColor=COLOR_TEXT_MUTED))
-    styles.add(ParagraphStyle(name='V2Transition', fontName=font_name, fontSize=10,
-                               spaceAfter=8, spaceBefore=4, textColor=COLOR_TEXT_MUTED,
-                               alignment=1))
-    styles.add(ParagraphStyle(name='V2Bullet', fontName=font_name, fontSize=9.5,
-                               spaceAfter=2, leading=13, leftIndent=10,
-                               textColor=COLOR_TEXT_DARK))
-    styles.add(ParagraphStyle(name='V2Alert', fontName=font_name, fontSize=8.5,
-                               spaceAfter=3, leading=13, textColor=COLOR_TEXT_MUTED))
-    styles.add(ParagraphStyle(name='V2Action', fontName=font_name, fontSize=9.5,
-                               spaceAfter=2, leading=14, textColor=COLOR_TEXT_DARK))
+    # ============ V2/V3 共享常量 ============
+    global COLOR_EXCELLENT, COLOR_GOOD, COLOR_IMPROVE
+    global COLOR_BG_TOP, COLOR_BG_BOT, COLOR_BG_WHITE, COLOR_WHITE
+    global COLOR_TEXT_DARK, COLOR_TEXT_MUTED, COLOR_GRID
+
+    # V3 样式定义
+    styles.add(ParagraphStyle(name='V3Cover', fontName=font_name, fontSize=28,
+                               alignment=1, spaceAfter=4, textColor=COLOR_V3_BLUE))
+    styles.add(ParagraphStyle(name='V3CoverSub', fontName=font_name, fontSize=14,
+                               alignment=1, spaceAfter=2, textColor=COLOR_V3_GRAY))
+    styles.add(ParagraphStyle(name='V3CoverInfo', fontName=font_name, fontSize=11,
+                               alignment=1, spaceAfter=4, textColor=COLOR_V3_GRAY))
+    styles.add(ParagraphStyle(name='V3Section', fontName=font_name, fontSize=14,
+                               spaceAfter=8, spaceBefore=6, textColor=COLOR_V3_BLUE))
+    styles.add(ParagraphStyle(name='V3CardTitle', fontName=font_name, fontSize=12,
+                               spaceAfter=3, textColor=COLOR_V3_DARK))
+    styles.add(ParagraphStyle(name='V3Text', fontName=font_name, fontSize=9,
+                               spaceAfter=3, leading=13, textColor=COLOR_V3_DARK))
+    styles.add(ParagraphStyle(name='V3Muted', fontName=font_name, fontSize=8.5,
+                               spaceAfter=2, leading=12, textColor=COLOR_V3_GRAY))
+    styles.add(ParagraphStyle(name='V3Footer', fontName=font_name, fontSize=8,
+                               alignment=1, textColor=COLOR_V3_GRAY))
+    styles.add(ParagraphStyle(name='V3Bullet', fontName=font_name, fontSize=9,
+                               spaceAfter=2, leading=12, leftIndent=8,
+                               textColor=COLOR_V3_DARK))
+    styles.add(ParagraphStyle(name='V3Alert', fontName=font_name, fontSize=8,
+                               spaceAfter=2, leading=11, textColor=COLOR_V3_GRAY))
 
     story = []
 
-    # Add section divider helper
-    def add_section_divider(story, color=COLOR_EXCELLENT):
-        """添加装饰性分隔线"""
+    # ============ 共享辅助函数 ============
+    def make_card(content_list, bg_color, radius=6):
+        inner = Table([[c] for c in content_list], colWidths=[78*mm])
+        inner.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), bg_color),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('ROUNDEDCORNERS', [radius]),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e0e0e0')),
+        ]))
+        return inner
+
+    def add_section_divider(story, color=COLOR_V3_BLUE):
+        """装饰性分隔线"""
         divider_data = [['', '']]
-        divider = Table(divider_data, colWidths=[80*mm, 100*mm], rowHeights=[1])
+        divider = Table(divider_data, colWidths=[40*mm, 130*mm], rowHeights=[2])
         divider.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, 0), color),
-            ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#e2e8f033')),
+            ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#e0e0e0')),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ('TOPPADDING', (0, 0), (-1, -1), 0),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
         ]))
-        story.append(Spacer(1, 1*mm))
+        story.append(Spacer(1, 2*mm))
         story.append(divider)
         story.append(Spacer(1, 1*mm))
 
-    # ========== P1：标题 + 雷达图 + 总览表 ==========
-    story.append(Paragraph('8维能力深度评测报告', styles['V2Title']))
-    story.append(Paragraph(f'<b>{user_name}</b> · {experience} · {datetime.now().strftime("%Y年%m月%d日")}',
-                           styles['V2Sub']))
+    def draw_circle_badge(score, dim_color):
+        """绘制圆形分数徽章"""
+        from reportlab.graphics.shapes import Drawing, Circle, String
+        d = Drawing(50, 50)
+        # 外圈
+        d.add(Circle(25, 25, 22, fillColor=dim_color, strokeColor=None))
+        # 内部白色
+        d.add(Circle(25, 25, 18, fillColor=COLOR_V3_WHITE, strokeColor=None))
+        # 分数文字
+        score_str = f'{score:.1f}'
+        d.add(String(25, 17, score_str, textAnchor='middle', fontSize=12,
+                     fontName=font_name, fillColor=dim_color))
+        return d
+
+    # ========== 封面页：几何图形装饰 + 标题 ==========
+    # 顶部装饰条
+    top_bar = Table([['']], colWidths=[190*mm], rowHeights=[8])
+    top_bar.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), COLOR_V3_BLUE),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(top_bar)
+
+    # 装饰圆形
+    from reportlab.graphics.shapes import Drawing, Circle
+    deco = Drawing(190*mm, 30)
+    deco.add(Circle(170, 15, 12, fillColor=COLOR_V3_ORANGE, strokeColor=None))
+    deco.add(Circle(185, 8, 6, fillColor=COLOR_V3_BLUE, strokeColor=None))
+    deco.add(Circle(15, 10, 8, fillColor=COLOR_V3_LIGHT_BLUE, strokeColor=None))
+    story.append(deco)
+
+    story.append(Spacer(1, 8*mm))
+    story.append(Paragraph('8维能力深度评测报告', styles['V3Cover']))
+    story.append(Paragraph(f'<b>{user_name}</b>', styles['V3CoverSub']))
+    story.append(Paragraph(f'{experience} · {datetime.now().strftime("%Y年%m月%d日")}', styles['V3CoverInfo']))
     story.append(Spacer(1, 4*mm))
 
+    # 维度数据准备
     dim_order = ['COG', 'TEC', 'COM', 'SOC', 'ORG', 'PRS', 'MGT', 'LLA']
     dim_names = {
         'COG': '认知能力', 'TEC': '技术掌握', 'COM': '理解表达',
         'SOC': '社交技能', 'ORG': '策划执行', 'PRS': '解决问题',
         'MGT': '管理技能', 'LLA': '持续学习'
     }
+    dim_colors_map = {
+        'COG': COLOR_V3_BLUE, 'TEC': COLOR_V3_ORANGE, 'COM': colors.HexColor('#26a69a'),
+        'SOC': colors.HexColor('#7e57c2'), 'ORG': colors.HexColor('#ec407a'),
+        'PRS': colors.HexColor('#ef5350'), 'MGT': colors.HexColor('#66bb6a'),
+        'LLA': colors.HexColor('#5c6bc0')
+    }
+
     sort_scores = sorted(scores.items(), key=lambda x: x[1]['average'], reverse=True)
+
+    # ========== 综合评分摘要 ==========
+    all_avgs = [s['average'] for _, s in sort_scores]
+    total_avg = sum(all_avgs) / len(all_avgs)
+    max_dim = sort_scores[0]
+    min_dim = sort_scores[-1]
+
+    # 综合评分卡片（横向4格）
+    summary_data = [
+        [Paragraph('<b>综合评分</b>', styles['V3Muted']),
+         Paragraph(f'<b>{total_avg:.1f}</b>', styles['V3CardTitle']),
+         Paragraph('<b>最突出</b>', styles['V3Muted']),
+         Paragraph(f'<b>{max_dim[1]["name"]}</b><br/><font color="#1e88e5">{max_dim[1]["average"]:.1f}分</font>',
+                  styles['V3Muted']),
+         Paragraph('<b>待提升</b>', styles['V3Muted']),
+         Paragraph(f'<b>{min_dim[1]["name"]}</b><br/><font color="#ff9800">{min_dim[1]["average"]:.1f}分</font>',
+                  styles['V3Muted'])],
+    ]
+    summary_tbl = Table(summary_data, colWidths=[25*mm, 20*mm, 22*mm, 38*mm, 22*mm, 38*mm])
+    summary_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), COLOR_V3_LIGHT_GRAY),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('ALIGN', (3, 0), (3, 0), 'CENTER'),
+        ('ALIGN', (5, 0), (5, 0), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('BOX', (0, 0), (-1, -1), 1, COLOR_V3_BLUE),
+    ]))
+    story.append(summary_tbl)
+    story.append(Spacer(1, 4*mm))
+
+    # ========== 8维度圆形徽章展示 ==========
+    story.append(Paragraph('维度得分一览', styles['V3Section']))
+
+    # 绘制8个圆形徽章
+    dim_badges = []
+    for dim, data in sort_scores:
+        badge = draw_circle_badge(data['average'], dim_colors_map.get(dim, COLOR_V3_BLUE))
+        label = Paragraph(f'<b>{data["name"]}</b><br/>{data["average"]:.1f}', styles['V3Muted'])
+        cell = Table([[badge], [label]], colWidths=[52*mm])
+        cell.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        dim_badges.append(cell)
+
+    # 4x2 网格布局
+    badge_rows = []
+    for i in range(0, 8, 4):
+        row = dim_badges[i:i+4]
+        while len(row) < 4:
+            row.append(Spacer(1, 1))
+        badge_rows.append(row)
+
+    badge_table = Table(badge_rows, colWidths=[47*mm]*4)
+    badge_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    story.append(badge_table)
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story, COLOR_V3_ORANGE)
+
+    # ========== 核心优势 TOP 3（蓝色卡片） ==========
+    story.append(Paragraph('★ 核心优势 TOP 3', styles['V3Section']))
+
+    advantageDescV2 = {
+        'COG': ('认知领跑者', '陈志明展现出极强的逻辑构建能力，尤其在处理非结构化信息时——能迅速剥离噪音，直达核心本质。',
+                ['快速提炼复杂信息核心', '发现逻辑论证中的漏洞', '掌握新领域速度快于常人']),
+        'TEC': ('技术适应力强', '陈志明对新技术保持开放心态，能快速上手并将新工具转化为生产力，是团队的数字化先锋。',
+                ['AI和数据工具运用自如', '面对新技术快速上手', '遇问题自主排查解决']),
+        'COM': ('沟通影响力强', '陈志明在信息传递场景中具有显著影响力——既能精准解读他人隐含意图，也能用简洁语言驱动团队决策。',
+                ['准确理解对方言外之意', '复杂概念简洁化传达', '在会议中主导结论输出']),
+        'SOC': ('高情商社交者', '陈志明善于在复杂人际网络中建立信任，尤其在跨部门协作场景中能有效协调分歧、促进共识。',
+                ['敏锐感知团队情绪变化', '在冲突中促进各方达成共识', '与不同背景人士建立长期信任']),
+        'ORG': ('高效执行者', '陈志明具备从目标到落地的完整策划执行能力，能在无外部监督下维持高标准，确保任务按时交付。',
+                ['将模糊目标转化为清晰行动计划', '无人督促仍保持高效产出', '合理分配时间与资源']),
+        'PRS': ('创新解决者', '陈志明擅长在压力下快速找到创新解法，原方案遇阻时能迅速切换视角，构建替代性解决方案。',
+                ['原方案失败时迅速产出Plan B', '用结构化方法深挖问题根源', '无SOP时自创有效方案']),
+        'MGT': ('团队赋能者', '陈志明具备项目与预期管理能力，能有效协调多方资源，在交付结果与上级期望之间建立清晰桥梁。',
+                ['管理上下级期望落差', '多任务并行时准确判断优先级', '有效授权并建立跟进机制']),
+        'LLA': ('持续成长者', '陈志明保持主动学习姿态，定期拓展知识边界并能从批评与挫折中提炼教训，职场成熟度提升速度高于同龄人。',
+                ['定期阅读行业书刊、参加课程', '跨界探索本职以外新领域', '将批评转化为成长养分']),
+    }
+
+    top3 = sort_scores[:3]
+    top3_cards = []
+    for dim, s in top3:
+        title, desc, traits = advantageDescV2.get(dim, (s['name'], '你最突出的能力领域。', []))
+        card = [
+            Paragraph(f'<b>{title}</b> <font color="#1e88e5" size="14">{s["average"]:.1f}分</font>',
+                     styles['V3CardTitle']),
+            Paragraph(desc, styles['V3Muted']),
+        ]
+        for t in traits[:3]:
+            card.append(Paragraph(f'✓ {t}', styles['V3Bullet']))
+        top3_cards.append(make_card(card, COLOR_V3_LIGHT_BLUE))
+
+    # 横向3栏
+    top3_row = Table([top3_cards], colWidths=[62*mm, 62*mm, 62*mm])
+    top3_row.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(top3_row)
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story, COLOR_V3_ORANGE)
+
+    # ========== 发展空间 BOTTOM 3（橙色卡片） ==========
+    story.append(Paragraph('🌱 发展空间', styles['V3Section']))
+    story.append(Paragraph('最具成长潜力的领域，建议重点关注：', styles['V3Muted']))
+
+    developmentDescV2 = {
+        'COG': ('认知能力', '在信息密集型岗位上更具竞争力的关键在于认知加工效率的进一步提升。',
+                '用思维导图整理复杂问题结构；每日阅读后用3句话自测信息提炼准确度。'),
+        'TEC': ('技术掌握', '补强数字化工具使用深度后，你将更自信地应对复杂技术环境，减少对团队的依赖。',
+                '每周用2小时深入学习1个新工具，记录使用技巧到个人工具库。'),
+        'COM': ('理解表达', '精进表达技巧后，你在跨部门协作、汇报和外部沟通场景中将更游刃有余。',
+                '练习"电梯演讲"——30秒内说清一个复杂观点；写完报告后检查是否只需3句话总结。'),
+        'SOC': ('社交技能', '提升人际敏锐度和冲突处理能力后，你将成为团队中不可或缺的协调枢纽。',
+                '每周主动发起1次1对1交流；会议中观察每位发言者的情绪状态变化。'),
+        'ORG': ('策划执行', '强化自我驱动的策划执行能力后，你的项目交付质量和时效性将显著提升。',
+                '番茄工作法（25分钟专注+5分钟休息）；为每项任务设定比截止日期早1天的内部节点。'),
+        'PRS': ('解决问题', '提升应变决策能力后，你将成为团队中不可替代的关键人物，能够在危机中带领团队找到破局点。',
+                '每周针对1个业务难题绘制"逻辑树"（MECE原则）；练习"5 Whys 追问法"问到底。'),
+        'MGT': ('管理技能', '精进管理技能后，你将更适合承担需要协调多方资源的复杂项目，成为团队信赖的桥梁。',
+                '用SMART原则拆解每个目标；接受任务后第一时间复述理解并等待确认。'),
+        'LLA': ('持续学习', '建立系统化的学习机制后，你的职业成长速度将显著快于同龄人，形成独特的专业壁垒。',
+                '设定每月读完1本专业书籍的目标；建立个人知识库（笔记+标签系统）。'),
+    }
+
+    bot3 = sort_scores[-3:][::-1]
+    dev_cards = []
+    for dim, s in bot3:
+        title = s['name']
+        vals = developmentDescV2.get(dim, None)
+        if vals:
+            _, scenario, habit = vals
+        else:
+            scenario, habit = '建议优先投入提升资源。', ''
+        card = [
+            Paragraph(f'<b>{title}</b> <font color="#ff9800" size="14">{s["average"]:.1f}分</font>',
+                     styles['V3CardTitle']),
+            Paragraph(f'<i>{scenario}</i>', styles['V3Muted']),
+            Paragraph(f'<b>行动</b>：{habit}', styles['V3Text']),
+        ]
+        dev_cards.append(make_card(card, COLOR_V3_LIGHT_ORANGE))
+
+    dev_row = Table([dev_cards], colWidths=[62*mm, 62*mm, 62*mm])
+    dev_row.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(dev_row)
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story, COLOR_V3_BLUE)
+
+    # ========== 子能力细分详解 ==========
+    story.append(PageBreak())
+    story.append(Paragraph('子能力细分详解', styles['V3Section']))
+
+    subInfoV2 = {
+        'COG': [('资讯提炼', '从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。'),
+                ('逻辑推理', '面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。'),
+                ('快速学习', '短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。')],
+        'TEC': [('数字生产力', '有效运用AI工具和数据分析工具提升个人和团队的工作效率。'),
+                ('技术适应力', '面对新技术或新系统能快速上手，适应变化的能力强于常人。'),
+                ('故障排查', '遇到技术问题时能自主排查根本原因，不依赖他人解决问题。')],
+        'COM': [('解码能力', '准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。'),
+                ('精炼表达', '用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。'),
+                ('口头影响力', '在公开发言和会议中能有效吸引听众注意力和影响决策。')],
+        'SOC': [('情绪觉察', '敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。'),
+                ('冲突协调', '在团队分歧和人际冲突中能促进各方达成共识，保持冷静。'),
+                ('关系建立', '与不同背景的人建立信任，维护长期人脉网络并保持有效联系。')],
+        'ORG': [('目标规划', '将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。'),
+                ('自主执行', '在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。'),
+                ('资源管理', '合理分配时间、人力、预算等资源，在有限条件下最大化产出。')],
+        'PRS': [('应变能力', '原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。'),
+                ('根源分析', '用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。'),
+                ('创新方案', '在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。')],
+        'MGT': [('预期管理', '有效管理上级和团队对任务结果的期望，避免目标与产出的落差。'),
+                ('优先级取舍', '多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。'),
+                ('授权追踪', '有效分配任务并建立跟进机制，信任团队不过度干预执行过程。')],
+        'LLA': [('知识更新', '保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。'),
+                ('主动探索', '跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。'),
+                ('挫折转化', '面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。')],
+    }
+
+    for dim, s in sort_scores:
+        subs = subInfoV2.get(dim, [])
+        score_color = dim_colors_map.get(dim, COLOR_V3_BLUE)
+        bar_width = int((s['average'] / 5.0) * 50)
+        bar_table = Table([['']], colWidths=[bar_width*mm, (50-bar_width)*mm], rowHeights=[5])
+        bar_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), score_color),
+            ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#e0e0e0')),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+
+        dim_header = Table(
+            [[Paragraph(f'<b>{s["name"]}</b> <font color="#1e88e5">{s["average"]:.1f}分</font>',
+                       styles['V3CardTitle']), bar_table]],
+            colWidths=[80*mm, 55*mm]
+        )
+        dim_header.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(dim_header)
+
+        sub_rows = []
+        for i in range(0, len(subs), 2):
+            row = []
+            for j in range(2):
+                if i + j < len(subs):
+                    sub_name, sub_desc = subs[i + j]
+                    row.append(Paragraph(f'<b>· {sub_name}</b>：{sub_desc}', styles['V3Text']))
+                else:
+                    row.append(Spacer(1, 1))
+            sub_rows.append(row)
+
+        sub_table = Table(sub_rows, colWidths=[70*mm, 70*mm])
+        sub_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        story.append(sub_table)
+        story.append(Spacer(1, 2*mm))
+
+    story.append(Spacer(1, 2*mm))
+    add_section_divider(story, COLOR_V3_ORANGE)
+
+    # ========== 总结与优先行动 ==========
+    story.append(PageBreak())
+    story.append(Paragraph('总结与优先行动', styles['V3Section']))
+
+    DIM_IMPROVEMENT = {
+        'COG': ('信息降噪训练', '每天用3句话总结一篇长文；练习MECE原则分类'),
+        'TEC': ('AI工具深度使用', '每周解锁1个AI新功能；建立个人工具提示词库'),
+        'COM': ('电梯演讲练习', '30秒说清一个复杂观点；写完报告后用3句话概括'),
+        'SOC': ('情绪观察日记', '每天记录3次他人情绪变化；学习非暴力沟通四步法'),
+        'ORG': ('SMART目标法', '每任务用SMART原则拆解；25分钟专注+5分钟休息'),
+        'PRS': ('Plan B训练', '每任务预设应急方案；练习"排除法"记录解决路径'),
+        'MGT': ('预期对齐四步', '接任务时复述理解；每天用"重要/紧急"矩阵筛选TOP 3'),
+        'LLA': ('知识输入系统', '每周精读1篇深度文章；每月尝试1个非本职领域'),
+    }
+
+    # 直接使用传入的维度分数
+    dim_scores_list = []
+    for dim, data in scores.items():
+        dim_scores_list.append({
+            'dim': dim,
+            'name': data.get('name', dim_names.get(dim, dim)),
+            'score': data.get('average', 0),
+        })
+
+    # 按分数升序，取最弱的6个维度
+    dim_scores_list.sort(key=lambda x: x['score'])
+    weakest_dims = dim_scores_list[:6]
+
+    # 生成优先行动卡片
+    action_cards = []
+    for idx, d in enumerate(weakest_dims):
+        tool_name, action_desc = DIM_IMPROVEMENT.get(d['dim'], ('刻意练习', '建议进行针对性训练'))
+        score_hex = '#ff9800' if d['score'] < 2.5 else '#f59e0b' if d['score'] < 3.0 else '#757575'
+
+        card = [
+            Paragraph(f'<b>P{idx+1}</b> <font color="{score_hex}" size="14">{d["score"]:.1f}分</font>',
+                     styles['V3CardTitle']),
+            Paragraph(f'<b>{d["name"]}</b>', styles['V3Muted']),
+            Paragraph(f'<b>方法</b>：{tool_name}', styles['V3Text']),
+            Paragraph(f'<b>行动</b>：{action_desc}', styles['V3Text']),
+        ]
+        action_cards.append(make_card(card, COLOR_V3_LIGHT_ORANGE))
+
+    # 2列3行布局
+    card_rows = []
+    for i in range(0, len(action_cards), 2):
+        row = action_cards[i:i+2]
+        while len(row) < 2:
+            row.append(Spacer(1, 1))
+        card_rows.append(row)
+
+    cards_table = Table(card_rows, colWidths=[90*mm, 90*mm])
+    cards_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    story.append(cards_table)
+
+    # 90天行动计划提示
+    story.append(Spacer(1, 4*mm))
+    plan_text = f'💡 <b>90天行动计划</b>：从"<b>{weakest_dims[0]["name"]}</b>"切入，每30天完成1次自检并记录进步幅度。'
+    story.append(Paragraph(plan_text, styles['V3Muted']))
+    story.append(Spacer(1, 3*mm))
+    add_section_divider(story, COLOR_V3_BLUE)
+
+    # ========== 底部信息 ==========
+    story.append(Paragraph(
+        '本报告基于自评数据生成，结果仅供参考。自评可能受个人认知偏差影响，建议结合他人的客观反馈进行综合分析。'
+        '如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。',
+        styles['V3Alert']))
+
+    # 底部装饰条
+    bottom_bar = Table([['']], colWidths=[190*mm], rowHeights=[4])
+    bottom_bar.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), COLOR_V3_ORANGE),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(bottom_bar)
+
+    doc.build(story)
+    return buffer
 
     # 综合评分摘要
     all_avgs = [s['average'] for _, s in sort_scores]
@@ -1832,405 +2233,7 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
     radar_dims = [dim_names[d] for d in dim_order]
     radar_drawing = draw_radar_chart_v2(dim_order, radar_scores)  # 使用默认尺寸220x220
 
-    # 总览表数据
-    table_data = [['维度', '分数', '等级']]
-    for dim, s in sort_scores:
-        lvl = get_level_label(s['average'])
-        table_data.append([s['name'], f"{s['average']:.1f}", lvl])
-
-    score_table = Table(table_data, colWidths=[42*mm, 28*mm, 35*mm])
-    score_colors = []
-    for idx, (dim, s) in enumerate(sort_scores):
-        row_idx = idx + 1  # 跳过表头
-        sc = get_score_color(s['average'])
-        score_colors.append(('TEXTCOLOR', (2, row_idx), (2, row_idx), sc))
-
-    score_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), COLOR_EXCELLENT),
-        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_WHITE),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-        ('TOPPADDING', (0, 1), (-1, -1), 5),
-        ('GRID', (0, 0), (-1, -1), 0.5, COLOR_GRID),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_WHITE, colors.HexColor('#f8fafc')]),
-    ] + score_colors))
-
-    # 并排布局（雷达图 + 总览表）—— A4可用宽度180mm
-    from reportlab.platypus import KeepInFrame
-    # 雷达图 220x220 drawing，KeepInFrame宽度72mm足够容纳
-    left_col = KeepInFrame(72*mm, 160*mm, [radar_drawing], hAlign='CENTER', vAlign='MIDDLE')
-    right_col = KeepInFrame(100*mm, 160*mm, [score_table], hAlign='CENTER', vAlign='MIDDLE')
-    layout_table = Table([[left_col, right_col]], colWidths=[72*mm, 100*mm])  # 合计172mm，安全
-    layout_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    story.append(layout_table)
-    story.append(Spacer(1, 3*mm))
-    add_section_divider(story)
-
-    # ========== P2：核心优势 Top 3（浅蓝底色） ==========
-    story.append(Paragraph('★ 核心优势 TOP 3', styles['V2Section']))
-
-    advantageDescV2 = {
-        'COG': ('认知领跑者',
-                '陈志明展现出极强的逻辑构建能力，尤其在处理非结构化信息时——能迅速剥离噪音，直达核心本质。',
-                ['快速提炼复杂信息核心', '发现逻辑论证中的漏洞', '掌握新领域速度快于常人']),
-        'TEC': ('技术适应力强',
-                '陈志明对新技术保持开放心态，能快速上手并将新工具转化为生产力，是团队的数字化先锋。',
-                ['AI和数据工具运用自如', '面对新技术快速上手', '遇问题自主排查解决']),
-        'COM': ('沟通影响力强',
-                '陈志明在信息传递场景中具有显著影响力——既能精准解读他人隐含意图，也能用简洁语言驱动团队决策。',
-                ['准确理解对方言外之意', '复杂概念简洁化传达', '在会议中主导结论输出']),
-        'SOC': ('高情商社交者',
-                '陈志明善于在复杂人际网络中建立信任，尤其在跨部门协作场景中能有效协调分歧、促进共识。',
-                ['敏锐感知团队情绪变化', '在冲突中促进各方达成共识', '与不同背景人士建立长期信任']),
-        'ORG': ('高效执行者',
-                '陈志明具备从目标到落地的完整策划执行能力，能在无外部监督下维持高标准，确保任务按时交付。',
-                ['将模糊目标转化为清晰行动计划', '无人督促仍保持高效产出', '合理分配时间与资源']),
-        'PRS': ('创新解决者',
-                '陈志明擅长在压力下快速找到创新解法，原方案遇阻时能迅速切换视角，构建替代性解决方案。',
-                ['原方案失败时迅速产出Plan B', '用结构化方法深挖问题根源', '无SOP时自创有效方案']),
-        'MGT': ('团队赋能者',
-                '陈志明具备项目与预期管理能力，能有效协调多方资源，在交付结果与上级期望之间建立清晰桥梁。',
-                ['管理上下级期望落差', '多任务并行时准确判断优先级', '有效授权并建立跟进机制']),
-        'LLA': ('持续成长者',
-                '陈志明保持主动学习姿态，定期拓展知识边界并能从批评与挫折中提炼教训，职场成熟度提升速度高于同龄人。',
-                ['定期阅读行业书刊、参加课程', '跨界探索本职以外新领域', '将批评转化为成长养分']),
-    }
-
-    # 构建核心优势卡片（横向3栏）
-    top3 = sort_scores[:3]
-    top3_cards = []
-    for dim, s in top3:
-        title, desc, traits = advantageDescV2.get(dim, (s['name'], '你最突出的能力领域。', []))
-        score_color = get_score_color(s['average'])
-        card_content = [
-            Paragraph(f'<b>{title}</b> <font color="{score_color.hexval() if hasattr(score_color, "hexval") else "#1e3a8a"}">{s["average"]:.1f}分</font>',
-                      styles['V2CardTitle']),
-            Spacer(1, 1*mm),
-            Paragraph(desc, styles['V2Muted']),
-            Spacer(1, 1*mm),
-        ]
-        for t in traits[:3]:
-            card_content.append(Paragraph(f'· {t}', styles['V2Bullet']))
-        top3_cards.append(card_content)
-
-    # 浅蓝背景卡片
-    def make_card(content_list, bg_color):
-        inner = Table([[c] for c in content_list], colWidths=[78*mm])
-        inner.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), bg_color),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('ROUNDEDCORNERS', [4]),
-        ]))
-        return inner
-
-    card1 = make_card(top3_cards[0], COLOR_BG_TOP)
-    card2 = make_card(top3_cards[1], COLOR_BG_TOP)
-    card3 = make_card(top3_cards[2], COLOR_BG_TOP)
-    cards_row = Table([[card1, card2, card3]], colWidths=[82*mm, 82*mm, 82*mm])
-    cards_row.setStyle(TableStyle([
-        ('LEFTPADDING', (0, 0), (-1, -1), 2),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-    ]))
-    story.append(cards_row)
-    story.append(Spacer(1, 3*mm))
-    add_section_divider(story, COLOR_IMPROVE)
-
-    # ========== P3：发展空间 Bottom 3（暖橙底色） ==========
-    story.append(Paragraph('🌱 发展空间（最具成长潜力的领域）', styles['V2Section']))
-    story.append(Paragraph(
-        '为了实现从"优秀"到"卓越"的跨越，建议重点关注以下领域：',
-        styles['V2Transition']))
-
-    developmentDescV2 = {
-        'COG': ('认知能力',
-                '在信息密集型岗位上更具竞争力的关键在于认知加工效率的进一步提升。',
-                '面对大量新信息时容易迷失重点，难以快速形成清晰结论。',
-                '用思维导图整理复杂问题结构；每日阅读后用3句话自测信息提炼准确度。',
-                '每周选取1篇深度文章，写出"一句话核心观点+3个支撑细节"'),
-        'TEC': ('技术掌握',
-                '补强数字化工具使用深度后，你将更自信地应对复杂技术环境，减少对团队的依赖。',
-                '部分AI工具尚未深度使用；新系统上手需要比别人更长时间。',
-                '每周用2小时深入学习1个新工具，记录使用技巧到个人工具库。',
-                '遇到技术问题先自行排查30分钟，再决定是否求助'),
-        'COM': ('理解表达',
-                '精进表达技巧后，你在跨部门协作、汇报和外部沟通场景中将更游刃有余。',
-                '在接受模糊指令时，未能第一时间反向对齐（Check-back）交付标准，导致后期返工。',
-                '练习"电梯演讲"——30秒内说清一个复杂观点；写完报告后检查是否只需3句话总结。',
-                '每次汇报后复盘"哪些信息听众记住了，哪些遗漏了"'),
-        'SOC': ('社交技能',
-                '提升人际敏锐度和冲突处理能力后，你将成为团队中不可或缺的协调枢纽。',
-                '偶尔未能及时感知他人情绪；面对人际冲突倾向回避而非直面。',
-                '每周主动发起1次1对1交流；会议中观察每位发言者的情绪状态变化。',
-                '每次冲突后写"情绪复盘卡"——触发点、自己反应、改进点'),
-        'ORG': ('策划执行',
-                '强化自我驱动的策划执行能力后，你的项目交付质量和时效性将显著提升。',
-                '无外部截止日期驱动时，容易陷入"等待完美时机"的拖延陷阱。',
-                '番茄工作法（25分钟专注+5分钟休息）；为每项任务设定比截止日期早1天的内部节点。',
-                '每周日规划下周TOP 3优先任务，完成后打勾确认'),
-        'PRS': ('解决问题',
-                '提升应变决策能力后，你将成为团队中不可替代的关键人物，能够在危机中带领团队找到破局点。',
-                '当既定业务流程受到突发政策或技术限制阻断时，容易陷入局部细节纠缠，缺乏全局破局策略。',
-                '每周针对1个业务难题绘制"逻辑树"（MECE原则）；练习"5 Whys 追问法"问到底。',
-                '在项目总结中增加"意外应对机制"模块，刻意练习预案设计能力'),
-        'MGT': ('管理技能',
-                '精进管理技能后，你将更适合承担需要协调多方资源的复杂项目，成为团队信赖的桥梁。',
-                '在接受模糊指令时，未能第一时间反向对齐（Check-back）交付标准，导致后期返工成本增加。',
-                '用SMART原则拆解每个目标；接受任务后第一时间复述理解并等待确认。',
-                '每周主动与上级对齐一次预期；练习"委托四步法"：说目标→给资源→少干预→做复盘'),
-        'LLA': ('持续学习',
-                '建立系统化的学习机制后，你的职业成长速度将显著快于同龄人，形成独特的专业壁垒。',
-                '学习时间主要在工作需求驱动下发生，缺乏主动探索的规划性。',
-                '设定每月读完1本专业书籍的目标；建立个人知识库（笔记+标签系统）。',
-                '把每次批评写成"成长反馈卡"——事实→感受→教训→行动'),
-    }
-
-    bot3 = sort_scores[-3:][::-1]
-    dev_cards = []
-    for dim, s in bot3:
-        title = s['name']
-        vals = developmentDescV2.get(dim, None)
-        if vals:
-            _, _, scenario, tool_tip, habit = vals
-        else:
-            scenario, tool_tip, habit = '建议优先投入提升资源。', '', ''
-        score_color = get_score_color(s['average'])
-        card_content = [
-            Paragraph(f'<b>{title}</b> <font color="{score_color.hexval() if hasattr(score_color, "hexval") else "#ea580c"}">{s["average"]:.1f}分</font>',
-                      styles['V2CardTitle']),
-            Spacer(1, 1*mm),
-            Paragraph(f'<i>{scenario}</i>', styles['V2Muted']),
-            Spacer(1, 1*mm),
-            Paragraph(f'<b>思维工具</b>：{tool_tip}', styles['V2Text']),
-            Paragraph(f'<b>复盘习惯</b>：{habit}', styles['V2Text']),
-        ]
-        dev_cards.append(card_content)
-
-    dev_card1 = make_card(dev_cards[0], COLOR_BG_BOT)
-    dev_card2 = make_card(dev_cards[1], COLOR_BG_BOT)
-    dev_card3 = make_card(dev_cards[2], COLOR_BG_BOT)
-    dev_cards_row = Table([[dev_card1, dev_card2, dev_card3]], colWidths=[82*mm, 82*mm, 82*mm])
-    dev_cards_row.setStyle(TableStyle([
-        ('LEFTPADDING', (0, 0), (-1, -1), 2),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-    ]))
-    story.append(dev_cards_row)
-    story.append(Spacer(1, 3*mm))
-    add_section_divider(story)
-
-    # ========== P4-P5：子能力细分 24 项（彩色分数条） ==========
-    story.append(PageBreak())
-    story.append(Paragraph('子能力细分详解（8维×3项）', styles['V2Section']))
-
-    subInfoV2 = {
-        'COG': [
-            ('资讯提炼', '从大量复杂信息中快速提取关键重点，忽略噪音，直达本质。'),
-            ('逻辑推理', '面对矛盾资讯时进行理性分析，发现论证漏洞，做出合理判断。'),
-            ('快速学习', '短时间内掌握全新技术领域，学习效率明显优于同侪平均水平。'),
-        ],
-        'TEC': [
-            ('数字生产力', '有效运用AI工具和数据分析工具提升个人和团队的工作效率。'),
-            ('技术适应力', '面对新技术或新系统能快速上手，适应变化的能力强于常人。'),
-            ('故障排查', '遇到技术问题时能自主排查根本原因，不依赖他人解决问题。'),
-        ],
-        'COM': [
-            ('解码能力', '准确理解对方言辞背后的真正意图，能处理含蓄和模糊的沟通。'),
-            ('精炼表达', '用简洁清晰的语言表达复杂概念，书面和口头表达均逻辑清晰。'),
-            ('口头影响力', '在公开发言和会议中能有效吸引听众注意力和影响决策。'),
-        ],
-        'SOC': [
-            ('情绪觉察', '敏锐感知他人情绪的细微变化，能根据对方状态调整沟通方式。'),
-            ('冲突协调', '在团队分歧和人际冲突中能促进各方达成共识，保持冷静。'),
-            ('关系建立', '与不同背景的人建立信任，维护长期人脉网络并保持有效联系。'),
-        ],
-        'ORG': [
-            ('目标规划', '将模糊目标拆解为清晰可衡量的行动步骤，制定详细计划和时间表。'),
-            ('自主执行', '在无外部监督的情况下仍能维持高标准，主动推进任务不拖延。'),
-            ('资源管理', '合理分配时间、人力、预算等资源，在有限条件下最大化产出。'),
-        ],
-        'PRS': [
-            ('应变能力', '原方案失败时能迅速调整策略，快速产出替代方案（Plan B）。'),
-            ('根源分析', '用结构化方法（5 Whys、鱼骨图等）深挖问题根本原因。'),
-            ('创新方案', '在无既有SOP的情况下能自行设计有效解决方案，常有创意突破。'),
-        ],
-        'MGT': [
-            ('预期管理', '有效管理上级和团队对任务结果的期望，避免目标与产出的落差。'),
-            ('优先级取舍', '多任务并行时能准确判断轻重缓急，敢于拒绝次要任务的干扰。'),
-            ('授权追踪', '有效分配任务并建立跟进机制，信任团队不过度干预执行过程。'),
-        ],
-        'LLA': [
-            ('知识更新', '保持定期阅读行业书刊、参加课程的习惯，主动更新专业知识体系。'),
-            ('主动探索', '跨界探索本职以外的新领域，好奇心驱动学习，不带功利目的。'),
-            ('挫折转化', '面对批评和失败能保持成长型心态，将负面反馈转化为改进养分。'),
-        ],
-    }
-
-    # 维度内子能力按分数排序展示
-    for dim, s in sort_scores:
-        subs = subInfoV2.get(dim, [])
-        score_color = get_score_color(s['average'])
-        # 维度标题行（含分数和颜色）
-        header_text = f'<b>{s["name"]}</b>'
-        header_score = f' <font color="{score_color.hexval() if hasattr(score_color, "hexval") else "#1e3a8a"}">{s["average"]:.1f}分</font>'
-
-        # 分数条
-        bar_width = int((s['average'] / 5.0) * 60)
-        bar_table = Table([['']], colWidths=[bar_width*mm, (60-bar_width)*mm], rowHeights=[6])
-        bar_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, 0), score_color),
-            ('BACKGROUND', (1, 0), (1, 0), COLOR_GRID),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ]))
-
-        dim_header = Table(
-            [[Paragraph(header_text + header_score, styles['V2CardTitle']), bar_table]],
-            colWidths=[80*mm, 65*mm]
-        )
-        dim_header.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        story.append(dim_header)
-
-        # 子能力详情（2列布局）
-        sub_rows = []
-        for i in range(0, len(subs), 2):
-            row = []
-            for j in range(2):
-                if i + j < len(subs):
-                    sub_name, sub_desc = subs[i + j]
-                    row.append(Paragraph(f'<b>· {sub_name}</b>：{sub_desc}', styles['V2Text']))
-                else:
-                    row.append(Spacer(1, 1))
-            sub_rows.append(row)
-
-        sub_table = Table(sub_rows, colWidths=[75*mm, 75*mm])
-        sub_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
-        ]))
-        story.append(sub_table)
-        story.append(Spacer(1, 3*mm))
-
-    story.append(Spacer(1, 3*mm))
-
-    # ========== P6：总结与行动（基于弱项维度） ==========
-    story.append(PageBreak())
-    story.append(Paragraph('总结与优先行动', styles['V2Section']))
-
-    # 计算维度分数
-    dim_base = {'COG': 1, 'TEC': 7, 'COM': 13, 'SOC': 19, 'ORG': 25, 'PRS': 31, 'MGT': 37, 'LLA': 43}
-    dim_names = {'COG': '认知能力', 'TEC': '技术掌握', 'COM': '理解表达', 'SOC': '社交技能',
-                 'ORG': '策划执行', 'PRS': '解决问题', 'MGT': '管理技能', 'LLA': '持续学习'}
-    dim_colors = {
-        'COG': '#3b82f6', 'TEC': '#8b5cf6', 'COM': '#06b6d4', 'SOC': '#10b981',
-        'ORG': '#f59e0b', 'PRS': '#ef4444', 'MGT': '#ec4899', 'LLA': '#6366f1'
-    }
-
-    # 维度 → 提升建议映射（精简版）
-    DIM_IMPROVEMENT = {
-        'COG': ('信息降噪训练', '每天用3句话总结一篇长文；练习MECE原则分类'),
-        'TEC': ('AI工具深度使用', '每周解锁1个AI新功能；建立个人工具提示词库'),
-        'COM': ('电梯演讲练习', '30秒说清一个复杂观点；写完报告后用3句话概括'),
-        'SOC': ('情绪观察日记', '每天记录3次他人情绪变化；学习非暴力沟通四步法'),
-        'ORG': ('SMART目标法', '每任务用SMART原则拆解；25分钟专注+5分钟休息'),
-        'PRS': ('Plan B训练', '每任务预设应急方案；练习"排除法"记录解决路径'),
-        'MGT': ('预期对齐四步', '接任务时复述理解；每天用"重要/紧急"矩阵筛选TOP 3'),
-        'LLA': ('知识输入系统', '每周精读1篇深度文章；每月尝试1个非本职领域'),
-    }
-
-    # 直接使用传入的维度分数
-    dim_scores = []
-    for dim, data in scores.items():
-        dim_scores.append({
-            'dim': dim,
-            'name': data.get('name', dim_names.get(dim, dim)),
-            'score': data.get('average', 0),
-            'color': dim_colors.get(dim, '#64748b')
-        })
-
-    # 按分数升序，取最弱的6个维度
-    dim_scores.sort(key=lambda x: x['score'])
-    weakest_dims = dim_scores[:6]
-
-    # 生成优先行动卡片
-    action_cards = []
-    for idx, d in enumerate(weakest_dims):
-        tool_name, action_desc = DIM_IMPROVEMENT.get(d['dim'], ('刻意练习', '建议进行针对性训练'))
-        score_hex = '#ea580c' if d['score'] < 2.5 else ('#f59e0b' if d['score'] < 3.0 else '#64748b')
-
-        card = [
-            Paragraph(f'<b>P{idx+1}</b> <font color="{score_hex}">{d["score"]:.1f}分</font>',
-                     styles['V2CardTitle']),
-            Paragraph(f'<b>{d["name"]}</b>', styles['V2Muted']),
-            Spacer(1, 1*mm),
-            Paragraph(f'<b>方法</b>：{tool_name}', styles['V2Text']),
-            Paragraph(f'<b>行动</b>：{action_desc}', styles['V2Text']),
-        ]
-        action_cards.append(card)
-
-    # 2列3行布局
-    card_rows = []
-    for i in range(0, len(action_cards), 2):
-        row = []
-        for j in range(2):
-            if i + j < len(action_cards):
-                row.append(make_card(action_cards[i + j], COLOR_BG_BOT))
-            else:
-                row.append(Spacer(1, 1))
-        card_rows.append(row)
-
-    cards_table = Table(card_rows, colWidths=[82*mm, 82*mm])
-    cards_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 3),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
-    ]))
-    story.append(cards_table)
-
-    # 90天行动计划提示
-    story.append(Spacer(1, 4*mm))
-    plan_text = f'💡 <b>90天行动计划建议</b>：从"<b>{weakest_dims[0]["name"]}</b>"切入，每30天完成1次自检并记录进步幅度。'
-    story.append(Paragraph(plan_text, styles['V2Muted']))
-
-    story.append(Spacer(1, 3*mm))
-    add_section_divider(story)
-
-    # ========== P7-P8: 子能力细分详解（24项） ==========
-
-    # ========== 免责声明 ==========
-    story.append(Paragraph(
-        '本报告基于自评数据生成，结果仅供参考。自评可能受个人认知偏差影响，建议结合他人的客观反馈进行综合分析。'
-        '如需一对一专业求职定位咨询，请联系 Santa Chow 教练获取个人化指导。',
-        styles['V2Alert']))
-    story.append(Spacer(1, 3*mm))
-    story.append(Paragraph(
-        f'Report ID: 8D-{result_id} · Santa Chow 8维能力评测系统 · {datetime.now().strftime("%Y-%m-%d")}',
-        styles['V2Footer']))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-def generate_pdf_48_v3(result_id, scores, user_name, experience, font_name='Helvetica'):
+    # 新版本 generate_pdf_48_v2 结束于此
     """
     生成PDF报告V3 - 数据可视化风格
     改进：
