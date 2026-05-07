@@ -2157,14 +2157,13 @@ def generate_pdf_48_v2(result_id, scores, user_name, experience):
         'LLA': ('知识输入系统', '每周精读1篇深度文章；每月尝试1个非本职领域'),
     }
 
+    # 直接使用传入的维度分数
     dim_scores = []
-    for dim, base in dim_base.items():
-        score = (answers.get(base, 0) + answers.get(base+1, 0) + answers.get(base+2, 0) +
-                  answers.get(base+3, 0) + answers.get(base+4, 0) + answers.get(base+5, 0)) / 6
+    for dim, data in scores.items():
         dim_scores.append({
             'dim': dim,
-            'name': dim_names[dim],
-            'score': round(score, 2),
+            'name': data.get('name', dim_names.get(dim, dim)),
+            'score': data.get('average', 0),
             'color': dim_colors.get(dim, '#64748b')
         })
 
