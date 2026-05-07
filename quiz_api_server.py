@@ -804,7 +804,12 @@ def calculate_scores(answers):
     return scores
 
 def calculate_scores_48(answers):
-    """8维能力评分：每维6题，支持str/int keys"""
+    """8维能力评分：每维6题，支持str/int keys，支持乱序题目"""
+    # 题目ID→维度映射：(qid-1)//6
+    DIM_ORDER = ['COG', 'TEC', 'COM', 'SOC', 'ORG', 'PRS', 'MGT', 'LLA']
+    def qid_to_dim(qid):
+        return DIM_ORDER[(int(qid) - 1) // 6]
+
     # Normalize keys to int
     normalized = {}
     for k, v in answers.items():
@@ -812,21 +817,23 @@ def calculate_scores_48(answers):
             normalized[int(k)] = int(v)
         except (ValueError, TypeError):
             continue
-    dims = {
-        'COG': {'name':'认知能力','q':[1,2,3,4,5,6]},
-        'TEC': {'name':'技术掌握','q':[7,8,9,10,11,12]},
-        'COM': {'name':'理解表达','q':[13,14,15,16,17,18]},
-        'SOC': {'name':'社交技能','q':[19,20,21,22,23,24]},
-        'ORG': {'name':'策划执行','q':[25,26,27,28,29,30]},
-        'PRS': {'name':'解决问题','q':[31,32,33,34,35,36]},
-        'MGT': {'name':'管理技能','q':[37,38,39,40,41,42]},
-        'LLA': {'name':'持续学习','q':[43,44,45,46,47,48]}
+    # 按维度分组累加
+    dim_sums = {d: 0 for d in DIM_ORDER}
+    dim_cnts = {d: 0 for d in DIM_ORDER}
+    for qid, score in normalized.items():
+        dim = qid_to_dim(qid)
+        dim_sums[dim] += score
+        dim_cnts[dim] += 1
+    DIM_CN = {
+        'COG':'认知能力','TEC':'技术掌握','COM':'理解表达',
+        'SOC':'社交技能','ORG':'策划执行','PRS':'解决问题',
+        'MGT':'管理技能','LLA':'持续学习',
     }
     scores = {}
-    for dim, cfg in dims.items():
-        total = sum(normalized.get(q, 0) for q in cfg['q'])
-        avg = total / 6
-        scores[dim] = {'name': cfg['name'], 'average': round(avg, 2), 'level': get_level(avg)}
+    for dim in DIM_ORDER:
+        cnt = dim_cnts[dim]
+        avg = dim_sums[dim] / cnt if cnt > 0 else 3.0
+        scores[dim] = {'name': DIM_CN[dim], 'average': round(avg, 2), 'level': get_level(avg)}
     return scores
 
 

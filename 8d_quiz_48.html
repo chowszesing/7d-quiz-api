@@ -468,12 +468,8 @@
         function startQuiz() {
             const exp = document.getElementById('experience').value;
             if (!exp) { alert('请选择工作经验'); return; }
-            const dims = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
-            order = [];
-            for (const dim of dims) {
-                const dimQs = questions.filter(q => q.dim === dim);
-                order.push(...shuffle(dimQs));
-            }
+            // 全量随机打乱48题（不保留维度分组）
+            order = shuffle(questions);
             currentQ = 0;
             answers = {};
             document.getElementById('infoSection').classList.add('hidden');
@@ -489,7 +485,6 @@
             document.getElementById('progressText').textContent = `${currentQ+1} / ${total}`;
             document.getElementById('prevBtn').disabled = currentQ === 0;
 
-            const dimInfo = DIM_INFO[q.dim];
             const nextLabel = currentQ === total - 1 ? '提交评测 ✓' : '下一题 →';
 
             let optHtml = OPTIONS.map((o, i) => {
@@ -507,7 +502,6 @@
             document.getElementById('questionContainer').innerHTML = `
                 <div class="question-card">
                     <div class="question-meta">
-                        <span class="question-dimension" style="background:${dimInfo.color}22;color:${dimInfo.color}">${dimInfo.icon} ${dimInfo.name}</span>
                         <span class="question-number">第 ${currentQ+1} / ${total} 题</span>
                     </div>
                     <div class="question-text">${q.text}</div>
