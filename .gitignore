@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local test files - NOT for deployment
+*.log
+*.tmp
+*.db
+*.html
+*.pdf
+
+# Mac
+*.swp
+*.swo
+
+# Node (if any)
+node_modules/
+package-lock.json
+
+# Railway local
+railway.json

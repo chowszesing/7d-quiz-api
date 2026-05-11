@@ -1,7 +1,7 @@
 """
 7维能力测评 - 一体化后端（Flask）
 功能：问卷服务 + API + PDF报告 + 批量导入
-部署：只需一个Render.com服务
+部署：Railway
 """
 
 from flask import Flask, request, jsonify, send_file, render_template_string
@@ -557,8 +557,12 @@ HTML_ADMIN = '''<!DOCTYPE html>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;background:#f5f7fa;color:#333}
         .container{max-width:1300px;margin:0 auto;padding:20px}
-        .header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;padding:20px;border-radius:12px;margin-bottom:20px}
+        .header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;padding:20px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
         .header h1{font-size:24px;margin-bottom:5px}
+        .header-right{display:flex;align-items:center;gap:12px}
+        .user-info{font-size:13px;opacity:0.9}
+        .btn-logout{padding:7px 14px;background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:6px;cursor:pointer;font-size:13px}
+        .btn-logout:hover{background:rgba(255,255,255,0.3)}
         .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
         .tab{padding:10px 20px;background:white;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;border:2px solid transparent;transition:all 0.2s}
         .tab.active{background:#1e3a8a;color:white}
@@ -572,199 +576,195 @@ HTML_ADMIN = '''<!DOCTYPE html>
         th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
         th{background:#f8f9fc;font-weight:600;color:#1e3a8a;white-space:nowrap}
         tr:hover{background:#f8f9fc}
-        .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-        .badge-green{background:#d1fae5;color:#065f46}
-        .badge-red{background:#fee2e2;color:#991b1b}
-        .badge-yellow{background:#fef3c7;color:#92400e}
         .btn{padding:8px 14px;background:#1e3a8a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px}
         .btn:hover{background:#2563eb}
         .btn-sm{padding:5px 10px;font-size:12px}
         .btn-red{background:#ef4444}.btn-red:hover{background:#dc2626}
         .btn-green{background:#10b981}.btn-green:hover{background:#059669}
         .import-section{border:2px dashed #ddd;padding:30px;text-align:center;border-radius:12px;margin-top:20px}
-        .token-input{display:inline-block;padding:8px 12px;border:1px solid #ddd;border-radius:6px;width:120px}
         .msg{background:#f0f9ff;border-left:4px solid #1e3a8a;padding:12px 16px;border-radius:6px;margin:10px 0;font-size:13px}
-        .token-list{max-height:300px;overflow-y:auto}
         .hidden{display:none}
+        /* 登录页 */
+        #loginOverlay{position:fixed;inset:0;background:rgba(15,23,42,0.85);display:flex;align-items:center;justify-content:center;z-index:9999}
+        .login-card{background:white;border-radius:16px;padding:40px;width:400px;max-width:90vw;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.4)}
+        .login-card h2{font-size:22px;color:#1e3a8a;margin-bottom:8px}
+        .login-card p{font-size:13px;color:#888;margin-bottom:30px}
+        .login-input{width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;margin-bottom:12px;outline:none;transition:border-color 0.2s}
+        .login-input:focus{border-color:#3b82f6}
+        .login-btn{width:100%;padding:12px;background:#1e3a8a;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600}
+        .login-btn:hover{background:#2563eb}
+        .login-error{background:#fee2e2;color:#991b1b;border-radius:6px;padding:10px;margin-bottom:15px;font-size:13px;display:none}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>⚙️ 8维能力测评 - 管理后台</h1>
-            <p>数据管理 | Token权限 | 报告下载</p>
-        </div>
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('records')">📋 48题记录</div>
-            <div class="tab" onclick="showTab('tokens')">🔑 Token管理</div>
-            <div class="tab" onclick="showTab('import')">📤 批量导入</div>
-        </div>
 
-        <!-- 48题记录 -->
-        <div id="tab-records">
-            <div class="stats-grid" id="stats48"></div>
-            <div class="card">
-                <h2>📋 48题测评记录（含Token来源）</h2>
-                <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap">
-                    <input type="text" id="searchName" placeholder="搜索姓名..." style="padding:8px;border:1px solid #ddd;border-radius:6px;width:160px">
-                    <select id="filterIndustry48" style="padding:8px;border:1px solid #ddd;border-radius:6px"><option value="">所有行业</option></select>
-                    <button class="btn" onclick="load48()">搜索</button>
-                    <a href="/api/quiz/list_48" class="btn" style="background:#10b981">📥 导出记录</a>
-                </div>
-                <div style="overflow-x:auto">
-                    <table><thead><tr><th>ID</th><th>姓名</th><th>行业</th><th>年限</th><th>Token</th><th>提交时间</th><th>操作</th></tr></thead><tbody id="table48"></tbody></table>
-                </div>
-            </div>
+    <!-- 登录页 -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h2>🔐 管理后台登录</h2>
+            <p>请输入管理员账号密码</p>
+            <div id="loginError" class="login-error"></div>
+            <input type="text" id="username" class="login-input" placeholder="用户名" autocomplete="username">
+            <input type="password" id="password" class="login-input" placeholder="密码" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+            <button class="login-btn" onclick="doLogin()">登录</button>
         </div>
-
-        <!-- Token管理 -->
-        <div id="tab-tokens" class="hidden">
-            <div class="stats-grid" id="statsTokens"></div>
-            <div class="card">
-                <h2>🔑 生成访问Token</h2>
-                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:15px">
-                    <div>
-                        <label style="font-size:12px;color:#888">数量</label><br>
-                        <input type="number" id="genCount" value="20" min="1" max="300" class="token-input" style="width:80px">
-                    </div>
-                    <div>
-                        <label style="font-size:12px;color:#888">前缀</label><br>
-                        <input type="text" id="genPrefix" value="8D" maxlength="10" class="token-input" style="width:80px">
-                    </div>
-                    <div>
-                        <label style="font-size:12px;color:#888">分配给（选填）</label><br>
-                        <input type="text" id="genAssign" placeholder="如：香港大学MBA班" class="token-input" style="width:180px">
-                    </div>
-                    <div style="margin-top:18px"><button class="btn btn-green" onclick="generateTokens()">生成</button></div>
-                </div>
-                <div id="genResult" class="msg" style="display:none"></div>
-            </div>
-            <div class="card">
-                <h2>📋 Token列表</h2>
-                <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap">
-                    <select id="filterTokenUsed" onchange="loadTokens()" style="padding:8px;border:1px solid #ddd;border-radius:6px">
-                        <option value="">全部</option><option value="0">未使用</option><option value="1">已使用</option>
-                    </select>
-                    <button class="btn" onclick="loadTokens()">刷新</button>
-                    <a href="/api/token/export" class="btn" style="background:#10b981">📥 导出CSV</a>
-                </div>
-                <div class="token-list" style="overflow-x:auto">
-                    <table><thead><tr><th>Token</th><th>状态</th><th>分配给</th><th>创建时间</th><th>使用时间</th><th>操作</th></tr></thead><tbody id="tableTokens"></tbody></table>
-                </div>
-            </div>
-        </div>
-
-        <!-- 批量导入 -->
-        <div id="tab-import" class="hidden">
-            <div class="card">
-                <h2>📤 批量导入（离线问卷）</h2>
-                <div class="import-section">
-                    <p>上传CSV文件批量导入测评结果</p>
-                    <p style="font-size:12px;color:#888;margin:10px 0">格式：name, industry, experience, q1-q31（每题1-5分）</p>
-                    <input type="file" id="csvFile" accept=".csv">
-                    <button class="btn" onclick="importCSV()" style="margin-top:10px">导入</button>
-                    <div id="importResult" style="margin-top:10px"></div>
-                </div>
-            </div>
-        </div>
-
-        <div style="text-align:center;margin-top:20px"><a href="/" style="color:#1e3a8a">← 返回首页</a></div>
     </div>
+
+    <!-- Admin 主面板 -->
+    <div id="adminPanel" class="hidden">
+        <div class="container">
+            <div class="header">
+                <div>
+                    <h1>⚙️ 8维能力测评 - 管理后台</h1>
+                    <p>数据管理 | 报告下载</p>
+                </div>
+                <div class="header-right">
+                    <span class="user-info" id="userInfo"></span>
+                    <button class="btn-logout" onclick="doLogout()">退出登录</button>
+                </div>
+            </div>
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('records')">📋 48题记录</div>
+                <div class="tab" onclick="showTab('import')">📤 批量导入</div>
+            </div>
+
+            <!-- 48题记录 -->
+            <div id="tab-records">
+                <div class="stats-grid" id="stats48"></div>
+                <div class="card">
+                    <h2>📋 48题测评记录</h2>
+                    <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap">
+                        <input type="text" id="searchName" placeholder="搜索姓名..." style="padding:8px;border:1px solid #ddd;border-radius:6px;width:160px">
+                        <select id="filterIndustry48" style="padding:8px;border:1px solid #ddd;border-radius:6px"><option value="">所有行业</option></select>
+                        <button class="btn" onclick="load48()">搜索</button>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table><thead><tr><th>ID</th><th>姓名</th><th>行业</th><th>年限</th><th>提交时间</th><th>操作</th></tr></thead><tbody id="table48"></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量导入 -->
+            <div id="tab-import" class="hidden">
+                <div class="card">
+                    <h2>📤 批量导入（离线问卷）</h2>
+                    <div class="import-section">
+                        <p>上传CSV文件批量导入测评结果</p>
+                        <p style="font-size:12px;color:#888;margin:10px 0">格式：name, industry, experience, q1-q31（每题1-5分）</p>
+                        <input type="file" id="csvFile" accept=".csv">
+                        <button class="btn" onclick="importCSV()" style="margin-top:10px">导入</button>
+                        <div id="importResult" style="margin-top:10px"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align:center;margin-top:20px"><a href="/" style="color:#1e3a8a">← 返回首页</a></div>
+        </div>
+    </div>
+
     <script>
-        const API='';
-        function showTab(name){
-            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-            document.querySelectorAll('[id^=tab-]').forEach(t=>t.classList.add('hidden'));
-            document.getElementById('tab-'+name).classList.remove('hidden');
-            event.target.classList.add('active');
+        const API = '';
+        var _token = localStorage.getItem('admin_token') || '';
+
+        function authHeaders() {
+            return _token ? {'Authorization': 'Bearer ' + _token} : {};
         }
-        async function load48(){
-            const name=document.getElementById('searchName').value;
-            const res=await fetch(API+'/api/quiz/list_48?limit=200');
-            const data=await res.json();
-            document.getElementById('stats48').innerHTML=`
-                <div class="stat-box"><div class="stat-value">${data.count}</div><div class="stat-label">48题总记录</div></div>
-                <div class="stat-box"><div class="stat-value">${data.results.filter(r=>r.access_token).length}</div><div class="stat-label">Token来源</div></div>`;
-            const industries=[...new Set(data.results.map(r=>r.industry||''))].filter(Boolean);
-            document.getElementById('filterIndustry48').innerHTML='<option value="">所有行业</option>'+
-                industries.map(i=>`<option value="${i}">${i}</option>`).join('');
-            const filtered=data.results.filter(r=>!name||(r.user_name||'').includes(name));
-            document.getElementById('table48').innerHTML=filtered.map(r=>`
-                <tr>
-                    <td>${r.id}</td>
-                    <td>${r.user_name||'匿名'}</td>
-                    <td>${r.industry||'-'}</td>
-                    <td>${r.experience||'-'}</td>
-                    <td><span style="font-size:11px;color:#1e3a8a;font-family:monospace">${r.access_token||'无'}</span></td>
-                    <td>${r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-'}</td>
-                    <td><button class="btn btn-sm" onclick="window.open('${API}/api/quiz/report_48/${r.id}','_blank')">PDF</button></td>
-                </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:#888">暂无记录</td></tr>';
-        }
-        async function loadTokens(){
-            const used=document.getElementById('filterTokenUsed').value;
-            const res=await fetch(API+'/api/token/list?used='+used);
-            const data=await res.json();
-            document.getElementById('statsTokens').innerHTML=`
-                <div class="stat-box"><div class="stat-value">${data.total}</div><div class="stat-label">总Token数</div></div>
-                <div class="stat-box"><div class="stat-value" style="color:#10b981">${data.available}</div><div class="stat-label">可用</div></div>
-                <div class="stat-box"><div class="stat-value" style="color:#ef4444">${data.used}</div><div class="stat-label">已使用</div></div>`;
-            document.getElementById('tableTokens').innerHTML=data.tokens.map(t=>`
-                <tr>
-                    <td><span style="font-family:monospace;font-size:13px">${t.token}</span></td>
-                    <td><span class="badge ${t.used?'badge-red':'badge-green'}">${t.used?'已使用':'未使用'}</span></td>
-                    <td style="font-size:12px;color:#666">${t.assigned_to||'-'}</td>
-                    <td style="font-size:12px">${t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</td>
-                    <td style="font-size:12px">${t.used_at ? new Date(t.used_at).toLocaleDateString() : '-'}</td>
-                    <td>
-                        ${!t.used ? `<button class="btn btn-sm" onclick="resetToken('${t.token}')" style="background:#f59e0b">重置</button>` : ''}
-                        <button class="btn btn-sm btn-red" onclick="deleteToken('${t.token}')">删除</button>
-                    </td>
-                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无Token，请先生成</td></tr>';
-        }
-        async function generateTokens(){
-            const count=parseInt(document.getElementById('genCount').value);
-            const prefix=document.getElementById('genPrefix').value.trim()||'8D';
-            const assigned=document.getElementById('genAssign').value.trim();
-            const res=await fetch(API+'/api/token/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({count,prefix,assigned_to:assigned})});
-            const data=await res.json();
-            const el=document.getElementById('genResult');
-            if(data.success){
-                el.style.display='block';
-                el.style.background='#d1fae5';
-                el.style.borderColor='#065f46';
-                el.innerHTML=`<b>成功生成 ${data.created_count} 个Token：</b><br>`+
-                    data.tokens.map(t=>`<span style="font-family:monospace;background:#fff;padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-size:12px">${t}</span>`).join(' ');
-                loadTokens();
-            }else{
-                el.style.display='block';
-                el.style.background='#fee2e2';
-                el.innerHTML=`<b style="color:#991b1b">错误：${data.error}</b>`;
+
+        async function checkSession() {
+            if (!_token) { showLogin(); return; }
+            const res = await fetch(API + '/api/admin/check', {headers: authHeaders()});
+            if (res.ok) {
+                const data = await res.json();
+                showAdmin(data.username || 'admin');
+            } else {
+                localStorage.removeItem('admin_token');
+                _token = '';
+                showLogin();
             }
         }
-        async function deleteToken(token){
-            if(!confirm('确认删除 Token: '+token+'？'))return;
-            await fetch(API+'/api/token/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
-            loadTokens();
+
+        async function doLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errEl = document.getElementById('loginError');
+            errEl.style.display = 'none';
+            if (!username || !password) {
+                errEl.textContent = '请输入用户名和密码';
+                errEl.style.display = 'block';
+                return;
+            }
+            try {
+                const res = await fetch(API + '/admin/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                const data = await res.json();
+                if (data.token) {
+                    _token = data.token;
+                    localStorage.setItem('admin_token', _token);
+                    showAdmin(data.username || username);
+                } else {
+                    errEl.textContent = data.msg || data.error || '登录失败，请检查账号密码';
+                    errEl.style.display = 'block';
+                }
+            } catch(e) {
+                errEl.textContent = '网络错误，请稍后重试';
+                errEl.style.display = 'block';
+            }
         }
-        async function resetToken(token){
-            if(!confirm('重置 Token: '+token+' 为未使用？'))return;
-            await fetch(API+'/api/token/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
-            loadTokens();
+
+        function doLogout() {
+            _token = '';
+            localStorage.removeItem('admin_token');
+            showLogin();
         }
-        async function importCSV(){
-            const file=document.getElementById('csvFile').files[0];
-            if(!file){alert('请选择CSV文件');return}
-            const formData=new FormData();
-            formData.append('file',file);
-            try{
-                const res=await fetch(API+'/api/quiz/batch-import',{method:'POST',body:formData});
-                const data=await res.json();
-                document.getElementById('importResult').innerHTML=
-                    `<b style="color:${data.success?'#065f46':'#991b1b'}">${data.message}</b> 成功: ${data.success_count||0} 失败: ${data.fail_count||0}`;
-            }catch(e){document.getElementById('importResult').innerHTML=`<b style="color:#991b1b">导入失败: ${e.message}</b>`}
+
+        function showLogin() {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
         }
-        load48();
+
+        function showAdmin(username) {
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+            document.getElementById('userInfo').textContent = '👤 ' + username;
+            load48();
+        }
+
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id^=tab-]').forEach(t => t.classList.add('hidden'));
+            document.getElementById('tab-' + name).classList.remove('hidden');
+            if (event) event.target.classList.add('active');
+        }
+
+        async function load48() {
+            const name = document.getElementById('searchName').value;
+            const res = await fetch(API + '/api/quiz/list_48?limit=200', {headers: authHeaders()});
+            if (res.status === 401 || res.status === 403) { doLogout(); return; }
+            const data = await res.json();
+            document.getElementById('stats48').innerHTML = '<div class="stat-box"><div class="stat-value">' + data.count + '</div><div class="stat-label">48题总记录</div></div>';
+            const industries = [...new Set((data.results || []).map(r => r.industry || ''))].filter(Boolean);
+            document.getElementById('filterIndustry48').innerHTML = '<option value="">所有行业</option>' +
+                industries.map(i => '<option value="' + i + '">' + i + '</option>').join('');
+            const filtered = (data.results || []).filter(r => !name || (r.user_name || '').includes(name));
+            document.getElementById('table48').innerHTML = filtered.map(r => '<tr><td>' + r.id + '</td><td>' + (r.user_name || '匿名') + '</td><td>' + (r.industry || '-') + '</td><td>' + (r.experience || '-') + '</td><td>' + (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-') + '</td><td><button class="btn btn-sm" onclick="window.open(\\'' + API + '/api/quiz/report_48/' + r.id + '\\',\\'_blank\\')">PDF</button></td></tr>').join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无记录</td></tr>';
+        }
+
+        async function importCSV() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) { alert('请选择CSV文件'); return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(API + '/api/quiz/batch-import', {method: 'POST', body: formData});
+                const data = await res.json();
+                document.getElementById('importResult').innerHTML = '<b style="color:' + (data.success ? '#065f46' : '#991b1b') + '">' + (data.message || '') + '</b> 成功: ' + (data.success_count || 0) + ' 失败: ' + (data.fail_count || 0);
+            } catch(e) { document.getElementById('importResult').innerHTML = '<b style="color:#991b1b">导入失败: ' + e.message + '</b>'; }
+        }
+
+        checkSession();
     </script>
 </body>
 </html>'''
@@ -1092,7 +1092,7 @@ JWT_ALGO = 'HS256'
 
 def generate_token(user_id, role):
     payload = {
-        'sub': user_id,
+        'sub': str(user_id),
         'role': role,
         'iat': datetime.utcnow(),
         'exp': datetime.utcnow().replace(microsecond=0) + __import__('datetime').timedelta(hours=4)
@@ -1133,33 +1133,6 @@ def admin_required(f):
             return jsonify({'error': 'Admin privilege required'}), 403
         return f(*args, **kwargs)
     return wrapper
-    from functools import wraps
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.headers.get('Authorization', None)
-        if not auth or not auth.startswith('Bearer '):
-            return jsonify({'error': 'Missing or invalid Authorization header'}), 401
-        token = auth.split(' ')[1]
-        payload = decode_token(token)
-        if not payload:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-        request.jwt_payload = payload
-        return f(*args, **kwargs)
-    return decorated
-    from functools import wraps
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.headers.get('Authorization', None)
-        if not auth or not auth.startswith('Bearer '):
-            return jsonify({'error': 'Missing or invalid Authorization header'}), 401
-        token = auth.split(' ')[1]
-        payload = decode_token(token)
-        if not payload:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-        # 将 payload 注入 request 上下文
-        request.jwt_payload = payload
-        return f(*args, **kwargs)
-    return decorated
 
 # ---------- 登录接口 ----------
 @app.route('/admin/login', methods=['POST'])
@@ -1168,17 +1141,28 @@ def admin_login():
     username = data.get('username')
     password = data.get('password')
     if not username or not password:
-        return jsonify({'error': 'username and password required'}), 400
-    with sqlite3.connect(DATABASE) as conn:
+        return jsonify({'msg': 'username and password required'}), 400
+    with get_db() as conn:
         cur = conn.execute('SELECT id, password_hash, role FROM admin_user WHERE username = ?', (username,))
         row = cur.fetchone()
         if not row:
-            return jsonify({'error': 'Invalid credentials'}), 401
+            return jsonify({'msg': 'Invalid credentials'}), 401
         user_id, pwd_hash, role = row
         if not check_password_hash(pwd_hash, password):
-            return jsonify({'error': 'Invalid credentials'}), 401
+            return jsonify({'msg': 'Invalid credentials'}), 401
         token = generate_token(user_id, role)
-        return jsonify({'token': token, 'role': role})
+        return jsonify({'token': token, 'role': role, 'username': username})
+
+@app.route('/api/admin/check', methods=['GET'])
+@admin_required
+def admin_check():
+    """验证当前会话是否有效（前端轮询/页面加载时调用）"""
+    payload = request.jwt_payload
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute('SELECT username FROM admin_user WHERE id = ?', (int(payload.get('sub')),))
+        row = c.fetchone()
+    return jsonify({'logged_in': True, 'username': row[0] if row else 'admin', 'role': payload.get('role')})
 
 @app.route('/api/quiz/submit', methods=['POST'])
 def submit():
@@ -2973,133 +2957,9 @@ def generate_pdf_48(result_id, scores, user_name, experience):
     buffer.seek(0)
     return buffer
 
-# ============ Token 管理 API ============
-@app.route('/api/token/generate', methods=['POST'])
-def generate_tokens():
-    """批量生成 Token（管理员接口）"""
-    try:
-        data = request.get_json()
-        count = min(int(data.get('count', 10)), 500)  # 最多500个
-        prefix = data.get('prefix', '8D').upper()
-        assigned_to = data.get('assigned_to', '')
-
-        with get_db() as conn:
-            c = conn.cursor()
-            # 找当前最大序号
-            c.execute('SELECT token FROM access_tokens WHERE token LIKE ? ORDER BY token DESC LIMIT 1',
-                      (f'{prefix}-%',))
-            existing = c.fetchall()
-            if existing:
-                try:
-                    last_num = int(existing[0]['token'].split('-')[-1])
-                except ValueError:
-                    last_num = 0
-            else:
-                last_num = 0
-
-            created = []
-            for i in range(1, count + 1):
-                token = f'{prefix}-{last_num + i:03d}'
-                c.execute('''INSERT OR IGNORE INTO access_tokens (token, assigned_to, created_at)
-                              VALUES (?, ?, ?)''',
-                          (token, assigned_to, datetime.now().isoformat()))
-                if c.rowcount > 0:
-                    created.append(token)
-            conn.commit()
-
-        return jsonify({
-            'success': True,
-            'created_count': len(created),
-            'tokens': created,
-            'message': f'成功生成 {len(created)} 个Token'
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/token/list')
-def list_tokens():
-    """列出所有 Token"""
-    try:
-        used_filter = request.args.get('used', '')  # ''=全部, '0'=未用, '1'=已用
-        with get_db() as conn:
-            c = conn.cursor()
-            if used_filter == '0':
-                c.execute('SELECT * FROM access_tokens WHERE used=0 ORDER BY created_at DESC')
-            elif used_filter == '1':
-                c.execute('SELECT * FROM access_tokens WHERE used=1 ORDER BY used_at DESC')
-            else:
-                c.execute('SELECT * FROM access_tokens ORDER BY created_at DESC')
-            rows = c.fetchall()
-
-        total = len(rows)
-        used = sum(1 for r in rows if r['used'] == 1)
-        return jsonify({
-            'tokens': [dict(r) for r in rows],
-            'total': total,
-            'used': used,
-            'available': total - used
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/token/delete', methods=['POST'])
-def delete_token():
-    """删除 Token"""
-    try:
-        data = request.get_json()
-        token = data.get('token', '')
-        with get_db() as conn:
-            c = conn.cursor()
-            c.execute('DELETE FROM access_tokens WHERE token=?', (token,))
-            conn.commit()
-        return jsonify({'success': True, 'deleted': token})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/token/reset', methods=['POST'])
-def reset_token():
-    """重置 Token（标记为未使用）"""
-    try:
-        data = request.get_json()
-        token = data.get('token', '')
-        with get_db() as conn:
-            c = conn.cursor()
-            c.execute('UPDATE access_tokens SET used=0, used_at=NULL WHERE token=?', (token,))
-            conn.commit()
-        return jsonify({'success': True, 'reset': token})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/token/export')
-def export_tokens():
-    """导出 Token 列表为 CSV"""
-    try:
-        with get_db() as conn:
-            c = conn.cursor()
-            c.execute('SELECT * FROM access_tokens ORDER BY created_at DESC')
-            rows = c.fetchall()
-
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Token', '状态', '分配给', '创建时间', '使用时间'])
-        for r in rows:
-            writer.writerow([
-                r['token'],
-                '已使用' if r['used'] == 1 else '未使用',
-                r['assigned_to'] or '',
-                r['created_at'] or '',
-                r['used_at'] or ''
-            ])
-        output.seek(0)
-        return send_file(io.BytesIO(output.getvalue().encode('utf-8-sig')),
-                        mimetype='text/csv',
-                        as_attachment=True,
-                        download_name=f'access_tokens_{datetime.now().strftime("%Y%m%d")}.csv')
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ============ 48题列表（含Token来源）============
+# ============ 48题列表 ============
 @app.route('/api/quiz/list_48')
+@admin_required
 def list_48():
     """列出48题提交记录（含来源Token）"""
     try:
@@ -3114,6 +2974,7 @@ def list_48():
 
 # ============ 管理接口 ============
 @app.route('/api/admin/init_db', methods=['POST'])
+@admin_required
 def admin_init_db():
     """手动初始化数据库（创建所有表）"""
     init_db()
