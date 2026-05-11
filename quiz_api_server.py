@@ -62,7 +62,7 @@ DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
 
 # ---------- Admin 用户表与初始化 ----------
 def init_admin_table():
-    with sqlite3.connect(DATABASE) as conn:
+    with get_db() as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS admin_user (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,11 +74,11 @@ def init_admin_table():
         conn.commit()
 
 def create_default_admin():
-    # 使用您提供的默认账号 admin / Css2504stc1128Abc@#$
+    # Railway 部署初始管理员账号
     username = 'admin'
-    raw_pwd = 'Css2504stc1128Abc@#$'
+    raw_pwd = 'Css2504stc1128Abc'
     pwd_hash = generate_password_hash(raw_pwd)
-    with sqlite3.connect(DATABASE) as conn:
+    with get_db() as conn:
         cur = conn.execute('SELECT id FROM admin_user WHERE username = ?', (username,))
         if not cur.fetchone():
             conn.execute('INSERT INTO admin_user (username, password_hash, role) VALUES (?,?,?)',
