@@ -270,6 +270,17 @@
         .loading { text-align: center; padding: 60px 20px; }
         .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* 打印优化样式 */
+        @media print {
+            body { background: white; }
+            .hero-bg { display: none; }
+            .main-container { padding: 20px; }
+            .card { box-shadow: none; border: 1px solid #e8e0d8; }
+            .result-btn-group { display: none; }
+            .footer { color: #999 !important; }
+            .no-print { display: none; }
+            button { display: none; }
+        }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeInUp 0.5s ease-out; }
 
@@ -359,7 +370,7 @@
                 <h2>🎯 评测完成！</h2>
                 <p id="resultTitle"></p>
                 <div class="result-btn-group">
-                    <button class="btn btn-secondary" onclick="downloadPDF()">📄 下载PDF报告</button>
+                    <button class="btn btn-secondary" onclick="printReport()">🖨️ 打印 / 保存PDF</button>
                     <button class="btn btn-secondary" onclick="location.reload()">重新评测</button>
                 </div>
             </div>
@@ -998,36 +1009,24 @@
             console.warn('Local calculation mode — server unavailable');
         }
 
-        // 下载PDF (v3.3 四阶递进报告)
-        function downloadPDF() {
-            if (!resultId) {
-                alert('请先完成测评并提交结果');
-                return;
+        // 打印报告功能 (使用浏览器打印为PDF)
+        function printReport() {
+            // 检查是否有结果可以打印
+            if (!document.getElementById('resultSection').classList.contains('hidden')) {
+                // 隐藏按钮组
+                const btnGroup = document.querySelector('.result-btn-group');
+                if (btnGroup) btnGroup.classList.add('no-print');
+                
+                // 调用打印
+                window.print();
+                
+                // 打印后恢复按钮显示
+                setTimeout(() => {
+                    if (btnGroup) btnGroup.classList.remove('no-print');
+                }, 500);
+            } else {
+                alert('请先完成测评以查看结果');
             }
-            const btn = document.querySelector('.btn-secondary');
-            const origText = btn ? btn.textContent : '';
-            if (btn) btn.textContent = '⏳ 生成中...';
-            fetch(`/api/quiz/report_48_v33/${resultId}`)
-                .then(r => {
-                    if (!r.ok) throw new Error('生成失败');
-                    return r.blob();
-                })
-                .then(blob => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    const name = document.getElementById('userName').value || '匿名用户';
-                    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
-                    a.download = `8d_report_v33_${name}_${today}.pdf`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                })
-                .catch(e => {
-                    alert('PDF生成失败: ' + e.message + '\n\n请尝试使用 Ctrl+P 打印页面');
-                })
-                .finally(() => {
-                    if (btn) btn.textContent = origText;
-                });
         }
 
         // Keyboard: Enter to continue
