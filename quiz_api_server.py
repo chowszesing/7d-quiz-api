@@ -85,8 +85,6 @@ def create_default_admin():
                          (username, pwd_hash, 'admin'))
             conn.commit()
 
-init_admin_table()
-create_default_admin()
 PORT = int(os.environ.get('PORT', 5000))
 
 # ============ 中文字体下载（Render 容器内无字体时使用）============
@@ -2762,7 +2760,14 @@ def generate_pdf_48_v3(result_id, scores, answers, user_name, experience, font_n
     buffer.seek(0)
     return buffer
 
+
+# ============ 初始化数据库 ============
+init_admin_table()
+create_default_admin()
+
+# ============ 主函数 ============
 if __name__ == '__main__':
+
     # 测试代码（已禁用，避免 draw_horizontal_bar_chart 缺失导致崩溃）
     # 如需测试，请使用 Flask test_client 或直接调用 generate_pdf_48_v3() 函数
     print("提示：直接运行此文件已禁用PDF测试。使用 test_client 测试API，或运行Flask服务器。")
@@ -4756,6 +4761,13 @@ def report_48_v33(result_id):
                        'font_name': CHINESE_FONT or 'none'}), 500
 
 # ============ 主函数 ============
+
+# ============ 初始化数据库 ============
+init_admin_table()
+create_default_admin()
+
+# ============ 主函数 ============
 if __name__ == '__main__':
+
     app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true',
              host='0.0.0.0', port=PORT, use_reloader=False)
