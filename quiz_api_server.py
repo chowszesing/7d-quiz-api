@@ -283,8 +283,12 @@ def register_fonts():
     print(f"{'='*50}\n")
     return None
 
-CHINESE_FONT = register_fonts()
-print(f"字体注册完成: CHINESE_FONT = {CHINESE_FONT}")
+try:
+    CHINESE_FONT = register_fonts()
+    print(f"字体注册完成: CHINESE_FONT = {CHINESE_FONT}")
+except Exception as e:
+    print(f"字体注册失败 (非致命): {e}")
+    CHINESE_FONT = None
 
 # ============ HTML模板（简体中文）============
 HTML_INDEX = '''<!DOCTYPE html>
