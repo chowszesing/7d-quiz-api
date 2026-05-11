@@ -85,8 +85,6 @@ def create_default_admin():
                          (username, pwd_hash, 'admin'))
             conn.commit()
 
-init_admin_table()
-create_default_admin()
 PORT = int(os.environ.get('PORT', 5000))
 
 # ============ 中文字体下载（Render 容器内无字体时使用）============
@@ -4760,6 +4758,9 @@ def report_48_v33(result_id):
                        'font_name': CHINESE_FONT or 'none'}), 500
 
 # ============ 主函数 ============
+
+init_admin_table()
+create_default_admin()
 if __name__ == '__main__':
     app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true',
              host='0.0.0.0', port=PORT, use_reloader=False)
