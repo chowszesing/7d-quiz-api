@@ -5,9 +5,12 @@
 """
 
 from flask import Flask, request, jsonify, send_file, render_template_string
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
 from flask_cors import CORS
 import json
 import sqlite3
+from functools import wraps
 import os
 import io
 import csv
@@ -56,6 +59,34 @@ def serve_report_engine():
 
 # 配置
 DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
+
+# ---------- Admin 用户表与初始化 ----------
+def init_admin_table():
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS admin_user (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT CHECK(role IN ('admin','token_user')) NOT NULL DEFAULT 'admin'
+            );
+        ''')
+        conn.commit()
+
+def create_default_admin():
+    # 使用您提供的默认账号 admin / Css2504stc1128Abc@#$
+    username = 'admin'
+    raw_pwd = 'Css2504stc1128Abc@#$'
+    pwd_hash = generate_password_hash(raw_pwd)
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.execute('SELECT id FROM admin_user WHERE username = ?', (username,))
+        if not cur.fetchone():
+            conn.execute('INSERT INTO admin_user (username, password_hash, role) VALUES (?,?,?)',
+                         (username, pwd_hash, 'admin'))
+            conn.commit()
+
+init_admin_table()
+create_default_admin()
 PORT = int(os.environ.get('PORT', 5000))
 
 # ============ 中文字体下载（Render 容器内无字体时使用）============
@@ -1054,6 +1085,101 @@ def admin():
 @app.route('/api/health')
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat(), 'font': CHINESE_FONT or 'none'})
+
+# ---------- JWT 相关 ----------
+JWT_SECRET = os.environ.get('JWT_SECRET', 'change_me_secret')  # 请在 Render 环境变量中设置安全的密钥
+JWT_ALGO = 'HS256'
+
+def generate_token(user_id, role):
+    payload = {
+        'sub': user_id,
+        'role': role,
+        'iat': datetime.utcnow(),
+        'exp': datetime.utcnow().replace(microsecond=0) + __import__('datetime').timedelta(hours=4)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
+
+def decode_token(token):
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def jwt_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('Authorization', None)
+        if not auth or not auth.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid Authorization header'}), 401
+        token = auth.split(' ')[1]
+        payload = decode_token(token)
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        request.jwt_payload = payload
+        return f(*args, **kwargs)
+    return decorated
+
+# ---------- Admin 权限检查 ----------
+def admin_required(f):
+    @wraps(f)
+    @jwt_required
+    def wrapper(*args, **kwargs):
+        payload = request.jwt_payload
+        if payload.get('role') != 'admin':
+            return jsonify({'error': 'Admin privilege required'}), 403
+        return f(*args, **kwargs)
+    return wrapper
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('Authorization', None)
+        if not auth or not auth.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid Authorization header'}), 401
+        token = auth.split(' ')[1]
+        payload = decode_token(token)
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        request.jwt_payload = payload
+        return f(*args, **kwargs)
+    return decorated
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('Authorization', None)
+        if not auth or not auth.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid Authorization header'}), 401
+        token = auth.split(' ')[1]
+        payload = decode_token(token)
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        # 将 payload 注入 request 上下文
+        request.jwt_payload = payload
+        return f(*args, **kwargs)
+    return decorated
+
+# ---------- 登录接口 ----------
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    data = request.get_json(silent=True) or {}
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'username and password required'}), 400
+    with sqlite3.connect(DATABASE) as conn:
+        cur = conn.execute('SELECT id, password_hash, role FROM admin_user WHERE username = ?', (username,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        user_id, pwd_hash, role = row
+        if not check_password_hash(pwd_hash, password):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        token = generate_token(user_id, role)
+        return jsonify({'token': token, 'role': role})
+
 @app.route('/api/quiz/submit', methods=['POST'])
 def submit():
     try:
@@ -1080,6 +1206,7 @@ def submit():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/quiz/report/<int:result_id>')
+@jwt_required
 def report(result_id):
     try:
         with get_db() as conn:
@@ -1102,6 +1229,7 @@ def report(result_id):
         return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None, 'font_name': CHINESE_FONT or 'none'}), 500
 
 @app.route('/api/quiz/all')
+@admin_required
 def get_all():
     try:
         name = request.args.get('name', '')
@@ -1129,6 +1257,7 @@ def get_all():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/quiz/export')
+@admin_required
 def export():
     try:
         with get_db() as conn:
@@ -1151,6 +1280,7 @@ def export():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/quiz/batch-import', methods=['POST'])
+@admin_required
 def batch_import():
     try:
         file = request.files.get('file')
