@@ -2770,6 +2770,13 @@ init_admin_table()
 create_default_admin()
 
 # ============ 主函数 ============
+
+# ============ 可打印报告页面 ============
+@app.route('/quiz-result/<int:result_id>')
+def quiz_result_print(result_id):
+    """返回可打印的HTML报告页面（用户可打印为PDF）"""
+    return printable_html
+
 if __name__ == '__main__':
 
     # 测试代码（已禁用，避免 draw_horizontal_bar_chart 缺失导致崩溃）
