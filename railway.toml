@@ -1,6 +1,6 @@
 [build]
   builder = "NIXPACKS"
-  buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install chromium && playwright install-deps chromium"
+  buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install chromium && playwright install-deps chromium && apt-get update && apt-get install -y fonts-noto-cjk || true"
 
 [deploy]
   startCommand = "gunicorn quiz_api_server:app -b 0.0.0.0:$PORT -w 4"
