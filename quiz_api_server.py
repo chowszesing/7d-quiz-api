@@ -93,12 +93,6 @@ PORT = int(os.environ.get('PORT', 5000))
 # ============ 中文字体下载（Render 容器内无字体时使用）============
 FONT_DOWNLOAD_DIR = '/tmp'  # Render 容器 /tmp 可写
 
-FONT_CDN_SOURCES = [
-    # Noto Sans SC 简体中文子集（推荐，最小 ~1.5MB）
-    'https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf',
-    # Noto Sans SC TTF 版本
-    'https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/07_NotoSansSC.zip',
-]
 
 FONT_LOCAL_PATHS = [
     # 优先使用系统安装的字体（Railway apt-get 安装）
@@ -119,60 +113,7 @@ FONT_SYSTEM_EXPLICIT = [
     ('NotoSerifCJKSC', '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc,0'),
 ]
 
-FONT_FILENAME = 'NotoSansSC-Regular.otf'
 
-def download_chinese_font():
-    """从 CDN 下载中文字体到 /tmp，返回字体路径，失败返回 None"""
-    import urllib.request
-    import zipfile
-
-    # 优先下载 TTC/TTF 格式（ReportLab 支持）
-    ttc_url = 'https://github.com/notofonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf'
-    target_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttc')
-    
-    if os.path.exists(target_path):
-        print(f"  [字体] 使用已下载字体: {target_path}")
-        return target_path
-    
-    # 方案1：下载 TTC 字体（ReportLab 兼容）
-    print(f"  [字体] 尝试下载 Noto Sans SC (TTC)...")
-    try:
-        # 使用 Google Fonts 的 TTF 格式
-        ttf_url = 'https://fonts.gstatic.com/s/notosanssc/v36/k3kCo94LPYmkofpaletteBMNmSJflUABQ.0.woff2'
-        # WOFF2 不支持，改用其他源
-        raise Exception("WOFF2 not supported, try TTC")
-    except:
-        pass
-    
-    # 方案2：使用系统字体包名称，提示用户安装
-    print(f"  [字体] 提示: 请在 railway.toml 中添加字体安装命令")
-    print(f"  [字体] 或确保项目 fonts/ 目录包含 TTC/TTF 格式的中文字体")
-    return None
-            data = resp.read()
-        zip_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC.zip')
-        with open(zip_path, 'wb') as f:
-            f.write(data)
-        print(f"  [字体] ZIP 下载成功: {len(data)} bytes")
-        # 解压
-        try:
-            with zipfile.ZipFile(zip_path, 'r') as zf:
-                for name in zf.namelist():
-                    if 'NotoSansSC-Regular.otf' in name or 'NotoSansSC-Regular.ttc' in name:
-                        zf.extract(name, FONT_DOWNLOAD_DIR)
-                        extracted = os.path.join(FONT_DOWNLOAD_DIR, name)
-                        # 重命名到标准名
-                        import shutil
-                        shutil.move(extracted, target_path)
-                        print(f"  [字体] 解压成功: {name} -> {target_path}")
-                        return target_path
-        except Exception as e2:
-            print(f"  [字体] 解压失败: {e2}")
-        os.remove(zip_path)
-    except Exception as e:
-        print(f"  [字体] ZIP 下载失败: {e}")
-
-    print(f"  [字体] 所有下载方案均失败")
-    return None
 
 # ============ 中文字体注册 ============
 def register_fonts():
