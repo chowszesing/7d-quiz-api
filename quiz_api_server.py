@@ -102,11 +102,9 @@ FONT_CDN_SOURCES = [
 
 FONT_LOCAL_PATHS = [
     # 项目 fonts/ 目录（包含在 Git 仓库中，推荐方式）
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.otf'),
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.otf'),
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJKsc-Regular.otf'),
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'wqy-microhei.ttc'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.ttf'),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.ttc'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'wqy-microhei.ttc'),
     # Windows 系统字体
     'C:/Windows/Fonts/msyh.ttc',   # 微软雅黑
     'C:/Windows/Fonts/simhei.ttf',  # 黑体
