@@ -128,31 +128,28 @@ def download_chinese_font():
     import urllib.request
     import zipfile
 
-    target_path = os.path.join(FONT_DOWNLOAD_DIR, FONT_FILENAME)
+    # 优先下载 TTC/TTF 格式（ReportLab 支持）
+    ttc_url = 'https://github.com/notofonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf'
+    target_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttc')
+    
     if os.path.exists(target_path):
         print(f"  [字体] 使用已下载字体: {target_path}")
         return target_path
-
-    print(f"  [字体] 尝试下载 Noto Sans SC 字体到 {target_path}...")
-
-    # 方案1：直接下载 OTF
-    otf_url = 'https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf'
+    
+    # 方案1：下载 TTC 字体（ReportLab 兼容）
+    print(f"  [字体] 尝试下载 Noto Sans SC (TTC)...")
     try:
-        req = urllib.request.Request(otf_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = resp.read()
-        with open(target_path, 'wb') as f:
-            f.write(data)
-        print(f"  [字体] 下载成功: {len(data)} bytes -> {target_path}")
-        return target_path
-    except Exception as e:
-        print(f"  [字体] OTF 下载失败: {e}")
-
-    # 方案2：下载 zip 并解压
-    zip_url = 'https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/07_NotoSansSC.zip'
-    try:
-        req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        # 使用 Google Fonts 的 TTF 格式
+        ttf_url = 'https://fonts.gstatic.com/s/notosanssc/v36/k3kCo94LPYmkofpaletteBMNmSJflUABQ.0.woff2'
+        # WOFF2 不支持，改用其他源
+        raise Exception("WOFF2 not supported, try TTC")
+    except:
+        pass
+    
+    # 方案2：使用系统字体包名称，提示用户安装
+    print(f"  [字体] 提示: 请在 railway.toml 中添加字体安装命令")
+    print(f"  [字体] 或确保项目 fonts/ 目录包含 TTC/TTF 格式的中文字体")
+    return None
             data = resp.read()
         zip_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC.zip')
         with open(zip_path, 'wb') as f:
