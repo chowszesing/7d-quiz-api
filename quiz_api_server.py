@@ -753,7 +753,7 @@ HTML_ADMIN = '''<!DOCTYPE html>
             document.getElementById('filterIndustry48').innerHTML = '<option value="">所有行业</option>' +
                 industries.map(i => '<option value="' + i + '">' + i + '</option>').join('');
             const filtered = (data.results || []).filter(r => !name || (r.user_name || '').includes(name));
-            document.getElementById('table48').innerHTML = filtered.map(r => '<tr><td>' + r.id + '</td><td>' + (r.user_name || '匿名') + '</td><td>' + (r.industry || '-') + '</td><td>' + (r.experience || '-') + '</td><td>' + (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-') + '</td><td><button class="btn btn-sm" onclick="window.open(\\'' + API + '/api/quiz/report_48/' + r.id + '\\',\\'_blank\\')">PDF</button></td></tr>').join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无记录</td></tr>';
+            document.getElementById('table48').innerHTML = filtered.map(r => '<tr><td>' + r.id + '</td><td>' + (r.user_name || '匿名') + '</td><td>' + (r.industry || '-') + '</td><td>' + (r.experience || '-') + '</td><td>' + (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-') + '</td><td><button class="btn btn-sm" onclick="window.open(\\'' + API + '/api/quiz/report_full/' + r.id + '\\',\\'_blank\\')">PDF(完整版)</button></td></tr>').join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无记录</td></tr>';
         }
 
         async function importCSV() {
@@ -1711,6 +1711,37 @@ def report_48(result_id):
     except Exception as e:
         import traceback
         print(f"PDF生成错误: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/quiz/report_full/<int:result_id>')
+def report_full(result_id):
+    """生成48题PDF报告（完整版 - 强制使用 generate_pdf_48_full）"""
+    try:
+        print(f"[Report Full] 开始生成PDF，result_id={result_id}")
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
+            row = c.fetchone()
+        
+        if not row:
+            print(f"[Report Full] 未找到记录: result_id={result_id}")
+            return jsonify({'error': 'Not found'}), 404
+        
+        print(f"[Report Full] 找到记录: user_name={row['user_name']}")
+        print(f"[Report Full] 调用 generate_pdf_48_full()")
+        
+        # 强制使用完整版PDF生成器
+        pdf_buffer = generate_pdf_48_full(row)
+        
+        print(f"[Report Full] PDF生成成功")
+        report_date = datetime.now().strftime("%Y%m%d")
+        
+        return send_file(pdf_buffer, mimetype='application/pdf',
+                        as_attachment=True,
+                        download_name=f'8d_report_FULL_{row["user_name"]}_{report_date}.pdf')
+    except Exception as e:
+        import traceback
+        print(f"[Report Full] 错误: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 

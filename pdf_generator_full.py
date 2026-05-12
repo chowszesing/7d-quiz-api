@@ -32,8 +32,12 @@ def generate_pdf_48_full(row):
         industry = row['industry'] or ''
         experience = row['experience'] or ''
     
-    # 读取 8d_quiz_48.html 的完整内容
-    with open('8d_quiz_48.html', 'r', encoding='utf-8') as f:
+    # 读取 8d_quiz_48.html 的完整内容（使用绝对路径）
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    html_path = os.path.join(base_dir, '8d_quiz_48.html')
+    print(f"[PDF Full] 读取HTML文件: {html_path}")
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
         html = f.read()
     
     # 修改HTML，让它直接显示结果（不显示测评界面）
@@ -46,8 +50,12 @@ def generate_pdf_48_full(row):
                         '<div class="card" id="resultSection">')
     
     # 2. 嵌入分数数据，并直接调用 renderResult()
+    # 使用 json.dumps 生成有效的 JavaScript 代码
     scores_js = json.dumps(scores, ensure_ascii=False)
     answers_js = json.dumps(answers, ensure_ascii=False)
+    user_name_js = json.dumps(user_name)
+    industry_js = json.dumps(industry)
+    experience_js = json.dumps(experience)
     
     script = f'''
     <script>
@@ -59,17 +67,23 @@ def generate_pdf_48_full(row):
             // 设置全局变量
             window.scores = {scores_js};
             window.answers = {answers_js};
-            window.userName = '{user_name}';
-            window.industry = '{industry}';
-            window.experience = '{experience}';
+            window.userName = {user_name_js};
+            window.industry = {industry_js};
+            window.experience = {experience_js};
             
             // 调用 renderResult（这个函数已经定义在 8d_quiz_48.html 中）
-            renderResult(window.scores, window.userName, window.experience, window.industry);
+            if (typeof renderResult === 'function') {{
+                renderResult(window.scores, window.userName, window.experience, window.industry);
+            }} else {{
+                console.error('renderResult function not found!');
+            }}
         }};
         
         // 页面加载完成后自动调用
         window.addEventListener('DOMContentLoaded', function() {{
-            window.submitQuiz();
+            setTimeout(function() {{
+                window.submitQuiz();
+            }}, 500);
         }});
     </script>
     '''
@@ -82,6 +96,8 @@ def generate_pdf_48_full(row):
         f.write(html)
         temp_html_path = f.name
     
+    print(f"[PDF Full] 临时HTML文件: {temp_html_path}")
+    
     try:
         # 使用 Playwright 生成 PDF
         with sync_playwright() as p:
@@ -89,15 +105,19 @@ def generate_pdf_48_full(row):
             page = browser.new_page()
             
             # 加载HTML文件
-            page.goto(f'file://{temp_html_path}', wait_until='networkidle', timeout=30000)
+            file_url = f'file://{temp_html_path}'
+            print(f"[PDF Full] 加载HTML: {file_url}")
+            page.goto(file_url, wait_until='networkidle', timeout=30000)
             
             # 等待渲染完成（等待结果内容出现）
+            print(f"[PDF Full] 等待结果内容渲染...")
             page.wait_for_selector('#resultContent', timeout=10000)
             
             # 额外等待2秒，确保所有JS执行完毕
             page.wait_for_timeout(2000)
             
             # 生成PDF
+            print(f"[PDF Full] 生成PDF...")
             pdf_bytes = page.pdf(
                 format='A4',
                 print_background=True,
@@ -105,11 +125,19 @@ def generate_pdf_48_full(row):
             )
             browser.close()
         
+        print(f"[PDF Full] PDF生成成功，大小: {len(pdf_bytes)} bytes")
+        
         # 将 PDF 字节写入 BytesIO
         buffer = BytesIO(pdf_bytes)
         buffer.seek(0)
         return buffer
+    except Exception as e:
+        print(f"[PDF Full] 错误: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         # 清理临时文件
         if os.path.exists(temp_html_path):
             os.unlink(temp_html_path)
+            print(f"[PDF Full] 清理临时文件: {temp_html_path}")
