@@ -11,13 +11,22 @@ from datetime import datetime
 def generate_pdf_48_playwright(row):
     """
     使用 Playwright 生成 PDF - 跟用户端看到的结果页面一模一样
+    支持 sqlite3.Row 对象或字典
     """
-    # 从数据库行提取数据
-    scores = json.loads(row['scores'])
-    answers = json.loads(row['answers']) if row['answers'] else {}
-    user_name = row['user_name'] or '匿名用户'
-    industry = row['industry'] or ''
-    experience = row['experience'] or ''
+    # 兼容 sqlite3.Row 和字典
+    if isinstance(row, dict):
+        scores = json.loads(row.get('scores', '{}'))
+        answers = json.loads(row.get('answers', '{}')) if row.get('answers') else {}
+        user_name = row.get('user_name') or '匿名用户'
+        industry = row.get('industry') or ''
+        experience = row.get('experience') or ''
+    else:
+        # 假设是 sqlite3.Row 或支持字典式访问的对象
+        scores = json.loads(row['scores'])
+        answers = json.loads(row['answers']) if row['answers'] else {}
+        user_name = row['user_name'] or '匿名用户'
+        industry = row['industry'] or ''
+        experience = row['experience'] or ''
     
     # 创建 HTML 内容（跟用户端结果页面一模一样）
     html_content = create_result_html(user_name, industry, experience, scores, answers)
