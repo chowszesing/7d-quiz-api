@@ -17,6 +17,7 @@ import csv
 import urllib.request
 from datetime import datetime
 from contextlib import contextmanager
+from pdf_generator import generate_pdf_48_playwright
 
 # PDF生成
 from reportlab.lib.pagesizes import A4
@@ -1689,7 +1690,7 @@ def submit_48():
 
 @app.route('/api/quiz/report_48/<int:result_id>')
 def report_48(result_id):
-    """生成48题PDF报告（V4专业设计版）"""
+    """生成48题PDF报告（Playwright HTML-to-PDF，跟用户端一模一样）"""
     try:
         with get_db() as conn:
             c = conn.cursor()
@@ -1699,11 +1700,8 @@ def report_48(result_id):
         if not row:
             return jsonify({'error': 'Not found'}), 404
 
-        scores = json.loads(row['scores'])
-        # 读取 answers 用于计算子能力分数
-        answers = json.loads(row['answers']) if row['answers'] else {}
-        pdf_buffer = generate_pdf_48_v4(result_id, scores, answers, row['user_name'], row['experience'],
-                                        font_name=CHINESE_FONT or 'Helvetica')
+        # 使用 Playwright 生成 PDF
+        pdf_buffer = generate_pdf_48_playwright(row)
         report_date = datetime.now().strftime("%Y%m%d")
 
         return send_file(pdf_buffer, mimetype='application/pdf',
