@@ -101,11 +101,13 @@ FONT_CDN_SOURCES = [
 ]
 
 FONT_LOCAL_PATHS = [
-    # 项目 fonts/ 目录（包含在 Git 仓库中，推荐方式）
+    # 优先使用系统安装的字体（Railway apt-get 安装）
+    '/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf',
+    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+    # 项目 fonts/ 目录（包含在 Git 仓库中）
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.ttf'),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.ttc'),
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'wqy-microhei.ttc'),
-    # Windows 系统字体
+    # Windows 系统字体（本地开发用）
     'C:/Windows/Fonts/msyh.ttc',   # 微软雅黑
     'C:/Windows/Fonts/simhei.ttf',  # 黑体
     'C:/Windows/Fonts/simsun.ttc', # 宋体
