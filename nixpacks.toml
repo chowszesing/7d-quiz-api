@@ -1,0 +1,31 @@
+# Nixpacks configuration for Railway
+# Install Playwright browsers after pip install
+
+[phases.build]
+cmds = [
+    "pip install -r requirements.txt",
+    "playwright install chromium",
+    "playwright install-deps chromium"
+]
+
+[phases.setup]
+nixPkgs = [
+    "chromium",
+    "nss",
+    "atk",
+    "at-spi2-atk",
+    "cups",
+    "libdrm",
+    "libxkbcommon",
+    "libgbm",
+    "libxcomposite",
+    "libxdamage",
+    "libxfixes",
+    "libxrandr",
+    "libgbm",
+    "gdk-pixbuf",
+    "gtk3",
+    "alsa-lib",
+    "pango",
+    "cairo"
+]
