@@ -1089,7 +1089,7 @@ def admin():
 
 @app.route('/api/health')
 def health():
-    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat(), 'font': CHINESE_FONT or 'none'})
+    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat(), 'font': CHINESE_FONT or 'none', 'version': '2026-05-12-v3-with-report-full'})
 
 # ---------- JWT 相关 ----------
 JWT_SECRET = os.environ.get('JWT_SECRET', 'change_me_secret')  # 请在 Render 环境变量中设置安全的密钥
