@@ -1,19 +1,23 @@
 """
 PDF生成模块 - 使用Playwright生成跟用户端一模一样的PDF
-最后更新: 2026-05-12 08:15
+最后更新: 2026-05-12 09:12
 """
 from io import BytesIO
-from playwright.sync_api import sync_playwright
 import tempfile
 import os
 import json
 from datetime import datetime
+
+# 惰性导入 - 避免顶层导入导致Gunicorn启动失败
+# from playwright.sync_api import sync_playwright  # 移到函数内部
 
 def generate_pdf_48_playwright(row):
     """
     使用 Playwright 生成 PDF - 跟用户端看到的结果页面一模一样
     支持 sqlite3.Row 对象或字典
     """
+    # 在函数内部导入 playwright，避免顶层导入失败导致服务器无法启动
+    from playwright.sync_api import sync_playwright
     # 兼容 sqlite3.Row 和字典
     if isinstance(row, dict):
         scores = json.loads(row.get('scores', '{}'))

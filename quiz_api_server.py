@@ -17,8 +17,9 @@ import csv
 import urllib.request
 from datetime import datetime
 from contextlib import contextmanager
-from pdf_generator import generate_pdf_48_playwright
-from pdf_generator_full import generate_pdf_48_full
+# PDF生成器 - 惰性导入（避免playwright未安装时服务器启动失败）
+# from pdf_generator import generate_pdf_48_playwright  # 移到函数内部
+# from pdf_generator_full import generate_pdf_48_full  # 移到函数内部
 
 # PDF生成
 from reportlab.lib.pagesizes import A4
@@ -1693,6 +1694,9 @@ def submit_48():
 def report_48(result_id):
     """生成48题PDF报告（完整版 - 跟用户端一模一样）"""
     try:
+        # 惰性导入 - 避免playwright未安装时失败
+        from pdf_generator_full import generate_pdf_48_full
+        
         with get_db() as conn:
             c = conn.cursor()
             c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
@@ -1718,6 +1722,9 @@ def report_full(result_id):
     """生成48题PDF报告（完整版 - 强制使用 generate_pdf_48_full）"""
     try:
         print(f"[Report Full] 开始生成PDF，result_id={result_id}")
+        # 惰性导入 - 避免playwright未安装时失败
+        from pdf_generator_full import generate_pdf_48_full
+        
         with get_db() as conn:
             c = conn.cursor()
             c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
