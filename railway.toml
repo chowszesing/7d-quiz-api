@@ -3,7 +3,7 @@
   buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install chromium"
 
 [deploy]
-  startCommand = "gunicorn quiz_api_server:app -b 0.0.0.0:$PORT -w 4"
+  startCommand = "gunicorn -b 0.0.0.0:$PORT -w 4 quiz_api_server:app"
   healthcheckPath = "/api/health"
   healthcheckTimeout = 30
   restartPolicyType = "ON_FAILURE"
