@@ -102,25 +102,21 @@ FONT_CDN_SOURCES = [
 
 FONT_LOCAL_PATHS = [
     # 优先使用系统安装的字体（Railway apt-get 安装）
-    '/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf',
     '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-    # 项目 fonts/ 目录（包含在 Git 仓库中）
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc',
+    # 项目 fonts/ 目录（包含在 Git 仓库中，TTF 格式）
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.ttf'),
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansCJK-Regular.ttc'),
     # Windows 系统字体（本地开发用）
-    'C:/Windows/Fonts/msyh.ttc',   # 微软雅黑
-    'C:/Windows/Fonts/simhei.ttf',  # 黑体
-    'C:/Windows/Fonts/simsun.ttc', # 宋体
+    'C:/Windows/Fonts/msyh.ttc',
+    'C:/Windows/Fonts/simhei.ttf',
+    'C:/Windows/Fonts/simsun.ttc',
 ]
 
 FONT_SYSTEM_EXPLICIT = [
-    ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto-cjk/NotoSansCJKsc-Regular.otf'),
-    ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto/NotoSansSC-Regular.otf'),
-    ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
-    ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'),
-    ('DroidSansFallback', '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'),
-    ('NotoSansHant', '/usr/share/fonts/opentype/noto/NotoSansHant-Regular.otf'),
-    ('SimHei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'),
+    ('WenQuanYiMicrohei', '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc,0'),
+    ('NotoSansCJKSC', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc,0'),
+    ('NotoSerifCJKSC', '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc,0'),
 ]
 
 FONT_FILENAME = 'NotoSansSC-Regular.otf'
@@ -194,55 +190,36 @@ def register_fonts():
             candidates.append((name, path))
             print(f"  [字体] 找到本地字体: {path}")
 
-    # 2. 系统显式路径
+    # 2. 系统显式路径（Railway 等已安装字体包的环境）
     for name, path in FONT_SYSTEM_EXPLICIT:
-        if os.path.exists(path) and not any(f == path for _, f in candidates):
+        # TTC 字体路径格式: /path/to/font.ttc,0 (0 是子字体索引)
+        font_path = path.split(',')[0] if ',' in path else path
+        if os.path.exists(font_path) and not any(p == path for _, p in candidates):
             candidates.append((name, path))
             print(f"  [字体] 找到系统字体: {path}")
 
-    # 3. 使用 fc-list 探测（Render 等 Linux 环境，最可靠）
-    try:
-        import subprocess
-        result = subprocess.run(['fc-list', ':lang=zh', '-f', '%{file}\n'],
-                               capture_output=True, text=True, timeout=10)
-        if result.returncode == 0:
-            for line in result.stdout.strip().split('\n'):
-                if line and os.path.exists(line) and not any(p == line for _, p in candidates):
-                    name = 'NotoSansSC'
-                    candidates.append((name, line))
-                    print(f"  [字体] fc-list 发现中文字体: {line}")
-    except Exception as e:
-        print(f"  [字体] fc-list 探测失败: {e}")
-
-    # 4. 递归搜索系统字体目录（兜底）
+    # 3. 递归搜索系统字体目录（兜底）
     import glob
     system_font_dirs = [
-        '/usr/share/fonts/', '/usr/local/share/fonts/',
-        '/opt/fonts/', os.path.expanduser('~/.fonts/'),
+        '/usr/share/fonts/',
+        '/usr/local/share/fonts/',
     ]
     for font_dir in system_font_dirs:
         if not os.path.exists(font_dir):
             continue
-        for ext in ['*.ttf', '*.otf', '*.ttc']:
+        for ext in ['*.ttf', '*.ttc']:
             for f in glob.glob(os.path.join(font_dir, '**', ext), recursive=True):
                 basename = os.path.basename(f).lower()
-                skip_patterns = ['dejavu', 'liberation', 'ubuntu', 'freefont', 'glyphicons', 'fontawesome']
+                skip_patterns = ['dejavu', 'liberation', 'ubuntu', 'freefont']
                 if any(p in basename for p in skip_patterns):
                     continue
-                cjk_patterns = ['cjk', 'noto', 'wqy', 'chinese', 'zh', 'sc', 'tc', 'hans', 'hant', 'droid', 'source']
+                cjk_patterns = ['cjk', 'noto', 'wqy', 'chinese', 'sc', 'tc']
                 if any(p in basename for p in cjk_patterns):
-                    name = os.path.splitext(os.path.basename(f))[0].replace('-', '').replace('_', '').replace(' ', '')
-                    if not any(f == f for _, f in candidates):
-                        candidates.append((name, f))
+                    name = os.path.splitext(os.path.basename(f))[0].replace('-', '').replace('_', '')[:20]
+                    font_path = f + ',0' if f.endswith('.ttc') else f
+                    if not any(p == font_path for _, p in candidates):
+                        candidates.append((name, font_path))
                         print(f"  [字体] 找到系统CJK字体: {f}")
-
-    # 5. 尝试下载（Render 等容器环境，最后兜底）
-    if not candidates:
-        print(f"  [字体] 未找到任何字体，尝试下载...")
-        downloaded = download_chinese_font()
-        if downloaded:
-            name = 'NotoSansSC'
-            candidates.append((name, downloaded))
 
     # 去重
     seen_paths = set()
@@ -259,8 +236,10 @@ def register_fonts():
 
     for name, path in candidates:
         try:
+            # TTC 字体需要指定子字体索引（,0 表示第一个字体）
+            font_path = path if ',0' in path or ',1' in path else (path + ',0' if path.endswith('.ttc') else path)
             # 注册 Regular 版本
-            font_regular = TTFont(name, path)
+            font_regular = TTFont(name, font_path)
             pdfmetrics.registerFont(font_regular)
             print(f"✓ 成功注册 Regular: {name}")
             print(f"  路径: {path}")
