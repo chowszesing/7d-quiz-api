@@ -190,3 +190,63 @@ def create_result_html(user_name, industry, experience, scores, answers):
 </html>'''
     
     return html
+
+def generate_image_48_playwright(row, format='png'):
+    """
+    使用 Playwright 生成图片 - 跟用户端看到的结果页面一模一样
+    支持 PNG 和 JPG 格式
+    """
+    from playwright.sync_api import sync_playwright
+    
+    # 兼容 sqlite3.Row 和字典
+    if isinstance(row, dict):
+        scores = json.loads(row.get('scores', '{}'))
+        answers = json.loads(row.get('answers', '{}')) if row.get('answers') else {}
+        user_name = row.get('user_name') or '匿名用户'
+        industry = row.get('industry') or ''
+        experience = row.get('experience') or ''
+    else:
+        scores = json.loads(row['scores'])
+        answers = json.loads(row['answers']) if row['answers'] else {}
+        user_name = row['user_name'] or '匿名用户'
+        industry = row['industry'] or ''
+        experience = row['experience'] or ''
+    
+    # 创建 HTML 内容
+    html_content = create_result_html(user_name, industry, experience, scores, answers)
+    
+    # 将 HTML 保存到临时文件
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.html', delete=False) as f:
+        f.write(html_content)
+        temp_html_path = f.name
+    
+    try:
+        # 使用 Playwright 截图
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(f'file://{temp_html_path}')
+            
+            # 等待页面渲染完成
+            page.wait_for_load_state('networkidle')
+            
+            # 截图选项
+            screenshot_options = {
+                'full_page': True,
+                'type': format  # 'png' or 'jpeg'
+            }
+            
+            if format == 'jpeg':
+                screenshot_options['quality'] = 85
+            
+            image_bytes = page.screenshot(**screenshot_options)
+            browser.close()
+        
+        # 将图片字节写入 BytesIO
+        buffer = BytesIO(image_bytes)
+        buffer.seek(0)
+        return buffer
+    finally:
+        # 清理临时文件
+        if os.path.exists(temp_html_path):
+            os.unlink(temp_html_path)

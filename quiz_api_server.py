@@ -1668,6 +1668,49 @@ def report_full(result_id):
         print(f"[Report Full] 错误: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/quiz/report_48/<int:result_id>/image')
+def report_48_image(result_id):
+    """生成48题图片报告（PNG/JPG）- 跟用户端一模一样"""
+    try:
+        # 获取格式参数（png 或 jpg）
+        format = request.args.get('format', 'png').lower()
+        if format not in ['png', 'jpg', 'jpeg']:
+            format = 'png'
+        if format == 'jpg':
+            format = 'jpeg'
+        
+        # 惰性导入
+        from pdf_generator import generate_image_48_playwright
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
+            row = c.fetchone()
+        
+        if not row:
+            return jsonify({'error': 'Not found'}), 404
+        
+        # 生成图片
+        image_buffer = generate_image_48_playwright(row, format=format)
+        
+        # 确定文件扩展名和 mimetype
+        if format == 'jpeg':
+            ext = 'jpg'
+            mimetype = 'image/jpeg'
+        else:
+            ext = 'png'
+            mimetype = 'image/png'
+        
+        report_date = datetime.now().strftime("%Y%m%d")
+        
+        return send_file(image_buffer, mimetype=mimetype,
+                        as_attachment=True,
+                        download_name=f'8d_report_{row["user_name"]}_{report_date}.{ext}')
+    except Exception as e:
+        import traceback
+        print(f"[Report Image] 错误: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/quiz/report_48_v2/<int:result_id>')
 def report_48_v2(result_id):
