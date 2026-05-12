@@ -1,5 +1,6 @@
 """
 PDF生成模块 - 使用Playwright生成跟用户端一模一样的PDF
+最后更新: 2026-05-12 08:15
 """
 from io import BytesIO
 from playwright.sync_api import sync_playwright
