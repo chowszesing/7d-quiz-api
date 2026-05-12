@@ -370,7 +370,7 @@
                 <h2>🎯 评测完成！</h2>
                 <p id="resultTitle"></p>
                 <div class="result-btn-group">
-                    <button class="btn btn-secondary" onclick="printReport()">🖨️ 打印 / 保存PDF</button>
+                    <button class="btn btn-secondary" onclick="exportImage()">📷 导出图片</button>
                     <button class="btn btn-secondary" onclick="location.reload()">重新评测</button>
                 </div>
             </div>
@@ -1007,6 +1007,16 @@
             }
             renderResult(scores, name, exp, ind);
             console.warn('Local calculation mode — server unavailable');
+        }
+
+        // 导出图片功能 (使用 Playwright 截图)
+        function exportImage() {
+            if (!resultId) {
+                alert('请先完成测评以生成图片');
+                return;
+            }
+            // 打开图片导出 URL（PNG 格式，高清）
+            window.open(`/api/quiz/report_48/${resultId}/image`, '_blank');
         }
 
         // 打印报告功能 (使用浏览器打印为PDF)

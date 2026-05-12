@@ -1609,64 +1609,19 @@ def submit_48():
 
 @app.route('/api/quiz/report_48/<int:result_id>')
 def report_48(result_id):
-    """生成48题PDF报告（完整版 - 跟用户端一模一样）"""
-    try:
-        # 惰性导入 - 避免playwright未安装时失败
-        from pdf_generator_full import generate_pdf_48_full
-        
-        with get_db() as conn:
-            c = conn.cursor()
-            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
-            row = c.fetchone()
-
-        if not row:
-            return jsonify({'error': 'Not found'}), 404
-
-        # 使用完整版PDF生成器
-        pdf_buffer = generate_pdf_48_full(row)
-        report_date = datetime.now().strftime("%Y%m%d")
-
-        return send_file(pdf_buffer, mimetype='application/pdf',
-                        as_attachment=True,
-                        download_name=f'8d_report_{row["user_name"]}_{report_date}.pdf')
-    except Exception as e:
-        import traceback
-        print(f"PDF生成错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e)}), 500
+    """PDF导出暂时禁用，请使用图片导出"""
+    return jsonify({
+        'error': 'PDF导出暂时禁用，请使用图片导出',
+        'image_url': f'/api/quiz/report_48/{result_id}/image'
+    }), 503
 
 @app.route('/api/quiz/report_full/<int:result_id>')
 def report_full(result_id):
-    """生成48题PDF报告（完整版 - 强制使用 generate_pdf_48_full）"""
-    try:
-        print(f"[Report Full] 开始生成PDF，result_id={result_id}")
-        # 惰性导入 - 避免playwright未安装时失败
-        from pdf_generator_full import generate_pdf_48_full
-        
-        with get_db() as conn:
-            c = conn.cursor()
-            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
-            row = c.fetchone()
-        
-        if not row:
-            print(f"[Report Full] 未找到记录: result_id={result_id}")
-            return jsonify({'error': 'Not found'}), 404
-        
-        print(f"[Report Full] 找到记录: user_name={row['user_name']}")
-        print(f"[Report Full] 调用 generate_pdf_48_full()")
-        
-        # 强制使用完整版PDF生成器
-        pdf_buffer = generate_pdf_48_full(row)
-        
-        print(f"[Report Full] PDF生成成功")
-        report_date = datetime.now().strftime("%Y%m%d")
-        
-        return send_file(pdf_buffer, mimetype='application/pdf',
-                        as_attachment=True,
-                        download_name=f'8d_report_FULL_{row["user_name"]}_{report_date}.pdf')
-    except Exception as e:
-        import traceback
-        print(f"[Report Full] 错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e)}), 500
+    """PDF导出暂时禁用，请使用图片导出"""
+    return jsonify({
+        'error': 'PDF导出暂时禁用，请使用图片导出',
+        'image_url': f'/api/quiz/report_48/{result_id}/image'
+    }), 503
 
 @app.route('/api/quiz/report_48/<int:result_id>/image')
 def report_48_image(result_id):
@@ -1714,28 +1669,11 @@ def report_48_image(result_id):
 
 @app.route('/api/quiz/report_48_v2/<int:result_id>')
 def report_48_v2(result_id):
-    """生成48题PDF报告 V2（雷达图 + 颜色编码 + 场景化举例）"""
-    try:
-        with get_db() as conn:
-            c = conn.cursor()
-            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
-            row = c.fetchone()
-
-        if not row:
-            return jsonify({'error': 'Not found'}), 404
-
-        scores = json.loads(row['scores'])
-        answers = json.loads(row['answers']) if row['answers'] else {}
-        pdf_buffer = generate_pdf_48_v2(row['id'], scores, answers, row['user_name'], row['experience'])
-        report_date = datetime.now().strftime("%Y%m%d")
-
-        return send_file(pdf_buffer, mimetype='application/pdf',
-                        as_attachment=True,
-                        download_name=f'8d_report_V2_{row["user_name"]}_{report_date}.pdf')
-    except Exception as e:
-        import traceback
-        print(f"V2 PDF生成错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None, 'font_name': CHINESE_FONT or 'none'}), 500
+    """PDF导出暂时禁用，请使用图片导出"""
+    return jsonify({
+        'error': 'PDF导出暂时禁用，请使用图片导出',
+        'image_url': f'/api/quiz/report_48/{result_id}/image'
+    }), 503
 
 
 # ============ V2 报告颜色常量 ============
