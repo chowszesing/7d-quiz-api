@@ -18,6 +18,7 @@ import urllib.request
 from datetime import datetime
 from contextlib import contextmanager
 from pdf_generator import generate_pdf_48_playwright
+from pdf_generator_full import generate_pdf_48_full
 
 # PDF生成
 from reportlab.lib.pagesizes import A4
@@ -1690,7 +1691,7 @@ def submit_48():
 
 @app.route('/api/quiz/report_48/<int:result_id>')
 def report_48(result_id):
-    """生成48题PDF报告（Playwright HTML-to-PDF，跟用户端一模一样）"""
+    """生成48题PDF报告（完整版 - 跟用户端一模一样）"""
     try:
         with get_db() as conn:
             c = conn.cursor()
@@ -1700,8 +1701,8 @@ def report_48(result_id):
         if not row:
             return jsonify({'error': 'Not found'}), 404
 
-        # 使用 Playwright 生成 PDF
-        pdf_buffer = generate_pdf_48_playwright(row)
+        # 使用完整版PDF生成器
+        pdf_buffer = generate_pdf_48_full(row)
         report_date = datetime.now().strftime("%Y%m%d")
 
         return send_file(pdf_buffer, mimetype='application/pdf',
@@ -1710,8 +1711,7 @@ def report_48(result_id):
     except Exception as e:
         import traceback
         print(f"PDF生成错误: {traceback.format_exc()}")
-        return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None,
-                       'font_name': CHINESE_FONT or 'none'}), 500
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/quiz/report_48_v2/<int:result_id>')
