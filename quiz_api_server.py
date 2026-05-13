@@ -81,6 +81,7 @@ def create_default_admin():
     username = 'admin'
     raw_pwd = 'Css2504stc1128Abc'
     pwd_hash = generate_password_hash(raw_pwd)
+    print(f"  [Admin] 正在初始化管理员账号: {username}", flush=True)
     with get_db() as conn:
         cur = conn.execute('SELECT id FROM admin_user WHERE username = ?', (username,))
         row = cur.fetchone()
@@ -88,11 +89,19 @@ def create_default_admin():
             conn.execute('INSERT INTO admin_user (username, password_hash, role) VALUES (?,?,?)',
                          (username, pwd_hash, 'admin'))
             conn.commit()
+            print(f"  [Admin] ✓ 新建管理员: {username}", flush=True)
         else:
             # 用户已存在，更新密码哈希（防止旧密码无法登录）
             conn.execute('UPDATE admin_user SET password_hash = ? WHERE username = ?',
                          (pwd_hash, username))
             conn.commit()
+            print(f"  [Admin] ✓ 更新管理员密码: {username} (id={row[0]})", flush=True)
+
+    # 验证密码哈希可正常校验
+    if check_password_hash(pwd_hash, raw_pwd):
+        print(f"  [Admin] ✓ 密码验证通过: check_password_hash OK", flush=True)
+    else:
+        print(f"  [Admin] ✗ 密码验证失败: check_password_hash FAILED!", flush=True)
 
 PORT = int(os.environ.get('PORT', 5000))
 
@@ -1129,17 +1138,22 @@ def admin_login():
     data = request.get_json(silent=True) or {}
     username = data.get('username')
     password = data.get('password')
+    print(f"  [Login] 尝试登录: username={username}", flush=True)
     if not username or not password:
         return jsonify({'msg': 'username and password required'}), 400
     with get_db() as conn:
         cur = conn.execute('SELECT id, password_hash, role FROM admin_user WHERE username = ?', (username,))
         row = cur.fetchone()
         if not row:
+            print(f"  [Login] ✗ 用户不存在: {username}", flush=True)
             return jsonify({'msg': 'Invalid credentials'}), 401
         user_id, pwd_hash, role = row
+        print(f"  [Login] 找到用户: id={user_id}, role={role}, hash={pwd_hash[:20]}...", flush=True)
         if not check_password_hash(pwd_hash, password):
+            print(f"  [Login] ✗ 密码不匹配: {username}", flush=True)
             return jsonify({'msg': 'Invalid credentials'}), 401
         token = generate_token(user_id, role)
+        print(f"  [Login] ✓ 登录成功: {username} (role={role})", flush=True)
         return jsonify({'token': token, 'role': role, 'username': username})
 
 @app.route('/api/admin/check', methods=['GET'])
@@ -2787,17 +2801,20 @@ def generate_pdf_48_v3(result_id, scores, answers, user_name, experience, font_n
 
 # ============ 确保Playwright Chromium可用 ============
 def ensure_playwright_chromium():
-    """如果 Playwright Chromium 未安装，自动安装到 /app/pw-browsers（持久化目录）"""
+    """确保 Playwright Chromium 可用：运行时自动安装到持久化目录"""
     import subprocess
     import os
+    import sys
 
-    # 浏览器安装到 /app/pw-browsers，此目录在 Railway deploy image 中会保留
-    pw_browsers_path = os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/app/pw-browsers')
+    # 强制设置浏览器安装路径为 /app/pw-browsers（Railway deploy image 持久化目录）
+    pw_browsers_path = '/app/pw-browsers'
     os.environ['PLAYWRIGHT_BROWSERS_PATH'] = pw_browsers_path
+    print(f"  [Playwright] PLAYWRIGHT_BROWSERS_PATH = {pw_browsers_path}", flush=True)
 
     try:
         from playwright.sync_api import sync_playwright
-        # 尝试启动，检测浏览器是否存在
+
+        # 尝试启动浏览器，检测是否已安装
         with sync_playwright() as p:
             try:
                 browser = p.chromium.launch(
@@ -2805,20 +2822,64 @@ def ensure_playwright_chromium():
                     args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
                 )
                 browser.close()
-                print(f"  [Playwright] Chromium 已就绪 (path={pw_browsers_path})")
-                return
+                print(f"  [Playwright] ✓ Chromium 已就绪 (path={pw_browsers_path})", flush=True)
+                return True
             except Exception as launch_err:
                 err_msg = str(launch_err)
+                print(f"  [Playwright] 启动失败: {err_msg[:200]}", flush=True)
+
                 if "Executable doesn't exist" in err_msg or "doesn't exist at" in err_msg:
-                    print(f"  [Playwright] Chromium 未找到，正在安装到 {pw_browsers_path}...")
-                    subprocess.run(['playwright', 'install', 'chromium'], check=True,
-                                   capture_output=True, text=True, timeout=180)
-                    print("  [Playwright] Chromium 安装完成")
+                    print(f"  [Playwright] 正在安装 Chromium 到 {pw_browsers_path} ...", flush=True)
+
+                    # 使用 --with-deps 安装系统依赖 + 指定路径
+                    env = os.environ.copy()
+                    env['PLAYWRIGHT_BROWSERS_PATH'] = pw_browsers_path
+
+                    # 安装浏览器二进制文件
+                    result = subprocess.run(
+                        ['playwright', 'install', 'chromium'],
+                        env=env,
+                        capture_output=True, text=True, timeout=300
+                    )
+                    print(f"  [Playwright] install stdout: {result.stdout[-500:] if result.stdout else '(empty)'}", flush=True)
+                    if result.returncode != 0:
+                        print(f"  [Playwright] install stderr: {result.stderr[-500:] if result.stderr else '(empty)'}", flush=True)
+                        raise RuntimeError(f"playwright install chromium failed: {result.returncode}")
+
+                    # 安装系统依赖库
+                    print(f"  [Playwright] 正在安装系统依赖 (--with-deps) ...", flush=True)
+                    result2 = subprocess.run(
+                        ['playwright', 'install-deps', 'chromium'],
+                        capture_output=True, text=True, timeout=300
+                    )
+                    print(f"  [Playwright] install-deps stdout: {result2.stdout[-300:] if result2.stdout else '(empty)'}", flush=True)
+                    if result2.returncode != 0:
+                        print(f"  [Playwright] install-deps stderr: {result2.stderr[-300:] if result2.stderr else '(empty)'}", flush=True)
+
+                    print(f"  [Playwright] ✓ Chromium 安装完成", flush=True)
+
+                    # 验证安装成功
+                    try:
+                        browser = p.chromium.launch(
+                            headless=True,
+                            args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+                        )
+                        browser.close()
+                        print(f"  [Playwright] ✓ Chromium 验证成功，可正常启动", flush=True)
+                        return True
+                    except Exception as verify_err:
+                        print(f"  [Playwright] ✗ 安装后验证失败: {verify_err}", flush=True)
+                        return False
                 else:
                     raise
     except Exception as e:
-        print(f"  [Playwright] ⚠️ Chromium 检查/安装失败: {e}")
+        print(f"  [Playwright] ✗ Chromium 初始化失败: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return False
 
+print("=" * 50, flush=True)
+print("[启动] 正在检查 Playwright Chromium ...", flush=True)
 ensure_playwright_chromium()
 
 # ============ 初始化数据库 ============
@@ -4826,12 +4887,6 @@ def report_48_v33(result_id):
         print(f"V3.3 PDF生成错误: {traceback.format_exc()}")
         return jsonify({'error': str(e), 'font_available': CHINESE_FONT is not None,
                        'font_name': CHINESE_FONT or 'none'}), 500
-
-# ============ 主函数 ============
-
-# ============ 初始化数据库 ============
-init_admin_table()
-create_default_admin()
 
 # ============ 主函数 ============
 if __name__ == '__main__':
