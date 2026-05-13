@@ -103,10 +103,13 @@ def create_result_html(user_name, industry, experience, scores, answers):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>8维能力测评报告 - {user_name}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: "WenQuanYi Micro Hei", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+            font-family: "Noto Sans SC", "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif;
             background: #f5f7fa;
             color: #333;
             padding: 20px;
