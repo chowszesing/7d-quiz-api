@@ -134,14 +134,20 @@ def ensure_chinese_font():
             return path
 
     # 不存在，尝试下载（从 GitHub raw 或 Google Fonts）
-    download_url = 'https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf'
-    # 备选：使用更轻量的字体文件
-    fallback_url = 'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/NotoSansSC-Regular.ttf'
+    # 优先使用 TTF 格式（ReportLab 对 OTF 的 postscript outlines 支持有限）
+    download_urls = [
+        # Google Fonts TTF 变体（Noto Sans SC Variable，包含完整CJK字符集）
+        'https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf',
+        # 备选：StellarCN 仓库的 TTF
+        'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/NotoSansSC-Regular.ttf',
+        # Google Fonts OTF 变体（较大，约16MB，但仅作为最后兜底）
+        'https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf',
+    ]
 
     download_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttf')
-    print(f"  [字体] 未找到本地字体，尝试下载: {fallback_url}")
+    print(f"  [字体] 未找到本地字体，尝试从 {len(download_urls)} 个源下载...")
 
-    for url in [fallback_url, download_url]:
+    for url in download_urls:
         try:
             print(f"  [字体] 下载中: {url}")
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -2800,6 +2806,20 @@ def generate_pdf_48_v3(result_id, scores, answers, user_name, experience, font_n
 
 
 # ============ 确保Playwright Chromium可用 ============
+def _try_launch_chromium(pw, pw_browsers_path):
+    """尝试启动 Chromium，成功返回 True，失败返回错误消息"""
+    try:
+        browser = pw.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+        )
+        browser.close()
+        print(f"  [Playwright] ✓ Chromium 已就绪 (path={pw_browsers_path})", flush=True)
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
 def ensure_playwright_chromium():
     """确保 Playwright Chromium 可用：运行时自动安装到持久化目录"""
     import subprocess
@@ -2814,64 +2834,60 @@ def ensure_playwright_chromium():
     try:
         from playwright.sync_api import sync_playwright
 
-        # 尝试启动浏览器，检测是否已安装
+        # 第一轮：尝试直接启动
         with sync_playwright() as p:
-            try:
-                browser = p.chromium.launch(
-                    headless=True,
-                    args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
-                )
-                browser.close()
-                print(f"  [Playwright] ✓ Chromium 已就绪 (path={pw_browsers_path})", flush=True)
+            ok, err_msg = _try_launch_chromium(p, pw_browsers_path)
+            if ok:
                 return True
-            except Exception as launch_err:
-                err_msg = str(launch_err)
-                print(f"  [Playwright] 启动失败: {err_msg[:200]}", flush=True)
+            print(f"  [Playwright] 首次启动失败: {err_msg[:200]}", flush=True)
 
-                if "Executable doesn't exist" in err_msg or "doesn't exist at" in err_msg:
-                    print(f"  [Playwright] 正在安装 Chromium 到 {pw_browsers_path} ...", flush=True)
+            # 检查是否是缺库或缺浏览器
+            need_install = any(key in err_msg for key in [
+                "Executable doesn't exist", "doesn't exist at",
+                "shared libraries", "cannot open shared object",
+                "No such file or directory"
+            ])
 
-                    # 使用 --with-deps 安装系统依赖 + 指定路径
-                    env = os.environ.copy()
-                    env['PLAYWRIGHT_BROWSERS_PATH'] = pw_browsers_path
+            if not need_install:
+                print(f"  [Playwright] ✗ 非安装类错误，跳过自动修复", flush=True)
+                return False
 
-                    # 安装浏览器二进制文件
-                    result = subprocess.run(
-                        ['playwright', 'install', 'chromium'],
-                        env=env,
-                        capture_output=True, text=True, timeout=300
-                    )
-                    print(f"  [Playwright] install stdout: {result.stdout[-500:] if result.stdout else '(empty)'}", flush=True)
-                    if result.returncode != 0:
-                        print(f"  [Playwright] install stderr: {result.stderr[-500:] if result.stderr else '(empty)'}", flush=True)
-                        raise RuntimeError(f"playwright install chromium failed: {result.returncode}")
+            # 离开 sync_playwright 上下文后再安装（避免连接冲突）
+            print(f"  [Playwright] 正在安装 Chromium + 系统依赖 ...", flush=True)
 
-                    # 安装系统依赖库
-                    print(f"  [Playwright] 正在安装系统依赖 (--with-deps) ...", flush=True)
-                    result2 = subprocess.run(
-                        ['playwright', 'install-deps', 'chromium'],
-                        capture_output=True, text=True, timeout=300
-                    )
-                    print(f"  [Playwright] install-deps stdout: {result2.stdout[-300:] if result2.stdout else '(empty)'}", flush=True)
-                    if result2.returncode != 0:
-                        print(f"  [Playwright] install-deps stderr: {result2.stderr[-300:] if result2.stderr else '(empty)'}", flush=True)
+        # 第二轮：在上下文外执行安装
+        env = os.environ.copy()
+        env['PLAYWRIGHT_BROWSERS_PATH'] = pw_browsers_path
 
-                    print(f"  [Playwright] ✓ Chromium 安装完成", flush=True)
+        # 安装浏览器二进制文件
+        result = subprocess.run(
+            ['playwright', 'install', 'chromium'],
+            env=env,
+            capture_output=True, text=True, timeout=300
+        )
+        print(f"  [Playwright] install chromium: rc={result.returncode}", flush=True)
+        if result.returncode != 0:
+            print(f"  [Playwright] install stderr: {result.stderr[-500:] if result.stderr else '(empty)'}", flush=True)
 
-                    # 验证安装成功
-                    try:
-                        browser = p.chromium.launch(
-                            headless=True,
-                            args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
-                        )
-                        browser.close()
-                        print(f"  [Playwright] ✓ Chromium 验证成功，可正常启动", flush=True)
-                        return True
-                    except Exception as verify_err:
-                        print(f"  [Playwright] ✗ 安装后验证失败: {verify_err}", flush=True)
-                        return False
-                else:
-                    raise
+        # 安装系统依赖库（关键：修复 libglib-2.0.so.0 等缺失）
+        result2 = subprocess.run(
+            ['playwright', 'install-deps', 'chromium'],
+            capture_output=True, text=True, timeout=300
+        )
+        print(f"  [Playwright] install-deps: rc={result2.returncode}", flush=True)
+        if result2.returncode != 0:
+            print(f"  [Playwright] install-deps stderr: {result2.stderr[-500:] if result2.stderr else '(empty)'}", flush=True)
+
+        print(f"  [Playwright] 安装完成，重新验证 ...", flush=True)
+
+        # 第三轮：重新进入上下文验证
+        with sync_playwright() as p:
+            ok, err_msg = _try_launch_chromium(p, pw_browsers_path)
+            if ok:
+                return True
+            print(f"  [Playwright] ✗ 安装后验证仍失败: {err_msg[:200]}", flush=True)
+            return False
+
     except Exception as e:
         print(f"  [Playwright] ✗ Chromium 初始化失败: {e}", flush=True)
         import traceback
