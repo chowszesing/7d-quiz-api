@@ -77,15 +77,21 @@ def init_admin_table():
         conn.commit()
 
 def create_default_admin():
-    # Railway 部署初始管理员账号
+    # Railway 部署初始管理员账号（已存在则更新密码，确保可登录）
     username = 'admin'
     raw_pwd = 'Css2504stc1128Abc'
     pwd_hash = generate_password_hash(raw_pwd)
     with get_db() as conn:
         cur = conn.execute('SELECT id FROM admin_user WHERE username = ?', (username,))
-        if not cur.fetchone():
+        row = cur.fetchone()
+        if not row:
             conn.execute('INSERT INTO admin_user (username, password_hash, role) VALUES (?,?,?)',
                          (username, pwd_hash, 'admin'))
+            conn.commit()
+        else:
+            # 用户已存在，更新密码哈希（防止旧密码无法登录）
+            conn.execute('UPDATE admin_user SET password_hash = ? WHERE username = ?',
+                         (pwd_hash, username))
             conn.commit()
 
 PORT = int(os.environ.get('PORT', 5000))
