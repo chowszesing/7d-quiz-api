@@ -90,17 +90,67 @@ def create_default_admin():
 
 PORT = int(os.environ.get('PORT', 5000))
 
-# ============ 中文字体下载（Render 容器内无字体时使用）============
-FONT_DOWNLOAD_DIR = '/tmp'  # Render 容器 /tmp 可写
+# ============ 中文字体下载（Railway 容器内部无字体时使用）============
+FONT_DOWNLOAD_DIR = '/tmp'  # Railway 容器 /tmp 可写
+
+def ensure_chinese_font():
+    """
+    确保中文字体可用：先检查系统字体，找不到则从网络下载 NotoSansSC-Regular.ttf
+    返回字体文件路径，失败返回 None
+    """
+    import urllib.request
+    import os
+
+    # 候选字体路径（按优先级）
+    candidates = [
+        # 1. 项目 fonts/ 目录（如果在 Git 中）
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.ttf'),
+        # 2. /tmp 下载缓存
+        os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttf'),
+        # 3. 系统字体（apt-get 安装）
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    ]
+
+    # 先检查是否已存在
+    for path in candidates:
+        if os.path.exists(path):
+            print(f"  [字体] 找到现有字体: {path}")
+            return path
+
+    # 不存在，尝试下载（从 GitHub raw 或 Google Fonts）
+    download_url = 'https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf'
+    # 备选：使用更轻量的字体文件
+    fallback_url = 'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/NotoSansSC-Regular.ttf'
+
+    download_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttf')
+    print(f"  [字体] 未找到本地字体，尝试下载: {fallback_url}")
+
+    for url in [fallback_url, download_url]:
+        try:
+            print(f"  [字体] 下载中: {url}")
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                with open(download_path, 'wb') as f:
+                    f.write(resp.read())
+            print(f"  [字体] 下载成功: {download_path} ({os.path.getsize(download_path)} bytes)")
+            return download_path
+        except Exception as e:
+            print(f"  [字体] 下载失败 ({url}): {e}")
+            continue
+
+    print(f"  [字体] ⚠️ 所有下载尝试均失败")
+    return None
 
 
 FONT_LOCAL_PATHS = [
-    # 优先使用系统安装的字体（Railway apt-get 安装）
-    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-    '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc',
+    # 优先使用 ensure_chinese_font() 下载的字体
+    os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttf'),
     # 项目 fonts/ 目录（包含在 Git 仓库中，TTF 格式）
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'NotoSansSC-Regular.ttf'),
+    # 系统字体（Railway apt-get 安装）
+    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
     # Windows 系统字体（本地开发用）
     'C:/Windows/Fonts/msyh.ttc',
     'C:/Windows/Fonts/simhei.ttf',
@@ -118,13 +168,22 @@ FONT_SYSTEM_EXPLICIT = [
 # ============ 中文字体注册 ============
 def register_fonts():
     """注册中文字体，支持PDF中文输出；返回可用字体名称，失败返回None"""
-
+    import urllib.request
     app_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # 先确保字体已下载
+    downloaded = ensure_chinese_font()
 
     # 候选字体来源
     candidates = []
 
-    # 1. 本地字体文件（开发者机器）
+    # 1. 下载的字体（优先）
+    if downloaded and os.path.exists(downloaded):
+        name = os.path.splitext(os.path.basename(downloaded))[0].replace('-', '').replace('_', '').replace(' ', '')[:20]
+        candidates.append((name, downloaded))
+        print(f"  [字体] 使用下载字体: {downloaded}")
+
+    # 2. 本地字体文件（开发者机器）
     for path in FONT_LOCAL_PATHS:
         if os.path.exists(path):
             name = os.path.splitext(os.path.basename(path))[0].replace('-', '').replace('_', '').replace(' ', '')

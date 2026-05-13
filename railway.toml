@@ -1,5 +1,5 @@
 [build]
-  buildCommand = "apt-get update && apt-get install -y --no-install-recommends fonts-wqy-microhei fonts-noto-cjk && pip install --no-cache-dir -r requirements.txt && playwright install chromium && playwright install-deps chromium"
+  buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install chromium"
 
 [env]
   PYTHONDONTWRITEBYTECODE = "1"
