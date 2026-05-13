@@ -1709,7 +1709,7 @@ def report_48(result_id):
         answers = json.loads(row['answers']) if row['answers'] else {}
         user_name = row['user_name'] or '匿名用户'
         experience = row['experience'] or ''
-        question_order = json.loads(row.get('question_order', '[]')) if row.get('question_order') else []
+        question_order = json.loads(row['question_order']) if row['question_order'] else []
 
         # 使用已注册的中文字体
         font_name = app.config.get('FONT_NAME', 'Helvetica')
