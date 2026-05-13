@@ -2787,8 +2787,14 @@ def generate_pdf_48_v3(result_id, scores, answers, user_name, experience, font_n
 
 # ============ 确保Playwright Chromium可用 ============
 def ensure_playwright_chromium():
-    """如果 Playwright Chromium 未安装，自动安装（Railway 容器重启后可能丢失）"""
+    """如果 Playwright Chromium 未安装，自动安装到 /app/pw-browsers（持久化目录）"""
     import subprocess
+    import os
+
+    # 浏览器安装到 /app/pw-browsers，此目录在 Railway deploy image 中会保留
+    pw_browsers_path = os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/app/pw-browsers')
+    os.environ['PLAYWRIGHT_BROWSERS_PATH'] = pw_browsers_path
+
     try:
         from playwright.sync_api import sync_playwright
         # 尝试启动，检测浏览器是否存在
@@ -2799,12 +2805,12 @@ def ensure_playwright_chromium():
                     args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
                 )
                 browser.close()
-                print("  [Playwright] Chromium 已就绪")
+                print(f"  [Playwright] Chromium 已就绪 (path={pw_browsers_path})")
                 return
             except Exception as launch_err:
                 err_msg = str(launch_err)
                 if "Executable doesn't exist" in err_msg or "doesn't exist at" in err_msg:
-                    print("  [Playwright] Chromium 未找到，正在安装...")
+                    print(f"  [Playwright] Chromium 未找到，正在安装到 {pw_browsers_path}...")
                     subprocess.run(['playwright', 'install', 'chromium'], check=True,
                                    capture_output=True, text=True, timeout=180)
                     print("  [Playwright] Chromium 安装完成")

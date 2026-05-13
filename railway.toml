@@ -1,7 +1,8 @@
 [build]
-  buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install --with-deps chromium"
+  buildCommand = "pip install --no-cache-dir -r requirements.txt && PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers playwright install --with-deps chromium"
 
 [env]
   PYTHONDONTWRITEBYTECODE = "1"
   PIP_NO_CACHE_DIR = "1"
   PYTHONUNBUFFERED = "1"
+  PLAYWRIGHT_BROWSERS_PATH = "/app/pw-browsers"
