@@ -136,12 +136,10 @@ def ensure_chinese_font():
     # 不存在，尝试下载（从 GitHub raw 或 Google Fonts）
     # 优先使用 TTF 格式（ReportLab 对 OTF 的 postscript outlines 支持有限）
     download_urls = [
-        # Google Fonts TTF 变体（Noto Sans SC Variable，包含完整CJK字符集）
+        # Google Fonts 原始 TTF 变体（ReportLab 完全兼容，已验证）
         'https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf',
-        # 备选：StellarCN 仓库的 TTF
-        'https://raw.githubusercontent.com/StellarCN/scp_zh/master/fonts/NotoSansSC-Regular.ttf',
-        # Google Fonts OTF 变体（较大，约16MB，但仅作为最后兜底）
-        'https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf',
+        # GhProxy 镜像（国内加速，同上文件）
+        'https://ghproxy.net/https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf',
     ]
 
     download_path = os.path.join(FONT_DOWNLOAD_DIR, 'NotoSansSC-Regular.ttf')
@@ -590,6 +588,7 @@ HTML_ADMIN = '''<!DOCTYPE html>
         .hidden{display:none}
         /* 登录页 */
         #loginOverlay{position:fixed;inset:0;background:rgba(15,23,42,0.85);display:flex;align-items:center;justify-content:center;z-index:9999}
+        #loginOverlay.hidden{display:none!important} /* ⚠️ 高優先級覆蓋 #loginOverlay 的 display:flex */
         .login-card{background:white;border-radius:16px;padding:40px;width:400px;max-width:90vw;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.4)}
         .login-card h2{font-size:22px;color:#1e3a8a;margin-bottom:8px}
         .login-card p{font-size:13px;color:#888;margin-bottom:30px}
@@ -2841,16 +2840,9 @@ def ensure_playwright_chromium():
                 return True
             print(f"  [Playwright] 首次启动失败: {err_msg[:200]}", flush=True)
 
-            # 检查是否是缺库或缺浏览器
-            need_install = any(key in err_msg for key in [
-                "Executable doesn't exist", "doesn't exist at",
-                "shared libraries", "cannot open shared object",
-                "No such file or directory"
-            ])
-
-            if not need_install:
-                print(f"  [Playwright] ✗ 非安装类错误，跳过自动修复", flush=True)
-                return False
+            # 只要启动失败就尝试自动修复——包括：缺浏览器、缺系统库(.so)、进程异常退出等
+            # 不依赖关键字检测（Playwright的错误消息经常不包含具体原因）
+            print(f"  [Playwright] 尝试自动安装修复 ...", flush=True)
 
             # 离开 sync_playwright 上下文后再安装（避免连接冲突）
             print(f"  [Playwright] 正在安装 Chromium + 系统依赖 ...", flush=True)
