@@ -51,6 +51,9 @@ def get_db_sqlite():
 @contextmanager
 def get_db_postgres():
     """PostgreSQL 连接"""
+    import psycopg2
+    # 设置参数风格为 qmark (?), 与 SQLite 保持一致，无需修改现有 SQL
+    psycopg2.paramstyle = 'qmark'
     pg_pool = get_postgres_pool()
     conn = pg_pool.getconn()
     conn.autocommit = False
@@ -125,6 +128,13 @@ def init_db_postgres():
 
 def _create_tables_sqlite(c):
     """SQLite 建表语句"""
+    c.execute('''CREATE TABLE IF NOT EXISTS admin_user (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT CHECK(role IN ('admin','token_user')) NOT NULL DEFAULT 'admin'
+    )''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS quiz_results (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_name TEXT, industry TEXT, experience TEXT,
@@ -161,6 +171,13 @@ def _create_tables_sqlite(c):
 
 def _create_tables_postgres(c):
     """PostgreSQL 建表语句"""
+    c.execute('''CREATE TABLE IF NOT EXISTS admin_user (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT CHECK(role IN ('admin','token_user')) NOT NULL DEFAULT 'admin'
+    )''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS quiz_results (
         id SERIAL PRIMARY KEY,
         user_name TEXT, industry TEXT, experience TEXT,

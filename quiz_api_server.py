@@ -65,16 +65,8 @@ DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
 
 # ---------- Admin 用户表与初始化 ----------
 def init_admin_table():
-    with get_db() as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS admin_user (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                role TEXT CHECK(role IN ('admin','token_user')) NOT NULL DEFAULT 'admin'
-            );
-        ''')
-        conn.commit()
+    """admin_user 表已由 db_adapter.init_db() 创建（含PostgreSQL兼容SQL）"""
+    # 不做任何事 — 表创建已由 init_db() 在上层完成
 
 def create_default_admin():
     # Railway 部署初始管理员账号（已存在则更新密码，确保可登录）
@@ -2891,6 +2883,7 @@ print("[启动] 正在检查 Playwright Chromium ...", flush=True)
 ensure_playwright_chromium()
 
 # ============ 初始化数据库 ============
+init_db()  # 先由 db_adapter 创建所有表（含admin_user），兼容 SQLite + PostgreSQL
 init_admin_table()
 create_default_admin()
 
