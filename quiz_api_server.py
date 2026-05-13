@@ -204,9 +204,11 @@ def register_fonts():
 try:
     CHINESE_FONT = register_fonts()
     print(f"字体注册完成: CHINESE_FONT = {CHINESE_FONT}")
+    app.config['FONT_NAME'] = CHINESE_FONT or 'Helvetica'
 except Exception as e:
     print(f"字体注册失败 (非致命): {e}")
     CHINESE_FONT = None
+    app.config['FONT_NAME'] = 'Helvetica'
 
 # ============ HTML模板（简体中文）============
 HTML_INDEX = '''<!DOCTYPE html>
@@ -1609,19 +1611,41 @@ def submit_48():
 
 @app.route('/api/quiz/report_48/<int:result_id>')
 def report_48(result_id):
-    """PDF导出暂时禁用，请使用图片导出"""
-    return jsonify({
-        'error': 'PDF导出暂时禁用，请使用图片导出',
-        'image_url': f'/api/quiz/report_48/{result_id}/image'
-    }), 503
+    """生成48题PDF报告（v3.3 四阶递进式）"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_48 WHERE id = ?', (result_id,))
+            row = c.fetchone()
+
+        if not row:
+            return jsonify({'error': 'Not found'}), 404
+
+        scores = json.loads(row['scores'])
+        answers = json.loads(row['answers']) if row['answers'] else {}
+        user_name = row['user_name'] or '匿名用户'
+        experience = row['experience'] or ''
+        question_order = json.loads(row.get('question_order', '[]')) if row.get('question_order') else []
+
+        # 使用已注册的中文字体
+        font_name = app.config.get('FONT_NAME', 'Helvetica')
+
+        buffer = generate_pdf_48_v33(result_id, scores, answers, user_name, experience,
+                                      question_order=question_order, font_name=font_name)
+
+        report_date = datetime.now().strftime("%Y%m%d")
+        return send_file(buffer, mimetype='application/pdf',
+                        as_attachment=True,
+                        download_name=f'8d_report_{user_name}_{report_date}.pdf')
+    except Exception as e:
+        import traceback
+        print(f"[Report PDF] 错误: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/quiz/report_full/<int:result_id>')
 def report_full(result_id):
-    """PDF导出暂时禁用，请使用图片导出"""
-    return jsonify({
-        'error': 'PDF导出暂时禁用，请使用图片导出',
-        'image_url': f'/api/quiz/report_48/{result_id}/image'
-    }), 503
+    """PDF报告（同report_48，保留兼容性）"""
+    return report_48(result_id)
 
 @app.route('/api/quiz/report_48/<int:result_id>/image')
 def report_48_image(result_id):
@@ -1669,11 +1693,8 @@ def report_48_image(result_id):
 
 @app.route('/api/quiz/report_48_v2/<int:result_id>')
 def report_48_v2(result_id):
-    """PDF导出暂时禁用，请使用图片导出"""
-    return jsonify({
-        'error': 'PDF导出暂时禁用，请使用图片导出',
-        'image_url': f'/api/quiz/report_48/{result_id}/image'
-    }), 503
+    """PDF报告v2（同report_48，保留兼容性）"""
+    return report_48(result_id)
 
 
 # ============ V2 报告颜色常量 ============

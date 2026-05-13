@@ -44,9 +44,18 @@ def generate_pdf_48_playwright(row):
     try:
         # 使用 Playwright 生成 PDF
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            browser = p.chromium.launch(
+                headless=True,
+                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+            )
+            page = browser.new_page(viewport={'width': 800, 'height': 1200})
             page.goto(f'file://{temp_html_path}')
+
+            try:
+                page.wait_for_load_state('networkidle', timeout=10000)
+            except Exception:
+                page.wait_for_timeout(2000)
+
             pdf_bytes = page.pdf(
                 format='A4',
                 print_background=True,
@@ -97,7 +106,7 @@ def create_result_html(user_name, industry, experience, scores, answers):
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            font-family: "WenQuanYi Micro Hei", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
             background: #f5f7fa;
             color: #333;
             padding: 20px;
@@ -197,7 +206,7 @@ def generate_image_48_playwright(row, format='png'):
     支持 PNG 和 JPG 格式
     """
     from playwright.sync_api import sync_playwright
-    
+
     # 兼容 sqlite3.Row 和字典
     if isinstance(row, dict):
         scores = json.loads(row.get('scores', '{}'))
@@ -211,34 +220,40 @@ def generate_image_48_playwright(row, format='png'):
         user_name = row['user_name'] or '匿名用户'
         industry = row['industry'] or ''
         experience = row['experience'] or ''
-    
+
     # 创建 HTML 内容
     html_content = create_result_html(user_name, industry, experience, scores, answers)
-    
+
     # 将 HTML 保存到临时文件
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.html', delete=False) as f:
         f.write(html_content)
         temp_html_path = f.name
-    
+
     try:
         # 使用 Playwright 截图
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            browser = p.chromium.launch(
+                headless=True,
+                args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+            )
+            page = browser.new_page(viewport={'width': 800, 'height': 1200})
             page.goto(f'file://{temp_html_path}')
-            
-            # 等待页面渲染完成
-            page.wait_for_load_state('networkidle')
-            
+
+            # 等待页面渲染完成（最多10秒）
+            try:
+                page.wait_for_load_state('networkidle', timeout=10000)
+            except Exception:
+                page.wait_for_timeout(2000)
+
             # 截图选项
             screenshot_options = {
                 'full_page': True,
                 'type': format  # 'png' or 'jpeg'
             }
-            
+
             if format == 'jpeg':
                 screenshot_options['quality'] = 85
-            
+
             image_bytes = page.screenshot(**screenshot_options)
             browser.close()
         
