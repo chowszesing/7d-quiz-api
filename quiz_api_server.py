@@ -2785,6 +2785,36 @@ def generate_pdf_48_v3(result_id, scores, answers, user_name, experience, font_n
     return buffer
 
 
+# ============ 确保Playwright Chromium可用 ============
+def ensure_playwright_chromium():
+    """如果 Playwright Chromium 未安装，自动安装（Railway 容器重启后可能丢失）"""
+    import subprocess
+    try:
+        from playwright.sync_api import sync_playwright
+        # 尝试启动，检测浏览器是否存在
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+                )
+                browser.close()
+                print("  [Playwright] Chromium 已就绪")
+                return
+            except Exception as launch_err:
+                err_msg = str(launch_err)
+                if "Executable doesn't exist" in err_msg or "doesn't exist at" in err_msg:
+                    print("  [Playwright] Chromium 未找到，正在安装...")
+                    subprocess.run(['playwright', 'install', 'chromium'], check=True,
+                                   capture_output=True, text=True, timeout=180)
+                    print("  [Playwright] Chromium 安装完成")
+                else:
+                    raise
+    except Exception as e:
+        print(f"  [Playwright] ⚠️ Chromium 检查/安装失败: {e}")
+
+ensure_playwright_chromium()
+
 # ============ 初始化数据库 ============
 init_admin_table()
 create_default_admin()

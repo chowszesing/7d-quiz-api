@@ -1,5 +1,5 @@
 [build]
-  buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install chromium"
+  buildCommand = "pip install --no-cache-dir -r requirements.txt && playwright install --with-deps chromium"
 
 [env]
   PYTHONDONTWRITEBYTECODE = "1"
