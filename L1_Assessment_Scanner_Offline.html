@@ -3,9 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L1 职场禀赋扫描仪 - 基础测评</title>
+    <title>职场禀赋扫描仪 - 基础测评</title>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
+        /* 香港高楼大厦背景 */
+        .hero-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 0; overflow: hidden; }
+        .hero-bg::before {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background:
+                linear-gradient(to bottom, rgba(30,25,20,0.15) 0%, rgba(30,25,20,0.35) 30%, rgba(30,25,20,0.75) 70%, rgba(30,25,20,0.95) 100%),
+                url('https://images.unsplash.com/photo-1536599018102-9f803c140fc1?w=1920&q=80') center/cover;
+            animation: slowZoom 60s ease-in-out infinite alternate;
+        }
+        @keyframes slowZoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+        .city-silhouette {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 20%;
+            background: linear-gradient(to top, rgba(30,25,20,0.5) 0%, transparent 100%);
+            pointer-events: none; z-index: 0;
+        }
+        .main-container { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
         :root {
             --primary-color: #2c3e50;
             --accent-color: #3498db;
@@ -19,21 +37,25 @@
 
         body {
             font-family: 'PingFang HK', 'Microsoft JhengHei', 'Segoe UI', sans-serif;
-            background-color: var(--bg-color);
+            background: transparent;
             color: var(--text-color);
             line-height: 1.6;
-            margin: 0;
-            padding: 20px;
+            margin:0;
+            padding:0;
         }
 
         .container {
             max-width: 800px;
-            margin: 0 auto;
-            background: var(--card-bg);
+            width: 100%;
+            margin: 40px auto;
+            background: rgba(255,255,255,0.97);
             padding: 40px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+            animation: fadeInUp 0.6s ease-out;
         }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
         header {
             text-align: center;
@@ -425,11 +447,14 @@
     </style>
 </head>
 <body>
+    <div class="hero-bg"></div>
+    <div class="city-silhouette"></div>
+    <div class="main-container">
 
 <!-- ==================== QUIZ PAGE ==================== -->
 <div class="container" id="quizPage">
     <header>
-        <h1>L1 职场禀赋扫描仪</h1>
+        <h1>职场禀赋扫描仪</h1>
         <p class="subtitle">解锁你的职场基因 · 发现隐藏的专业天赋</p>
     </header>
 
@@ -487,14 +512,14 @@
     </form>
 
     <footer>
-        &copy; 2026 Santa Chow 香港求职咨询 | 基于 VTC 8维能力模型与 Holland RIASEC 理论构建
+        &copy; 2026 Santa Chow 香港求职咨询
     </footer>
 </div>
 
 <!-- ==================== REPORT PAGE ==================== -->
 <div class="container" id="reportPage">
     <header class="report-header">
-        <h1>L1 职场禀赋扫描报告</h1>
+        <h1>职场禀赋扫描报告</h1>
         <div class="report-meta">
             <span id="rptName"></span> &nbsp;|&nbsp; <span id="rptSchool"></span> &nbsp;|&nbsp; <span id="rptIndustry"></span> &nbsp;|&nbsp; <span id="rptDate"></span>
         </div>
@@ -548,7 +573,7 @@
     </div>
 
     <footer>
-        &copy; 2026 Santa Chow 香港求职咨询 | 基于 VTC 8维能力模型与 Holland RIASEC 理论构建
+        &copy; 2026 Santa Chow 香港求职咨询
     </footer>
 </div>
 
@@ -1059,7 +1084,7 @@ function exportPNG() {
     }).then(canvas => {
         exportBtn.style.display = 'flex'; // Restore buttons
         const link = document.createElement('a');
-        link.download = `L1_职场禀赋报告_${document.getElementById('rptName').textContent}_${new Date().getTime()}.png`;
+        link.download = `职场禀赋报告_${document.getElementById('rptName').textContent}_${new Date().getTime()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
     }).catch(err => {
@@ -1068,6 +1093,8 @@ function exportPNG() {
     });
 }
 </script>
+
+</div>
 
 </body>
 </html>
