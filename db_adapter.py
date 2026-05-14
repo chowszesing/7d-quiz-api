@@ -168,6 +168,13 @@ def _create_tables_sqlite(c):
         c.execute("ALTER TABLE quiz_results_48 ADD COLUMN personality_report TEXT")
     except sqlite3.OperationalError:
         pass
+    
+    # 55题测评结果表
+    c.execute('''CREATE TABLE IF NOT EXISTS quiz_results_55 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_name TEXT, user_email TEXT, user_school TEXT,
+        target_industry TEXT, answers TEXT, scores TEXT,
+        submitted_at TEXT, ip_address TEXT, user_agent TEXT)''')
 
 def _create_tables_postgres(c):
     """PostgreSQL 建表语句"""
@@ -210,6 +217,13 @@ def _create_tables_postgres(c):
         c.execute("ALTER TABLE quiz_results_48 ADD COLUMN IF NOT EXISTS personality_report TEXT")
     except Exception:
         pass
+    
+    # 55题测评结果表
+    c.execute('''CREATE TABLE IF NOT EXISTS quiz_results_55 (
+        id SERIAL PRIMARY KEY,
+        user_name TEXT, user_email TEXT, user_school TEXT,
+        target_industry TEXT, answers TEXT, scores TEXT,
+        submitted_at TEXT, ip_address TEXT, user_agent TEXT)''')
 
 # ============ 数据库类型检测 ============
 def get_db_type():
