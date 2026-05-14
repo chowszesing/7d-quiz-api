@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L1 职场禀赋扫描仪 - 基础测评</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --border-radius: 12px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'PingFang HK', 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--bg-color);
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+        }
+
+        h1 { color: var(--primary-color); margin-bottom: 10px; font-size: 24pt; }
+        p.subtitle { color: #666; font-size: 11pt; }
+
+        .intro-box {
+            background: #eef7fd;
+            padding: 20px;
+            border-left: 5px solid var(--accent-color);
+            margin-bottom: 30px;
+            font-size: 10.5pt;
+        }
+
+        .section-title {
+            font-size: 14pt;
+            color: var(--primary-color);
+            margin: 40px 0 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--accent-color);
+            margin-right: 10px;
+        }
+
+        .question-card {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .question-text {
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .options-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .option {
+            flex: 1;
+            text-align: center;
+        }
+
+        .option input { display: none; }
+
+        .option label {
+            display: block;
+            padding: 10px 5px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 9pt;
+            transition: all 0.2s;
+        }
+
+        .option input:checked + label {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .option label:hover { background: #e9ecef; }
+
+        .meta-form {
+            background: #fafafa;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin-top: 50px;
+            border: 1px solid #eee;
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 12pt;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover { background: #1a252f; }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #999;
+            font-size: 9pt;
+        }
+
+        /* ========== Progress Bar ========== */
+        .progress-bar-wrap {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--card-bg);
+            padding: 12px 0 8px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .progress-track {
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), #2ecc71);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* ========== Report Page ========== */
+        #reportPage { display: none; }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--bg-color);
+        }
+        .report-header h1 { font-size: 22pt; margin-bottom: 5px; }
+        .report-header .report-meta {
+            color: #888;
+            font-size: 10pt;
+        }
+
+        .report-section {
+            margin: 30px 0;
+        }
+        .report-section-title {
+            font-size: 14pt;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .report-section-title::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--accent-color);
+            margin-right: 10px;
+        }
+
+        /* Radar Chart */
+        .radar-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .radar-wrap canvas {
+            max-width: 100%;
+        }
+
+        /* Dimension Score Cards */
+        .dim-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .dim-card {
+            background: #fafafa;
+            border-radius: 10px;
+            padding: 18px;
+            border-left: 4px solid var(--accent-color);
+        }
+        .dim-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .dim-card-name {
+            font-weight: bold;
+            font-size: 11pt;
+            color: var(--primary-color);
+        }
+        .dim-card-score {
+            font-size: 18pt;
+            font-weight: bold;
+        }
+        .dim-card-level {
+            font-size: 9pt;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .dim-bar-track {
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .dim-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+        .dim-card-desc {
+            font-size: 9pt;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        /* Strengths & Growth */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .analysis-box {
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .analysis-box.strength {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+        .analysis-box.growth {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+        }
+        .analysis-box h4 {
+            margin: 0 0 12px;
+            font-size: 11pt;
+        }
+        .analysis-box.strength h4 { color: #166534; }
+        .analysis-box.growth h4 { color: #92400e; }
+        .analysis-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            font-size: 9.5pt;
+        }
+        .analysis-item .icon {
+            margin-right: 8px;
+            font-size: 12pt;
+            flex-shrink: 0;
+        }
+
+        /* Industry Match */
+        .industry-match-box {
+            background: #eef7fd;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .industry-match-box h4 {
+            color: var(--primary-color);
+            margin: 0 0 12px;
+            font-size: 11pt;
+        }
+        .industry-match-box p {
+            font-size: 10pt;
+            margin: 0 0 8px;
+        }
+        .industry-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .industry-tag {
+            background: white;
+            border: 1px solid #93c5fd;
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 9pt;
+            color: var(--primary-color);
+        }
+
+        /* Summary */
+        .summary-box {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            border-radius: 10px;
+            padding: 25px;
+            font-size: 10.5pt;
+            line-height: 1.8;
+        }
+        .summary-box h4 {
+            margin: 0 0 12px;
+            font-size: 12pt;
+        }
+
+        /* Print Button */
+        .print-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 11pt;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px 10px 0 0;
+            transition: background 0.3s;
+        }
+        .print-btn:hover { background: #2980b9; }
+        .back-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #e9ecef;
+            color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            font-size: 11pt;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .back-btn:hover { background: #dee2e6; }
+
+        .report-actions {
+            text-align: center;
+            margin: 30px 0 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #eee;
+        }
+
+        /* ========== Print Styles ========== */
+        @media print {
+            body { padding: 0; background: white; }
+            .container { box-shadow: none; padding: 20px; }
+            .print-btn, .back-btn { display: none !important; }
+            .report-actions { display: none !important; }
+            .question-card { page-break-inside: avoid; }
+            .dim-card { page-break-inside: avoid; }
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            .dim-grid, .analysis-grid { grid-template-columns: 1fr; }
+            .options-group { flex-wrap: wrap; }
+            .option { flex: 0 0 30%; margin-bottom: 5px; }
+            h1 { font-size: 18pt; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== QUIZ PAGE ==================== -->
+<div class="container" id="quizPage">
+    <header>
+        <h1>L1 职场禀赋扫描仪</h1>
+        <p class="subtitle">解锁你的职场基因 · 发现隐藏的专业天赋</p>
+    </header>
+
+    <div class="intro-box">
+        <strong>测评说明：</strong><br>
+        本测评共 55 题，预计用时 10 分钟。请根据您在工作或学习中的<strong>真实行为频率</strong>做出选择。
+        这不是考试，没有标准答案，越真实的回答越能帮助您精确定位。
+    </div>
+
+    <div class="progress-bar-wrap" id="progressBar">
+        <div class="progress-info">
+            <span>答题进度</span>
+            <span id="progressText">0 / 55</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <form id="assessmentForm">
+        <div id="questionsContainer"></div>
+
+        <div class="meta-form">
+            <h3 style="margin-top:0;">最后一步：领取你的个人化报告</h3>
+            <div class="form-group">
+                <label>姓名/昵称</label>
+                <input type="text" name="userName" required placeholder="如何称呼您？">
+            </div>
+            <div class="form-group">
+                <label>联络 Email (用于发送报告)</label>
+                <input type="email" name="userEmail" required placeholder="example@email.com">
+            </div>
+            <div class="form-group">
+                <label>毕业院校 / 在读院校</label>
+                <input type="text" name="userSchool" required>
+            </div>
+            <div class="form-group">
+                <label>目标行业意向</label>
+                <select name="targetIndustry" required>
+                    <option value="">请选择...</option>
+                    <option value="1">金融与法律服务</option>
+                    <option value="2">信息与通信技术 (ICT)</option>
+                    <option value="3">工程与环境</option>
+                    <option value="4">政府公共管理</option>
+                    <option value="5">医疗与健康</option>
+                    <option value="6">教育与个人服务</option>
+                    <option value="7">商业行政</option>
+                    <option value="8">广告与设计</option>
+                    <option value="9">酒店、餐饮与旅游</option>
+                    <option value="10">运输物流</option>
+                    <option value="11">房地产服务</option>
+                    <option value="12">进出口贸易与零售</option>
+                    <option value="13">社会服务</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn">提交测评，生成我的职场基因报告</button>
+    </form>
+
+    <footer>
+        &copy; 2026 Santa Chow 香港求职咨询 | 基于 VTC 8维能力模型与 Holland RIASEC 理论构建
+    </footer>
+</div>
+
+<!-- ==================== REPORT PAGE ==================== -->
+<div class="container" id="reportPage">
+    <header class="report-header">
+        <h1>L1 职场禀赋扫描报告</h1>
+        <div class="report-meta">
+            <span id="rptName"></span> &nbsp;|&nbsp; <span id="rptSchool"></span> &nbsp;|&nbsp; <span id="rptIndustry"></span> &nbsp;|&nbsp; <span id="rptDate"></span>
+        </div>
+    </header>
+
+    <!-- Radar Chart -->
+    <div class="report-section">
+        <div class="report-section-title">八维能力全景图</div>
+        <div class="radar-wrap">
+            <canvas id="radarChart" width="480" height="480"></canvas>
+        </div>
+    </div>
+
+    <!-- Dimension Scores -->
+    <div class="report-section">
+        <div class="report-section-title">各维度得分详情</div>
+        <div class="dim-grid" id="dimGrid"></div>
+    </div>
+
+    <!-- Strengths & Growth -->
+    <div class="report-section">
+        <div class="report-section-title">核心发现</div>
+        <div class="analysis-grid">
+            <div class="analysis-box strength" id="strengthBox">
+                <h4>&#x2705; 核心优势</h4>
+                <div id="strengthList"></div>
+            </div>
+            <div class="analysis-box growth" id="growthBox">
+                <h4>&#x1f7e1; 成长空间</h4>
+                <div id="growthList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Industry Match -->
+    <div class="report-section">
+        <div class="report-section-title">行业适配分析</div>
+        <div class="industry-match-box" id="industryBox"></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="report-section">
+        <div class="report-section-title">综合评语</div>
+        <div class="summary-box" id="summaryBox"></div>
+    </div>
+
+    <div class="report-actions">
+        <button class="print-btn" onclick="window.print()">&#x1f5a8; 打印/导出PDF</button>
+        <button class="back-btn" onclick="goBack()">&#x21a9; 返回问卷</button>
+    </div>
+
+    <footer>
+        &copy; 2026 Santa Chow 香港求职咨询 | 基于 VTC 8维能力模型与 Holland RIASEC 理论构建
+    </footer>
+</div>
+
+<script>
+// ===================== DATA =====================
+
+const questions = [
+    "在处理多项紧急任务并发时，我能果断放弃那些价值较低的「琐事」。",
+    "我习惯对失败的案例进行深度复盘，并将其固化为自己的一条具体行为准则。",
+    "即使在无人监督的环境下，我依然能维持与在办公室同等甚至更高密度的产出。",
+    "我热衷于钻研科学理论、分析数据或探索事物的内在规律。",
+    "讨论问题时，我倾向于建立系统模型来分析影响因素，并能指出他人思维中的逻辑谬误。",
+    "我能精准听出对方话语中隐含的真实意图或尚未表达的担忧。",
+    "在任务启动前，我会预估潜在的阻力并预留缓冲时间，确保计划具备抗风险性。",
+    "我从未曾在背后说过任何人的坏话，对所有人始终保持绝对的真诚。",
+    "我渴望帮助他人解决问题、进行教学或在团队中提供情感支持。",
+    "当我发现现有技能无法应对新挑战时，我会立刻寻找高质量的学习资源进行补强。",
+    "面对负面反馈或职场挫败，我能迅速抽离个人情绪，将其视为价值极高的升级指南。",
+    "任务交付后，我会主动分析执行过程中的偏差，并作为未来的管理参考。",
+    "我喜欢亲自动手操作机械设备或修复具体的实体物件。",
+    "遇到复杂问题时，我能通过「剥洋葱」的方式逐层过滤噪音，锁定最核心的症结。",
+    "面对含糊的指令，我能通过反向提问迅速对齐需求，避免返工。",
+    "在海量并发任务中，我能根据公司的长期目标迅速判断出真正的「第一优先级」。",
+    "我偏好有序的环境下处理文字档案、整理数据或执行标准程序。",
+    "我会主动追踪技术趋势，并思考如何将新技术应用到现有的枯燥流程中。",
+    "进入一个完全陌生的专业领域，我通常能在极短时间内掌握其底层框架并开始处理业务。",
+    "在陌生社交场合，我能迅速找到切入点与关键决策者建立联系，而非仅限于寒暄。",
+    "面对长达数十页且信息散乱的报告，我能迅速萃取出对决策至关重要的关键点。",
+    "我能精确计算出每项任务所需的人力与时间成本，并根据资源余量进行调度。",
+    "遇到软硬件或系统逻辑错误时，我习惯先根据报错信息自主排查根源。",
+    "我撰写的邮件或报告通常只需一屏即可说明核心问题，且接收方无需二次询问。",
+    "面对极其有限的时间和预算，我能通过灵活置换或优化顺序来达成核心目标。",
+    "任务授权后，我会建立关键节点检查站，确保在不微观管理的情况下完全掌握进度。",
+    "我习惯在策划初期就同步构思两套完全不同的执行路径，以备不时之需。",
+    "面对激进的律词或攻击性言论，我能剥离情绪，引导对话回到建设性的任务讨论。",
+    "我每周会固定划出时间专研行业前沿知识，以确保自己的认知不被时代迭代。",
+    "我热衷于拆解新工具的逻辑，通常无需说明书就能掌握其高级功能。",
+    "我热衷于文学艺术、创意设计或透过不拘一格的方式表达自我。",
+    "汇报工作时，我能用一句话总结进展，并在三点之内陈述清楚逻辑。",
+    "对于已经运作多年的陈旧流程，我常能提出跨维度的改进方案，显著提升产出。",
+    "当团队切换到全新的协作平台时，我通常是第一批适应并制定使用规范的人。",
+    "面对逻辑断层的突发状况，我能本能地推导出事物间的因果关系。",
+    "面对从未遇到的「黑天鹅」难题，我能跳出思维框架，提出有效的新路径。",
+    "我喜欢领导团队达成目标、参与商务谈判或说服他人接受观点。",
+    "面对不合理的期限要求，我能用数据说明风险，并主动与上级重新对齐范围。",
+    "在承接任务时，我会先与相关方明确「成功」的具体指标，防止后期纠纷。",
+    "一旦主方案遇到不可抗力，我通常能在极短时间内启动预先想好的备选策略。",
+    "对于非本职相关的知识（如心理学、经济等），我具有强烈好奇心并能够转化为跨界动力。",
+    "我能熟练运用办公软件中的高级自动化工具（如函数、宏）来成倍提升效率。",
+    "面对偶发性失误，我的本能反应是复盘底层系统的结构性缺陷，而非修复表象。",
+    "在会议室氛围发生细微变化时，我能第一时间察觉出哪些成员持有保留意见。",
+    "在即兴发言或观点博弈中，我能用有感染力的叙述快速赢得听众的认可。",
+    "我擅长维护长期的人脉网络，即使在没有任何业务往来时也能保持高信任度互动。",
+    "当团队陷入僵局或利益冲突时，我能通过寻找「共同目标」来重新平衡矛盾。",
+    "我能准确识别合作伙伴的各种情绪状态，并据此调整沟通节奏。",
+    "遇到流程卡顿或失效时，我能精确判断是「工具限制」还是「设置逻辑」的问题。",
+    "面对质疑时，我能保持清晰语调并用结构化论据有说服力地进行回应。",
+    "我对交付成果有近乎苛刻的要求，提交前会进行多次交叉核对。",
+    "我会定期优化自己的数位工作空间，确保多任务处理时信息检索延迟极低。",
+    "我能将碎片化的会议记录在短时间内重组成逻辑严密的执行提纲。",
+    "我会将长线目标拆解为具象的里程碑和清单，确保每个阶段都有清晰标准。",
+    "我常主动参加行业沙龙或社区讨论，通过与不同领域专家的交流来打破思维边界。"
+];
+
+// Question number (1-based) -> dimension key
+// COG=cognitive, TEC=technical, COM=communication, SOC=social,
+// ORG=organization, PRS=problem-solving, MGT=management, LLA=learning
+const DIM_MAP = {
+    1:'ORG', 2:'LLA', 3:'ORG', 4:'COG', 5:'COG', 6:'COM', 7:'ORG', 8:'SOC',
+    9:'SOC', 10:'LLA', 11:'LLA', 12:'ORG', 13:'TEC', 14:'COG', 15:'COM', 16:'ORG',
+    17:'TEC', 18:'LLA', 19:'COG', 20:'SOC', 21:'COG', 22:'ORG', 23:'TEC', 24:'COM',
+    25:'PRS', 26:'MGT', 27:'PRS', 28:'COM', 29:'LLA', 30:'TEC', 31:'COG', 32:'COM',
+    33:'PRS', 34:'LLA', 35:'COG', 36:'PRS', 37:'MGT', 38:'MGT', 39:'ORG', 40:'PRS',
+    41:'LLA', 42:'TEC', 43:'PRS', 44:'SOC', 45:'COM', 46:'SOC', 47:'SOC', 48:'SOC',
+    49:'TEC', 50:'COM', 51:'ORG', 52:'ORG', 53:'COG', 54:'ORG', 55:'LLA'
+};
+
+const DIM_META = {
+    COG: { name:'认知能力', en:'Cognitive', color:'#3b82f6', desc:'信息提炼、逻辑推理、快速学习与系统思考能力' },
+    TEC: { name:'技术掌握', en:'Technical', color:'#10b981', desc:'数字工具运用、技术适应力与故障排查能力' },
+    COM: { name:'理解表达', en:'Communication', color:'#8b5cf6', desc:'精准解码需求、精炼表达与口头影响力' },
+    SOC: { name:'社交技能', en:'Social', color:'#ef4444', desc:'情绪觉察、冲突协调与人脉关系建立' },
+    ORG: { name:'策划执行', en:'Organization', color:'#f59e0b', desc:'目标规划、资源调度与闭环执行能力' },
+    PRS: { name:'解决问题', en:'Problem-Solving', color:'#14b8a6', desc:'Plan B快速产出、结构性根源分析与创新方案' },
+    MGT: { name:'管理技能', en:'Management', color:'#f97316', desc:'任务与预期管理、优先级取舍与授权追踪' },
+    LLA: { name:'持续学习', en:'Lifelong Learning', color:'#6366f1', desc:'知识更新、主动探索与挫折转化为成长动力' }
+};
+
+const DIM_KEYS = ['COG','TEC','COM','SOC','ORG','PRS','MGT','LLA'];
+
+const INDUSTRY_NAMES = {
+    '1':'金融与法律服务','2':'信息与通信技术 (ICT)','3':'工程与环境',
+    '4':'政府公共管理','5':'医疗与健康','6':'教育与个人服务',
+    '7':'商业行政','8':'广告与设计','9':'酒店、餐饮与旅游',
+    '10':'运输物流','11':'房地产服务','12':'进出口贸易与零售','13':'社会服务'
+};
+
+// Which dimensions matter most per industry (weighted importance)
+const INDUSTRY_DIMS = {
+    '1': { top:['COG','ORG','COM','MGT'], desc:'金融与法律行业高度依赖认知分析力、严密策划执行力与精准表达能力。你的' },
+    '2': { top:['COG','TEC','PRS','LLA'], desc:'ICT行业要求持续学习新技术的热情、逻辑分析力与创新解决问题的能力。你的' },
+    '3': { top:['TEC','ORG','PRS','COG'], desc:'工程与环境领域重视技术实操能力、严谨的流程管理与系统性问题解决力。你的' },
+    '4': { top:['ORG','COM','MGT','SOC'], desc:'公共管理部门强调制度执行力、跨部门沟通与利益相关者管理。你的' },
+    '5': { top:['COG','ORG','SOC','LLA'], desc:'医疗健康领域需要精准判断力、高度的责任执行力与同理心。你的' },
+    '6': { top:['SOC','COM','LLA','COG'], desc:'教育与个人服务行业以人际互动为核心，高度依赖社交影响力和表达传授能力。你的' },
+    '7': { top:['ORG','COM','MGT','TEC'], desc:'商业行政领域需要高效组织能力、清晰沟通与管理协调技能。你的' },
+    '8': { top:['COG','COM','LLA','SOC'], desc:'广告与设计行业重视创意认知、跨界学习与感染力表达。你的' },
+    '9': { top:['SOC','ORG','COM','PRS'], desc:'酒店餐饮旅游业以客户体验为核心，强调服务意识、应变能力与团队协作。你的' },
+    '10': { top:['ORG','TEC','PRS','MGT'], desc:'运输物流行业需要精准调度、流程优化与应急问题解决能力。你的' },
+    '11': { top:['ORG','MGT','COM','SOC'], desc:'房地产服务行业重视项目策划管理、客户关系与商务沟通能力。你的' },
+    '12': { top:['COM','SOC','ORG','PRS'], desc:'贸易零售行业需要市场洞察、客户沟通与灵活应变能力。你的' },
+    '13': { top:['SOC','ORG','COM','LLA'], desc:'社会服务行业以助人为核心，高度依赖同理心、沟通力与持续学习意愿。你的' }
+};
+
+// ===================== RENDER QUESTIONS =====================
+
+const container = document.getElementById('questionsContainer');
+const optionLabels = ["从不", "偶尔", "一半时间", "经常", "总是"];
+
+questions.forEach((q, index) => {
+    const qId = index + 1;
+    const card = document.createElement('div');
+    card.className = 'question-card';
+
+    let optionsHtml = '';
+    optionLabels.forEach((opt, i) => {
+        optionsHtml += `
+            <div class="option">
+                <input type="radio" id="q${qId}_${i}" name="q${qId}" value="${i+1}" required
+                    onchange="updateProgress()">
+                <label for="q${qId}_${i}">${opt}</label>
+            </div>
+        `;
+    });
+
+    card.innerHTML = `
+        <span class="question-text">${qId}. ${q}</span>
+        <div class="options-group">${optionsHtml}</div>
+    `;
+    container.appendChild(card);
+});
+
+// ===================== PROGRESS BAR =====================
+
+function updateProgress() {
+    const answered = document.querySelectorAll('input[type="radio"]:checked').length;
+    const total = questions.length;
+    document.getElementById('progressText').textContent = `${answered} / ${total}`;
+    document.getElementById('progressFill').style.width = `${(answered/total)*100}%`;
+}
+
+// ===================== FORM SUBMIT =====================
+
+document.getElementById('assessmentForm').onsubmit = function(e) {
+    e.preventDefault();
+
+    // Collect answers
+    const answers = {};
+    let allAnswered = true;
+    for (let i = 1; i <= questions.length; i++) {
+        const sel = document.querySelector(`input[name="q${i}"]:checked`);
+        if (!sel) { allAnswered = false; break; }
+        answers[i] = parseInt(sel.value);
+    }
+
+    if (!allAnswered) {
+        alert('请完成所有题目后再提交！');
+        return;
+    }
+
+    const userName = document.querySelector('input[name="userName"]').value.trim();
+    const userEmail = document.querySelector('input[name="userEmail"]').value.trim();
+    const userSchool = document.querySelector('input[name="userSchool"]').value.trim();
+    const targetIndustry = document.querySelector('select[name="targetIndustry"]').value;
+
+    // Disable submit button
+    const submitBtn = document.querySelector('.submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '正在提交...';
+
+    // Submit to backend API
+    fetch('/api/quiz/submit_55', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            answers: answers,
+            name: userName,
+            email: userEmail,
+            school: userSchool,
+            targetIndustry: targetIndustry
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Open PDF report in new tab
+            window.open(`/api/quiz/report_55/${data.result_id}`, '_blank');
+            alert('提交成功！PDF报告正在生成，将在新窗口中打开...');
+        } else {
+            alert('提交失败：' + (data.error || '未知错误'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交测评，生成我的职场基因报告';
+        }
+    })
+    .catch(err => {
+        alert('提交失败，请检查网络连接：' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = '提交测评，生成我的职场基因报告';
+    });
+};
+
+// ===================== REPORT GENERATION =====================
+
+function getLevel(score) {
+    if (score >= 4.1) return { text:'优秀水平', cls:'excellent' };
+    if (score >= 3.1) return { text:'熟练水平', cls:'proficient' };
+    if (score >= 2.1) return { text:'基础水平', cls:'foundational' };
+    return { text:'发展中', cls:'developing' };
+}
+
+function getLevelColor(score) {
+    if (score >= 4.1) return '#10b981';
+    if (score >= 3.1) return '#3b82f6';
+    if (score >= 2.1) return '#f59e0b';
+    return '#ef4444';
+}
+
+function generateReport(name, email, school, industry, dimAvg, overallAvg) {
+    // Header
+    document.getElementById('rptName').textContent = name;
+    document.getElementById('rptSchool').textContent = school;
+    document.getElementById('rptIndustry').textContent = INDUSTRY_NAMES[industry] || '未选择';
+    document.getElementById('rptDate').textContent = new Date().toLocaleDateString('zh-HK');
+
+    // Sort dimensions by score for strengths/growth
+    const sorted = DIM_KEYS.map(k => ({ key:k, score:dimAvg[k] }))
+                           .sort((a,b) => b.score - a.score);
+
+    // Render dimension cards
+    const dimGrid = document.getElementById('dimGrid');
+    dimGrid.innerHTML = '';
+    DIM_KEYS.forEach(k => {
+        const m = DIM_META[k];
+        const s = dimAvg[k];
+        const lv = getLevel(s);
+        const pct = (s / 5 * 100).toFixed(0);
+        const card = document.createElement('div');
+        card.className = 'dim-card';
+        card.style.borderLeftColor = m.color;
+        card.innerHTML = `
+            <div class="dim-card-header">
+                <span class="dim-card-name">${m.name}</span>
+                <span class="dim-card-score" style="color:${m.color}">${s.toFixed(1)}</span>
+            </div>
+            <div class="dim-card-level">${m.en} · ${lv.text}</div>
+            <div class="dim-bar-track">
+                <div class="dim-bar-fill" style="width:${pct}%;background:${m.color}"></div>
+            </div>
+            <div class="dim-card-desc">${m.desc}</div>
+        `;
+        dimGrid.appendChild(card);
+    });
+
+    // Strengths (top 3)
+    const strengthList = document.getElementById('strengthList');
+    strengthList.innerHTML = '';
+    sorted.slice(0, 3).forEach((item, idx) => {
+        const m = DIM_META[item.key];
+        const s = item.score;
+        const div = document.createElement('div');
+        div.className = 'analysis-item';
+        let advice = '';
+        if (item.key === 'COG') advice = '善于提炼关键信息、建立系统框架，适合需要深度分析的角色。';
+        else if (item.key === 'TEC') advice = '对工具有天然的直觉，能快速上手新系统并发现优化空间。';
+        else if (item.key === 'COM') advice = '沟通精准高效，减少信息损耗，在跨部门协作中优势明显。';
+        else if (item.key === 'SOC') advice = '人际感知力强，善于建立信任关系，适合需要大量互动的岗位。';
+        else if (item.key === 'ORG') advice = '执行力与规划力兼具，能把想法落地为可交付成果。';
+        else if (item.key === 'PRS') advice = '面对变数时保持冷静，能快速产出替代方案，抗压能力突出。';
+        else if (item.key === 'MGT') advice = '具备管理思维，善于控管预期和协调资源，适合带团队或项目。';
+        else if (item.key === 'LLA') advice = '学习驱动力强，能快速适应新领域，长期成长潜力大。';
+        div.innerHTML = `
+            <span class="icon" style="color:${m.color}">${idx+1}.</span>
+            <span><strong>${m.name}</strong> (${s.toFixed(1)}) — ${advice}</span>
+        `;
+        strengthList.appendChild(div);
+    });
+
+    // Growth areas (bottom 3)
+    const growthList = document.getElementById('growthList');
+    growthList.innerHTML = '';
+    sorted.slice(-3).reverse().forEach((item, idx) => {
+        const m = DIM_META[item.key];
+        const s = item.score;
+        const div = document.createElement('div');
+        div.className = 'analysis-item';
+        let advice = '';
+        if (item.key === 'COG') advice = '建议多练习结构化思维工具（如思维导图、MECE分析法），提升信息处理效率。';
+        else if (item.key === 'TEC') advice = '建议定期学习一个新工具或平台的功能，积累技术信心。';
+        else if (item.key === 'COM') advice = '建议练习"电梯演讲"——用30秒讲清楚一个复杂问题，锻炼精炼表达。';
+        else if (item.key === 'SOC') advice = '建议每周主动安排一次跨部门或跨行业的非正式交流，积累社交感知经验。';
+        else if (item.key === 'ORG') advice = '建议引入Checklist工作法，把重复性流程标准化，逐步建立执行纪律。';
+        else if (item.key === 'PRS') advice = '建议刻意练习"如果...那么..."思维，为每个关键决策预先准备Plan B。';
+        else if (item.key === 'MGT') advice = '建议从小型项目入手练习授权与追踪，建立管理直觉。';
+        else if (item.key === 'LLA') advice = '建议每周固定2小时深度学习时间，关注行业报告或专业课程。';
+        div.innerHTML = `
+            <span class="icon">&#x1f4a1;</span>
+            <span><strong>${m.name}</strong> (${s.toFixed(1)}) — ${advice}</span>
+        `;
+        growthList.appendChild(div);
+    });
+
+    // Industry match
+    const indBox = document.getElementById('industryBox');
+    if (industry && INDUSTRY_DIMS[industry]) {
+        const indData = INDUSTRY_DIMS[industry];
+        const topDimScores = indData.top.map(k => ({ key:k, score:dimAvg[k] }));
+        const indAvg = topDimScores.reduce((a,b) => a+b.score, 0) / topDimScores.length;
+        const matchPct = Math.min(100, Math.round(indAvg / 5 * 100));
+
+        // Recommend industries based on top dimensions
+        const recommended = [];
+        for (const [indId, indInfo] of Object.entries(INDUSTRY_DIMS)) {
+            if (indId === industry) continue;
+            const avg = indInfo.top.reduce((a,k) => a + dimAvg[k], 0) / indInfo.top.length;
+            if (avg >= 3.0) {
+                recommended.push({ name: INDUSTRY_NAMES[indId], score: avg });
+            }
+        }
+        recommended.sort((a,b) => b.score - a.score);
+
+        let tagsHtml = '';
+        if (recommended.length > 0) {
+            tagsHtml = '<div style="margin-top:12px;font-size:10pt;color:#555;"><strong>其他高匹配行业：</strong></div><div class="industry-tags">';
+            recommended.slice(0, 5).forEach(r => {
+                tagsHtml += `<span class="industry-tag">${r.name} (${r.score.toFixed(1)})</span>`;
+            });
+            tagsHtml += '</div>';
+        }
+
+        indBox.innerHTML = `
+            <h4>目标行业：${INDUSTRY_NAMES[industry]}</h4>
+            <p style="font-size:10.5pt;">${indData.desc}<strong style="color:${getLevelColor(indAvg)}">${getLevel(indAvg).text}</strong>（匹配度 ${matchPct}%）。</p>
+            <p style="font-size:9.5pt;color:#666;">该行业最看重的维度：${indData.top.map(k => `<strong>${DIM_META[k].name}</strong>`).join('、')}</p>
+            ${tagsHtml}
+        `;
+    } else {
+        indBox.innerHTML = '<p>未选择目标行业，无法进行行业适配分析。</p>';
+    }
+
+    // Summary
+    const summaryBox = document.getElementById('summaryBox');
+    const topDim = sorted[0];
+    const bottomDim = sorted[sorted.length - 1];
+    const overallLv = getLevel(overallAvg);
+    const topMeta = DIM_META[topDim.key];
+    const bottomMeta = DIM_META[bottomDim.key];
+
+    let summaryText = '';
+    if (overallAvg >= 4.0) {
+        summaryText = `${name}在八维能力评估中表现出色，综合得分达到<strong>${overallAvg.toFixed(1)}</strong>分（${overallLv.text}）。你的核心竞争优势在于<strong>${topMeta.name}</strong>（${topDim.score.toFixed(1)}分），展现了该领域的专业深度。同时建议关注<strong>${bottomMeta.name}</strong>（${bottomDim.score.toFixed(1)}分）的提升空间，通过有针对性的刻意练习，进一步强化你的职场竞争力。整体而言，你已具备中高级岗位的核心胜任力，建议在求职中重点展示你的分析能力和执行成果。`;
+    } else if (overallAvg >= 3.0) {
+        summaryText = `${name}在八维能力评估中表现良好，综合得分<strong>${overallAvg.toFixed(1)}</strong>分（${overallLv.text}）。你的突出优势在<strong>${topMeta.name}</strong>（${topDim.score.toFixed(1)}分），这是你求职中的重要差异化竞争力。建议重点提升<strong>${bottomMeta.name}</strong>（${bottomDim.score.toFixed(1)}分），这是你当前最显著的增长杠杆。整体而言，你的能力基础扎实，通过3-6个月的针对性强化，可以显著提升整体竞争力。`;
+    } else {
+        summaryText = `${name}在八维能力评估中综合得分<strong>${overallAvg.toFixed(1)}</strong>分，处于能力建设的早期阶段。这并非劣势——了解自己的起点是成长的第一步。你最突出的特质是<strong>${topMeta.name}</strong>（${topDim.score.toFixed(1)}分），建议以此为锚点，优先在擅长的领域积累成功经验。${bottomMeta.name}（${bottomDim.score.toFixed(1)}分）是当前最需要投入的方向，建议从日常工作中的小改善开始，逐步建立信心和能力。`;
+    }
+
+    summaryBox.innerHTML = `<h4>&#x1f4cb; 综合评估 · ${overallAvg.toFixed(1)} / 5.0（${overallLv.text}）</h4>${summaryText}`;
+
+    // Draw radar chart
+    drawRadar(dimAvg);
+
+    // Show report, hide quiz
+    document.getElementById('quizPage').style.display = 'none';
+    document.getElementById('reportPage').style.display = 'block';
+    window.scrollTo(0, 0);
+}
+
+// ===================== RADAR CHART =====================
+
+function drawRadar(dimAvg) {
+    const canvas = document.getElementById('radarChart');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const cx = W / 2;
+    const cy = H / 2;
+    const R = Math.min(W, H) / 2 - 60;
+    const N = DIM_KEYS.length;
+    const angleStep = (2 * Math.PI) / N;
+    const startAngle = -Math.PI / 2; // start from top
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw grid rings (1-5)
+    for (let ring = 1; ring <= 5; ring++) {
+        const r = (ring / 5) * R;
+        ctx.beginPath();
+        for (let i = 0; i <= N; i++) {
+            const angle = startAngle + i * angleStep;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = ring === 5 ? '#ccc' : '#e9ecef';
+        ctx.lineWidth = ring === 5 ? 1.5 : 1;
+        ctx.stroke();
+
+        // Ring label
+        if (ring % 2 === 0 || ring === 5) {
+            ctx.fillStyle = '#aaa';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(ring.toString(), cx + 4, cy - r + 3);
+        }
+    }
+
+    // Draw axis lines
+    for (let i = 0; i < N; i++) {
+        const angle = startAngle + i * angleStep;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // Draw filled polygon (scores)
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+        const idx = i % N;
+        const angle = startAngle + idx * angleStep;
+        const r = (dimAvg[DIM_KEYS[idx]] / 5) * R;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#3498db';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Draw score dots and labels
+    for (let i = 0; i < N; i++) {
+        const key = DIM_KEYS[i];
+        const angle = startAngle + i * angleStep;
+        const r = (dimAvg[key] / 5) * R;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+
+        // Dot
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = DIM_META[key].color;
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Label
+        const labelR = R + 30;
+        const lx = cx + labelR * Math.cos(angle);
+        const ly = cy + labelR * Math.sin(angle);
+        ctx.fillStyle = DIM_META[key].color;
+        ctx.font = 'bold 11px "PingFang HK", "Microsoft JhengHei", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(DIM_META[key].name, lx, ly);
+
+        // Score
+        const scoreLy = ly + 16;
+        ctx.fillStyle = '#666';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(dimAvg[key].toFixed(1), lx, scoreLy);
+    }
+}
+
+// ===================== NAVIGATION =====================
+
+function goBack() {
+    document.getElementById('reportPage').style.display = 'none';
+    document.getElementById('quizPage').style.display = 'block';
+    window.scrollTo(0, 0);
+}
+</script>
+
+</body>
+</html>

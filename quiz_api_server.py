@@ -60,6 +60,13 @@ def serve_report_engine():
     import os
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'report_engine.js')
 
+@app.route('/quiz_55')
+def quiz_55():
+    """55题测评问卷（L1 职场禀赋扫描仪）"""
+    from flask import send_file
+    import os
+    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'L1_Assessment_Scanner_Offline.html'))
+
 # 配置
 DATABASE = os.environ.get('DATABASE', 'quiz_results.db')
 
@@ -798,6 +805,12 @@ except ImportError:
                 answers TEXT, question_order TEXT, scores TEXT,
                 submitted_at TEXT, ip_address TEXT, user_agent TEXT,
                 access_token TEXT)''')
+            # 55题测评结果表
+            c.execute('''CREATE TABLE IF NOT EXISTS quiz_results_55 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT, user_email TEXT, user_school TEXT,
+                target_industry TEXT, answers TEXT, scores TEXT,
+                submitted_at TEXT, ip_address TEXT, user_agent TEXT)''')
             c.execute('''CREATE TABLE IF NOT EXISTS access_tokens (
                 token TEXT PRIMARY KEY,
                 used INTEGER DEFAULT 0,
@@ -862,8 +875,53 @@ def calculate_scores_48(answers):
         scores[dim] = {'name': DIM_CN[dim], 'average': round(avg, 2), 'level': get_level(avg)}
     return scores
 
+def calculate_scores_55(answers):
+    """55题8维能力评分：使用DIM_MAP映射（从L1_Assessment_Scanner_Offline.html移植）"""
+    # 题目ID -> 维度映射
+    DIM_MAP = {
+        1:'ORG', 2:'LLA', 3:'ORG', 4:'COG', 5:'COG', 6:'COM', 7:'ORG', 8:'SOC',
+        9:'SOC', 10:'LLA', 11:'LLA', 12:'ORG', 13:'TEC', 14:'COG', 15:'COM', 16:'ORG',
+        17:'TEC', 18:'LLA', 19:'COG', 20:'SOC', 21:'COG', 22:'ORG', 23:'TEC', 24:'COM',
+        25:'PRS', 26:'MGT', 27:'PRS', 28:'COM', 29:'LLA', 30:'TEC',
+        31:'COG', 32:'COM', 33:'PRS', 34:'LLA', 35:'COG', 36:'PRS', 37:'MGT', 38:'MGT', 39:'ORG', 40:'PRS',
+        41:'LLA', 42:'TEC', 43:'PRS', 44:'SOC', 45:'COM', 46:'SOC', 47:'SOC', 48:'SOC',
+        49:'TEC', 50:'COM', 51:'ORG', 52:'ORG', 53:'COG', 54:'ORG', 55:'LLA'
+    }
 
-def calculate_sub_scores_48(answers):
+    # Normalize keys to int
+    normalized = {}
+    for k, v in answers.items():
+        try:
+            normalized[int(k)] = int(v)
+        except (ValueError, TypeError):
+            continue
+
+    # 按维度分组累加
+    DIM_KEYS = ['COG', 'TEC', 'COM', 'SOC', 'ORG', 'PRS', 'MGT', 'LLA']
+    dim_sums = {d: 0 for d in DIM_KEYS}
+    dim_cnts = {d: 0 for d in DIM_KEYS}
+
+    for qid, score in normalized.items():
+        if qid in DIM_MAP:
+            dim = DIM_MAP[qid]
+            dim_sums[dim] += score
+            dim_cnts[dim] += 1
+
+    DIM_CN = {
+        'COG':'认知能力','TEC':'技术掌握','COM':'理解表达',
+        'SOC':'社交技能','ORG':'策划执行','PRS':'解决问题',
+        'MGT':'管理技能','LLA':'持续学习',
+    }
+
+    scores = {}
+    for dim in DIM_KEYS:
+        cnt = dim_cnts[dim]
+        avg = dim_sums[dim] / cnt if cnt > 0 else 3.0
+        scores[dim] = {'name': DIM_CN[dim], 'average': round(avg, 2), 'level': get_level(avg)}
+
+    return scores
+
+
     """
     计算24项子能力分数：每维度3项子能力，每项2题
     子能力映射：
@@ -1683,6 +1741,75 @@ def submit_48():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/quiz/submit_55', methods=['POST'])
+def submit_55():
+    """提交55题8维测评"""
+    try:
+        data = request.get_json()
+        if not data or 'answers' not in data:
+            return jsonify({'error': 'Missing answers'}), 400
+
+        scores = calculate_scores_55(data['answers'])
+
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('''INSERT INTO quiz_results_55
+                (user_name, user_email, user_school, target_industry, answers, scores, submitted_at, ip_address, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (data.get('name', '匿名用户'),
+                 data.get('email', ''),
+                 data.get('school', ''),
+                 data.get('targetIndustry', ''),
+                 json.dumps(data.get('answers', {})),
+                 json.dumps(scores),
+                 datetime.now().isoformat(),
+                 request.remote_addr,
+                 request.headers.get('User-Agent', '')))
+            result_id = c.lastrowid
+            conn.commit()
+
+        return jsonify({
+            'success': True,
+            'result_id': result_id,
+            'scores': scores
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/quiz/report_55/<int:result_id>')
+def report_55(result_id):
+    """生成55题PDF报告"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_55 WHERE id = ?', (result_id,))
+            row = c.fetchone()
+
+        if not row:
+            return jsonify({'error': 'Not found'}), 404
+
+        scores = json.loads(row['scores'])
+        user_name = row['user_name'] or '匿名用户'
+        
+        # 使用 v3.3 生成报告（复用 generate_pdf_48_v33）
+        font_name = app.config.get('FONT_NAME', 'Helvetica')
+        buffer = generate_pdf_48_v33(result_id, scores, {}, user_name, '',
+                                      font_name=font_name)
+
+        report_date = datetime.now().strftime("%Y%m%d")
+        return send_file(buffer, mimetype='application/pdf',
+                        as_attachment=True,
+                        download_name=f'L1_report_{user_name}_{report_date}.pdf')
+    except Exception as e:
+        import traceback
+        print(f"[Report 55 PDF] 错误: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/api/quiz/report_48/<int:result_id>')
