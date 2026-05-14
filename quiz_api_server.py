@@ -916,32 +916,6 @@ def calculate_scores_55(answers):
     
     return scores
 
-        'COG': 1, 'TEC': 7, 'COM': 13, 'SOC': 19,
-        'ORG': 25, 'PRS': 31, 'MGT': 37, 'LLA': 43
-    }
-
-    results = []
-    for dim, base in dim_base.items():
-        for sub_idx in range(3):
-            # 子能力对应题目：Q(base+sub_idx*2) 和 Q(base+sub_idx*2+1)
-            q1 = base + sub_idx * 2
-            q2 = q1 + 1
-            score = (normalized.get(q1, 0) + normalized.get(q2, 0)) / 2
-            key = (dim, sub_idx)
-            sub_name, sub_desc = sub_competencies.get(key, (f'子能力{sub_idx+1}', ''))
-            results.append({
-                'dim': dim,
-                'sub_idx': sub_idx,
-                'name': sub_name,
-                'desc': sub_desc,
-                'score': round(score, 2),
-                'level': get_level_label(score)
-            })
-
-    # 按分数升序排列（最弱的在前面）
-    results.sort(key=lambda x: x['score'])
-    return results
-
 def get_level(score):
     if score >= 4.0: return '优秀'
     elif score >= 3.0: return '良好'
