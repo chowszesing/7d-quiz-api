@@ -1046,8 +1046,8 @@ def index():
 
 @app.route('/quiz')
 def quiz_page():
-    """8维能力测评答题页面（无需token，直接访问）"""
-    quiz_path = os.path.join(os.path.dirname(__file__), '8d_quiz_48.html')
+    """L1 职场禀赋扫描仪（55题8维测评）- 默认问卷页面"""
+    quiz_path = os.path.join(os.path.dirname(__file__), 'L1_Assessment_Scanner_Offline.html')
     try:
         with open(quiz_path, 'r', encoding='utf-8') as f:
             return f.read()
