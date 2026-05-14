@@ -626,12 +626,13 @@ HTML_ADMIN = '''<!DOCTYPE html>
                 </div>
             </div>
             <div class="tabs">
-                <div class="tab active" onclick="showTab('records')">📋 48题记录</div>
+                <div class="tab active" onclick="showTab('records48')">📋 48题记录</div>
+                <div class="tab" onclick="showTab('records55')">📝 55题记录</div>
                 <div class="tab" onclick="showTab('import')">📤 批量导入</div>
             </div>
 
             <!-- 48题记录 -->
-            <div id="tab-records">
+            <div id="tab-records48">
                 <div class="stats-grid" id="stats48"></div>
                 <div class="card">
                     <h2>📋 48题测评记录</h2>
@@ -642,6 +643,21 @@ HTML_ADMIN = '''<!DOCTYPE html>
                     </div>
                     <div style="overflow-x:auto">
                         <table><thead><tr><th>ID</th><th>姓名</th><th>行业</th><th>年限</th><th>提交时间</th><th>操作</th></tr></thead><tbody id="table48"></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 55题记录 -->
+            <div id="tab-records55" class="hidden">
+                <div class="stats-grid" id="stats55"></div>
+                <div class="card">
+                    <h2>📝 55题测评记录</h2>
+                    <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap">
+                        <input type="text" id="searchName55" placeholder="搜索姓名..." style="padding:8px;border:1px solid #ddd;border-radius:6px;width:160px">
+                        <button class="btn" onclick="load55()">搜索</button>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table><thead><tr><th>ID</th><th>姓名</th><th>学校</th><th>行业</th><th>提交时间</th><th>操作</th></tr></thead><tbody id="table55"></tbody></table>
                     </div>
                 </div>
             </div>
@@ -732,6 +748,7 @@ HTML_ADMIN = '''<!DOCTYPE html>
             document.getElementById('adminPanel').classList.remove('hidden');
             document.getElementById('userInfo').textContent = '👤 ' + username;
             load48();
+            load55();
         }
 
         function showTab(name) {
@@ -752,6 +769,17 @@ HTML_ADMIN = '''<!DOCTYPE html>
                 industries.map(i => '<option value="' + i + '">' + i + '</option>').join('');
             const filtered = (data.results || []).filter(r => !name || (r.user_name || '').includes(name));
             document.getElementById('table48').innerHTML = filtered.map(r => '<tr><td>' + r.id + '</td><td>' + (r.user_name || '匿名') + '</td><td>' + (r.industry || '-') + '</td><td>' + (r.experience || '-') + '</td><td>' + (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-') + '</td><td><button class="btn btn-sm" onclick="window.open(\\'' + API + '/api/quiz/report_full/' + r.id + '\\',\\'_blank\\')">PDF(完整版)</button></td></tr>').join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无记录</td></tr>';
+        }
+
+        async function load55() {
+            const name = document.getElementById('searchName55').value;
+            const res = await fetch(API + '/api/quiz/list_55?limit=200', {headers: authHeaders()});
+            if (res.status === 401 || res.status === 403) { doLogout(); return; }
+            const data = await res.json();
+            document.getElementById('stats55').innerHTML = '<div class="stat-box"><div class="stat-value">' + data.count + '</div><div class="stat-label">55题总记录</div></div>';
+            const filtered = (data.results || []).filter(r => !name || (r.user_name || '').includes(name));
+            const industryMap = {'1':'金融与法律服务','2':'信息与通信技术','3':'工程与环境','4':'政府公共管理','5':'医疗与健康','6':'教育与个人服务','7':'商业行政','8':'广告与设计','9':'酒店餐饮旅游','10':'运输物流','11':'房地产服务','12':'进出口贸易零售','13':'社会服务'};
+            document.getElementById('table55').innerHTML = filtered.map(r => '<tr><td>' + r.id + '</td><td>' + (r.user_name || '匿名') + '</td><td>' + (r.user_school || '-') + '</td><td>' + (industryMap[r.target_industry] || r.target_industry || '-') + '</td><td>' + (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '-') + '</td><td><button class="btn btn-sm" onclick="window.open(\\'' + API + '/api/quiz/report_55/' + r.id + '\\',\\'_blank\\')">PDF</button></td></tr>').join('') || '<tr><td colspan="6" style="text-align:center;color:#888">暂无记录</td></tr>';
         }
 
         async function importCSV() {
@@ -3148,6 +3176,21 @@ def list_48():
         with get_db() as conn:
             c = conn.cursor()
             c.execute('SELECT * FROM quiz_results_48 ORDER BY id DESC LIMIT ?', (limit,))
+            rows = c.fetchall()
+        return jsonify({'results': [dict(r) for r in rows], 'count': len(rows)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============ 55题列表 ============
+@app.route('/api/quiz/list_55')
+@admin_required
+def list_55():
+    """列出55题提交记录"""
+    try:
+        limit = int(request.args.get('limit', 100))
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM quiz_results_55 ORDER BY id DESC LIMIT ?', (limit,))
             rows = c.fetchall()
         return jsonify({'results': [dict(r) for r in rows], 'count': len(rows)})
     except Exception as e:
