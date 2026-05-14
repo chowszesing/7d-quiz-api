@@ -887,7 +887,7 @@ def calculate_scores_55(answers):
         41:'LLA', 42:'TEC', 43:'PRS', 44:'SOC', 45:'COM', 46:'SOC', 47:'SOC', 48:'SOC',
         49:'TEC', 50:'COM', 51:'ORG', 52:'ORG', 53:'COG', 54:'ORG', 55:'LLA'
     }
-
+    
     # Normalize keys to int
     normalized = {}
     for k, v in answers.items():
@@ -895,86 +895,27 @@ def calculate_scores_55(answers):
             normalized[int(k)] = int(v)
         except (ValueError, TypeError):
             continue
-
+    
     # 按维度分组累加
     DIM_KEYS = ['COG', 'TEC', 'COM', 'SOC', 'ORG', 'PRS', 'MGT', 'LLA']
-    dim_sums = {d: 0 for d in DIM_KEYS}
+    dim_sums = {d: 0.0 for d in DIM_KEYS}
     dim_cnts = {d: 0 for d in DIM_KEYS}
-
+    
     for qid, score in normalized.items():
         if qid in DIM_MAP:
             dim = DIM_MAP[qid]
             dim_sums[dim] += score
             dim_cnts[dim] += 1
-
-    DIM_CN = {
-        'COG':'认知能力','TEC':'技术掌握','COM':'理解表达',
-        'SOC':'社交技能','ORG':'策划执行','PRS':'解决问题',
-        'MGT':'管理技能','LLA':'持续学习',
-    }
-
+    
+    # 计算平均分（不默认3.0，如无题目则返回0）
     scores = {}
     for dim in DIM_KEYS:
         cnt = dim_cnts[dim]
-        avg = dim_sums[dim] / cnt if cnt > 0 else 3.0
-        scores[dim] = {'name': DIM_CN[dim], 'average': round(avg, 2), 'level': get_level(avg)}
-
+        avg = dim_sums[dim] / cnt if cnt > 0 else 0.0
+        scores[dim] = round(avg, 2)
+    
     return scores
 
-
-    """
-    计算24项子能力分数：每维度3项子能力，每项2题
-    子能力映射：
-      - 维度内Q1-2 → 子能力1
-      - 维度内Q3-4 → 子能力2
-      - 维度内Q5-6 → 子能力3
-    返回: [(dim, sub_idx, sub_name, score, level), ...] 按分数升序排列
-    """
-    normalized = {}
-    for k, v in answers.items():
-        try:
-            normalized[int(k)] = int(v)
-        except (ValueError, TypeError):
-            continue
-
-    # 子能力定义：(维度, 子能力索引0-2, 名称)
-    sub_competencies = {
-        # COG - 认知能力
-        ('COG', 0): ('资讯提炼', '快速从复杂信息中提取关键重点'),
-        ('COG', 1): ('逻辑推理', '理性分析矛盾资讯，发现论证漏洞'),
-        ('COG', 2): ('快速学习', '短时间内掌握全新技术领域'),
-        # TEC - 技术掌握
-        ('TEC', 0): ('数字生产力', '有效运用AI工具和数据分析工具'),
-        ('TEC', 1): ('技术适应力', '面对新技术能快速上手'),
-        ('TEC', 2): ('故障排查', '能自主排查技术问题根本原因'),
-        # COM - 理解表达
-        ('COM', 0): ('解码能力', '准确理解对方言辞背后的真正意图'),
-        ('COM', 1): ('精炼表达', '用简洁清晰的语言表达复杂概念'),
-        ('COM', 2): ('口头影响力', '在公开发言中有效吸引听众注意力'),
-        # SOC - 社交技能
-        ('SOC', 0): ('情绪觉察', '敏锐感知他人情绪的细微变化'),
-        ('SOC', 1): ('冲突协调', '在团队分歧中促进各方达成共识'),
-        ('SOC', 2): ('关系建立', '与不同背景的人建立信任'),
-        # ORG - 策划执行
-        ('ORG', 0): ('目标规划', '将模糊目标拆解为清晰可衡量步骤'),
-        ('ORG', 1): ('自主执行', '无外部监督时仍维持高标准'),
-        ('ORG', 2): ('资源管理', '合理分配时间、人力、预算等资源'),
-        # PRS - 解决问题
-        ('PRS', 0): ('应变能力', '原方案失败时迅速产出替代方案'),
-        ('PRS', 1): ('根源分析', '用结构化方法深挖问题根本原因'),
-        ('PRS', 2): ('创新方案', '无既有SOP时自行设计有效解决方案'),
-        # MGT - 管理技能
-        ('MGT', 0): ('预期管理', '有效管理上下级对结果的期望'),
-        ('MGT', 1): ('优先级取舍', '准确判断轻重缓急，敢于拒绝干扰'),
-        ('MGT', 2): ('授权追踪', '有效分配任务并建立跟进机制'),
-        # LLA - 持续学习
-        ('LLA', 0): ('知识更新', '保持定期阅读行业书刊、参加课程'),
-        ('LLA', 1): ('主动探索', '跨界探索本职以外的新领域'),
-        ('LLA', 2): ('挫折转化', '将负面反馈转化为改进养分'),
-    }
-
-    # 维度基础题号
-    dim_base = {
         'COG': 1, 'TEC': 7, 'COM': 13, 'SOC': 19,
         'ORG': 25, 'PRS': 31, 'MGT': 37, 'LLA': 43
     }
@@ -1753,14 +1694,16 @@ def submit_55():
             return jsonify({'error': 'Missing answers'}), 400
 
         scores = calculate_scores_55(data['answers'])
+        
+        # 计算综合平均分
+        overall_avg = sum(scores.values()) / len(scores) if scores else 0
 
         with get_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT INTO quiz_results_55
-                (user_name, user_email, user_school, target_industry, answers, scores, submitted_at, ip_address, user_agent)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (user_name, user_school, target_industry, answers, scores, submitted_at, ip_address, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
                 (data.get('name', '匿名用户'),
-                 data.get('email', ''),
                  data.get('school', ''),
                  data.get('targetIndustry', ''),
                  json.dumps(data.get('answers', {})),
@@ -1774,7 +1717,8 @@ def submit_55():
         return jsonify({
             'success': True,
             'result_id': result_id,
-            'scores': scores
+            'scores': scores,
+            'overall_avg': round(overall_avg, 2)
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1783,24 +1727,26 @@ def submit_55():
 
 @app.route('/api/quiz/report_55/<int:result_id>')
 def report_55(result_id):
-    """生成55题PDF报告"""
+    """生成55题PDF报告（按L1_Sample_Report.pdf格式）"""
     try:
         with get_db() as conn:
             c = conn.cursor()
             c.execute('SELECT * FROM quiz_results_55 WHERE id = ?', (result_id,))
             row = c.fetchone()
-
+        
         if not row:
             return jsonify({'error': 'Not found'}), 404
-
+        
         scores = json.loads(row['scores'])
         user_name = row['user_name'] or '匿名用户'
+        school = row['user_school'] or ''
+        target_industry = row['target_industry'] or ''
         
-        # 使用 v3.3 生成报告（复用 generate_pdf_48_v33）
+        # 使用新的generate_pdf_55函数
         font_name = app.config.get('FONT_NAME', 'Helvetica')
-        buffer = generate_pdf_48_v33(result_id, scores, {}, user_name, '',
+        buffer = generate_pdf_55(result_id, scores, user_name, school, target_industry, 
                                       font_name=font_name)
-
+        
         report_date = datetime.now().strftime("%Y%m%d")
         return send_file(buffer, mimetype='application/pdf',
                         as_attachment=True,
@@ -4396,6 +4342,301 @@ def _safety_text(bot_dims, bot_subs):
             f"{strategy}"
         )
     return "<br/><br/>".join(sections)
+
+
+# ============ 55题PDF报告生成（按L1_Sample_Report.pdf格式）============
+
+def generate_pdf_55(result_id, scores, user_name, school, target_industry, font_name='Helvetica'):
+    """
+    生成55题PDF报告 - 按照L1_Sample_Report.pdf格式
+    格式：
+    - 第1页：标题信息 + 八维能力全景图（雷达图）
+    - 第2页：各维度得分详情 + 核心发现（优势+成长空间）
+    - 第3页：行业适配分析 + 综合评语
+    """
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from datetime import datetime
+    
+    buffer = io.BytesIO()
+    
+    # 页面设置
+    PAGE_W = 440
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=18*mm, rightMargin=18*mm,
+        topMargin=18*mm, bottomMargin=18*mm
+    )
+    story = []
+    
+    # 样式
+    def ps(name, **kwargs):
+        return ParagraphStyle(name, **kwargs)
+    
+    # ============ 第1页：标题 + 元信息 ============
+    
+    # 标题
+    story.append(Paragraph("L1 职场禀赋扫描报告", 
+        ps('Title', fontSize=18, textColor=colors.HexColor('#2c3e50'), spaceAfter=6)))
+    
+    # 元信息：姓名|学校|行业|日期
+    date_str = datetime.now().strftime('%Y-%m-%d')
+    industry_names = {
+        '1': '金融与法律服务', '2': '信息与通信技术(ICT)', '3': '工程与环境',
+        '4': '政府公共管理', '5': '医疗与健康', '6': '教育与个人服务',
+        '7': '商业行政', '8': '广告与设计', '9': '酒店、餐饮与旅游',
+        '10': '运输物流', '11': '房地产服务', '12': '进出口贸易与零售',
+        '13': '社会服务'
+    }
+    industry_text = industry_names.get(str(target_industry), '未选择')
+    
+    meta_text = f"{user_name} | {school} | {industry_text} | {date_str}"
+    story.append(Paragraph(meta_text, 
+        ps('Meta', fontSize=10, textColor=colors.HexColor('#666666'), spaceAfter=12)))
+    
+    # 八维能力全景图标题
+    story.append(Paragraph("八维能力全景图", 
+        ps('Section', fontSize=14, textColor=colors.HexColor('#2c3e50'), spaceAfter=10)))
+    
+    # TODO: 添加雷达图（需要生成图片然后插入）
+    # 暂时添加占位符
+    story.append(Spacer(1, 20*mm))
+    story.append(Paragraph("（雷达图生成功能开发中...）", 
+        ps('Placeholder', fontSize=10, textColor=colors.HexColor('#999999'), spaceAfter=10)))
+    
+    # ============ 第2页：各维度得分详情 + 核心发现 ============
+    story.append(PageBreak())
+    story.append(Paragraph("各维度得分详情", 
+        ps('Section', fontSize=14, textColor=colors.HexColor('#2c3e50'), spaceAfter=10)))
+    
+    # 计算综合平均分
+    overall_avg = sum(scores.values()) / len(scores) if scores else 0
+    
+    # 维度信息
+    dim_info = {
+        'COG': {'name': '认知能力', 'en': 'Cognitive', 'desc': '信息提炼、逻辑推理、快速学习与系统思考能力'},
+        'TEC': {'name': '技术掌握', 'en': 'Technical', 'desc': '数字工具运用、技术适应力与故障排查能力'},
+        'COM': {'name': '理解表达', 'en': 'Communication', 'desc': '精准解码需求、精炼表达与口头影响力'},
+        'SOC': {'name': '社交技能', 'en': 'Social', 'desc': '情绪觉察、冲突协调与人脉关系建立'},
+        'ORG': {'name': '策划执行', 'en': 'Organization', 'desc': '目标规划、资源调度与闭环执行能力'},
+        'PRS': {'name': '解决问题', 'en': 'Problem-Solving', 'desc': 'Plan B快速产出、结构性根源分析与创新方案'},
+        'MGT': {'name': '管理技能', 'en': 'Management', 'desc': '任务与预期管理、优先级取舍与授权追踪'},
+        'LLA': {'name': '持续学习', 'en': 'Lifelong Learning', 'desc': '知识更新、主动探索与挫折转化为成长动力'}
+    }
+    
+    # 排序维度
+    sorted_dims = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    
+    # 生成维度得分表格
+    dim_data = [['维度', '得分', '水平', '描述']]
+    for dim, score in sorted_dims:
+        info = dim_info.get(dim, {'name': dim, 'en': '', 'desc': ''})
+        # 判断水平
+        if score >= 4.1:
+            level = '优秀水平'
+        elif score >= 3.1:
+            level = '熟练水平'
+        elif score >= 2.1:
+            level = '基础水平'
+        else:
+            level = '发展中'
+        
+        dim_data.append([
+            f"{info['name']}\n{info['en']}",
+            f"{score:.1f}",
+            level,
+            info['desc']
+        ])
+    
+    dim_table = Table(dim_data, colWidths=[90, 50, 70, 180])
+    dim_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2c3e50')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,-1), font_name),
+        ('FONTSIZE', (0,0), (-1,0), 10),
+        ('FONTSIZE', (0,1), (-1,-1), 9),
+        ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#f8f9fa')),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor('#2c3e50')),
+        ('LINEBELOW', (0,1), (-1,-1), 0.5, colors.HexColor('#cccccc')),
+    ]))
+    story.append(dim_table)
+    story.append(Spacer(1, 8*mm))
+    
+    # 核心发现
+    story.append(Paragraph("核心发现", 
+        ps('Section', fontSize=14, textColor=colors.HexColor('#2c3e50'), spaceAfter=10)))
+    
+    # 核心优势（Top 3）
+    strength_text = "<b>✅ 核心优势</b><br/>"
+    for i, (dim, score) in enumerate(sorted_dims[:3], 1):
+        info = dim_info.get(dim, {'name': dim})
+        advice = ''
+        if dim == 'COG':
+            advice = '善于提炼关键信息、建立系统框架，适合需要深度分析的角色。'
+        elif dim == 'TEC':
+            advice = '对工具有天然的直觉，能快速上手新系统并发现优化空间。'
+        elif dim == 'COM':
+            advice = '沟通精准高效，减少信息损耗，在跨部门协作中优势明显。'
+        elif dim == 'SOC':
+            advice = '人际感知力强，善于建立信任关系，适合需要大量互动的岗位。'
+        elif dim == 'ORG':
+            advice = '执行力与规划力兼具，能把想法落地为可交付成果。'
+        elif dim == 'PRS':
+            advice = '面对变数时保持冷静，能快速产出替代方案，抗压能力突出。'
+        elif dim == 'MGT':
+            advice = '具备管理思维，善于控管预期和协调资源，适合带团队或项目。'
+        elif dim == 'LLA':
+            advice = '学习驱动力强，能快速适应新领域，长期成长潜力大。'
+        
+        strength_text += f"{i}. <b>{info['name']}</b> ({score:.1f}) — {advice}<br/>"
+    
+    story.append(Paragraph(strength_text, 
+        ps('Strength', fontSize=9, leading=14, spaceAfter=8)))
+    
+    # 成长空间（Bottom 3）
+    growth_text = "<b>⚡ 成长空间</b><br/>"
+    for i, (dim, score) in enumerate(sorted_dims[-3:][::-1], 1):
+        info = dim_info.get(dim, {'name': dim})
+        advice = ''
+        if dim == 'COG':
+            advice = '建议多练习结构化思维工具（如思维导图、MECE分析法），提升信息处理效率。'
+        elif dim == 'TEC':
+            advice = '建议定期学习一个新工具或平台的功能，积累技术信心。'
+        elif dim == 'COM':
+            advice = '建议练习"电梯演讲"——用30秒讲清楚一个复杂问题，锻炼精炼表达。'
+        elif dim == 'SOC':
+            advice = '建议每周主动安排一次跨部门或跨行业的非正式交流，积累社交感知经验。'
+        elif dim == 'ORG':
+            advice = '建议引入Checklist工作法，把重复性流程标准化，逐步建立执行纪律。'
+        elif dim == 'PRS':
+            advice = '建议刻意练习"如果...那么..."思维，为每个关键决策预先准备Plan B。'
+        elif dim == 'MGT':
+            advice = '建议从小型项目入手练习授权与追踪，建立管理直觉。'
+        elif dim == 'LLA':
+            advice = '建议每周固定2小时深度学习时间，关注行业报告或专业课程。'
+        
+        growth_text += f"💡 {info['name']} ({score:.1f}) — {advice}<br/>"
+    
+    story.append(Paragraph(growth_text, 
+        ps('Growth', fontSize=9, leading=14, spaceAfter=8)))
+    
+    # ============ 第3页：行业适配分析 + 综合评语 ============
+    story.append(PageBreak())
+    
+    # 行业适配分析
+    story.append(Paragraph("行业适配分析", 
+        ps('Section', fontSize=14, textColor=colors.HexColor('#2c3e50'), spaceAfter=10)))
+    
+    # 目标行业分析
+    target_score = 0
+    target_dims = []
+    if target_industry == '1':  # 金融与法律服务
+        target_dims = ['COG', 'ORG', 'COM', 'MGT']
+        target_desc = "金融与法律行业高度依赖认知分析力、严密策划执行力与精准表达能力。"
+    elif target_industry == '2':  # ICT
+        target_dims = ['TEC', 'COG', 'PRS', 'LLA']
+        target_desc = "信息与通信技术行业需要强大的技术掌握力、认知学习力与问题解决能力。"
+    elif target_industry == '3':  # 工程与环境
+        target_dims = ['TEC', 'ORG', 'PRS', 'COG']
+        target_desc = "工程与环境领域重视技术实操能力、严谨的流程管理与系统性问题解决力。"
+    elif target_industry == '4':  # 政府公共管理
+        target_dims = ['ORG', 'COM', 'MGT', 'SOC']
+        target_desc = "公共管理部门强调制度执行力、跨部门沟通与利益相关者管理。"
+    elif target_industry == '5':  # 医疗与健康
+        target_dims = ['COG', 'ORG', 'SOC', 'LLA']
+        target_desc = "医疗健康领域需要精准判断力、高度的责任执行力与同理心。"
+    elif target_industry == '6':  # 教育与个人服务
+        target_dims = ['SOC', 'COM', 'LLA', 'COG']
+        target_desc = "教育与个人服务行业以人际互动为核心，高度依赖社交影响力和表达传授能力。"
+    elif target_industry == '7':  # 商业行政
+        target_dims = ['ORG', 'COM', 'MGT', 'TEC']
+        target_desc = "商业行政领域需要高效组织能力、清晰沟通与管理协调技能。"
+    elif target_industry == '8':  # 广告与设计
+        target_dims = ['COG', 'COM', 'LLA', 'SOC']
+        target_desc = "广告与设计行业重视创意认知、跨界学习与感染力表达。"
+    elif target_industry == '9':  # 酒店、餐饮与旅游
+        target_dims = ['SOC', 'ORG', 'COM', 'PRS']
+        target_desc = "酒店餐饮旅游业以客户体验为核心，强调服务意识、应变能力与团队协作。"
+    elif target_industry == '10':  # 运输物流
+        target_dims = ['ORG', 'TEC', 'PRS', 'MGT']
+        target_desc = "运输物流行业需要精准调度、流程优化与应急问题解决能力。"
+    elif target_industry == '11':  # 房地产服务
+        target_dims = ['ORG', 'MGT', 'COM', 'SOC']
+        target_desc = "房地产服务行业重视项目策划管理、客户关系与商务沟通能力。"
+    elif target_industry == '12':  # 进出口贸易与零售
+        target_dims = ['COM', 'SOC', 'ORG', 'PRS']
+        target_desc = "贸易零售行业需要市场洞察、客户沟通与灵活应变能力。"
+    elif target_industry == '13':  # 社会服务
+        target_dims = ['SOC', 'ORG', 'COM', 'LLA']
+        target_desc = "社会服务行业以助人为核心，高度依赖同理心、沟通力与持续学习意愿。"
+    
+    if target_dims:
+        target_scores = [scores.get(d, 0) for d in target_dims]
+        target_score = sum(target_scores) / len(target_scores)
+        match_pct = min(100, int(target_score / 5 * 100))
+        
+        # 判断水平
+        if target_score >= 4.1:
+            level_text = '优秀水平'
+        elif target_score >= 3.1:
+            level_text = '熟练水平'
+        elif target_score >= 2.1:
+            level_text = '基础水平'
+        else:
+            level_text = '发展中'
+        
+        industry_text_content = f"<b>目标行业：{industry_text}</b><br/>"
+        industry_text_content += f"{target_desc}你的{level_text}（匹配度 {match_pct}%）。<br/>"
+        industry_text_content += f"该行业最看重的维度：{', '.join([dim_info[d]['name'] for d in target_dims])}"
+        
+        story.append(Paragraph(industry_text_content, 
+            ps('Industry', fontSize=10, leading=15, spaceAfter=8)))
+    else:
+        story.append(Paragraph("未选择目标行业，无法进行行业适配分析。", 
+            ps('Industry', fontSize=10, leading=15, spaceAfter=8)))
+    
+    # 综合评语
+    story.append(Paragraph("综合评语", 
+        ps('Section', fontSize=14, textColor=colors.HexColor('#2c3e50'), spaceAfter=10)))
+    
+    if overall_avg >= 4.0:
+        summary_text = f"{user_name}在八维能力评估中表现出色，综合得分达到< b>{overall_avg:.1f}</b>分（优秀水平）。你的核心竞争优势在于< b>{dim_info[sorted_dims[0][0]]['name']}</b>（{sorted_dims[0][1]:.1f}分），展现了该领域的专业深度。同时建议关注< b>{dim_info[sorted_dims[-1][0]]['name']}</b>（{sorted_dims[-1][1]:.1f}分）的提升空间，通过有针对性的刻意练习，进一步强化你的职场竞争力。整体而言，你已具备中高级岗位的核心胜任力，建议在求职中重点展示你的分析能力和执行成果。"
+    elif overall_avg >= 3.0:
+        summary_text = f"{user_name}在八维能力评估中表现良好，综合得分< b>{overall_avg:.1f}</b>分（熟练水平）。你的突出优势在< b>{dim_info[sorted_dims[0][0]]['name']}</b>（{sorted_dims[0][1]:.1f}分），这是你求职中的重要差异化竞争力。建议重点提升< b>{dim_info[sorted_dims[-1][0]]['name']}</b>（{sorted_dims[-1][1]:.1f}分），这是你当前最显著的增长杠杆。整体而言，你的能力基础扎实，通过3-6个月的针对性强化，可以显著提升整体竞争力。"
+    else:
+        summary_text = f"{user_name}在八维能力评估中综合得分< b>{overall_avg:.1f}</b>分，处于能力建设的早期阶段。这并非劣势——了解自己的起点是成长的第一步。你最突出的特质是< b>{dim_info[sorted_dims[0][0]]['name']}</b>（{sorted_dims[0][1]:.1f}分），建议以此为锚点，优先在擅长的领域积累成功经验。{dim_info[sorted_dims[-1][0]]['name']}（{sorted_dims[-1][1]:.1f}分）是当前最需要投入的方向，建议从日常工作中的小改善开始，逐步建立信心和能力。"
+    
+    # 判断综合水平
+    if overall_avg >= 4.1:
+        overall_level = '优秀水平'
+    elif overall_avg >= 3.1:
+        overall_level = '熟练水平'
+    elif overall_avg >= 2.1:
+        overall_level = '基础水平'
+    else:
+        overall_level = '发展中'
+    
+    story.append(Paragraph(f"📋 综合评估 · {overall_avg:.1f} / 5.0（{overall_level}）<br/><br/>{summary_text}", 
+        ps('Summary', fontSize=10, leading=15, spaceAfter=8)))
+    
+    # 页脚
+    story.append(Spacer(1, 10*mm))
+    story.append(Paragraph(f"© 2026 Santa Chow 香港求职咨询 | 基于 VTC 8维能力模型与 Holland RIASEC 理论构建", 
+        ps('Footer', fontSize=8, textColor=colors.HexColor('#999999'), alignment=1)))
+    
+    # 生成PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 
 def generate_pdf_48_v33(result_id, scores, answers, user_name, experience, question_order=None, font_name='Helvetica'):

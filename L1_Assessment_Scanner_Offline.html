@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>L1 职场禀赋扫描仪 - 基础测评</title>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -458,10 +459,6 @@
                 <input type="text" name="userName" required placeholder="如何称呼您？">
             </div>
             <div class="form-group">
-                <label>联络 Email (用于发送报告)</label>
-                <input type="email" name="userEmail" required placeholder="example@email.com">
-            </div>
-            <div class="form-group">
                 <label>毕业院校 / 在读院校</label>
                 <input type="text" name="userSchool" required>
             </div>
@@ -545,7 +542,8 @@
     </div>
 
     <div class="report-actions">
-        <button class="print-btn" onclick="window.print()">&#x1f5a8; 打印/导出PDF</button>
+        <button class="print-btn" onclick="exportPDF()">&#x1f5a8; 导出PDF</button>
+        <button class="print-btn" onclick="exportPNG()" style="background:#10b981;">&#x1f5bc; 导出PNG图片</button>
         <button class="back-btn" onclick="goBack()">&#x21a9; 返回问卷</button>
     </div>
 
@@ -722,7 +720,6 @@ document.getElementById('assessmentForm').onsubmit = function(e) {
     }
 
     const userName = document.querySelector('input[name="userName"]').value.trim();
-    const userEmail = document.querySelector('input[name="userEmail"]').value.trim();
     const userSchool = document.querySelector('input[name="userSchool"]').value.trim();
     const targetIndustry = document.querySelector('select[name="targetIndustry"]').value;
 
@@ -738,7 +735,6 @@ document.getElementById('assessmentForm').onsubmit = function(e) {
         body: JSON.stringify({
             answers: answers,
             name: userName,
-            email: userEmail,
             school: userSchool,
             targetIndustry: targetIndustry
         })
@@ -746,9 +742,13 @@ document.getElementById('assessmentForm').onsubmit = function(e) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Open PDF report in new tab
-            window.open(`/api/quiz/report_55/${data.result_id}`, '_blank');
-            alert('提交成功！PDF报告正在生成，将在新窗口中打开...');
+            // Generate report on webpage
+            generateReport(userName, userSchool, targetIndustry, data.scores, data.overall_avg);
+            // Show report page, hide quiz form
+            document.getElementById('quizPage').style.display = 'none';
+            document.getElementById('reportPage').style.display = 'block';
+            // Scroll to top
+            window.scrollTo(0, 0);
         } else {
             alert('提交失败：' + (data.error || '未知错误'));
             submitBtn.disabled = false;
@@ -1039,6 +1039,33 @@ function goBack() {
     document.getElementById('reportPage').style.display = 'none';
     document.getElementById('quizPage').style.display = 'block';
     window.scrollTo(0, 0);
+}
+
+// ===================== EXPORT FUNCTIONS =====================
+
+function exportPDF() {
+    window.print();
+}
+
+function exportPNG() {
+    const reportElement = document.getElementById('reportPage');
+    const exportBtn = document.querySelector('.report-actions');
+    exportBtn.style.display = 'none'; // Hide buttons in PNG
+    
+    html2canvas(reportElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+    }).then(canvas => {
+        exportBtn.style.display = 'flex'; // Restore buttons
+        const link = document.createElement('a');
+        link.download = `L1_职场禀赋报告_${document.getElementById('rptName').textContent}_${new Date().getTime()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => {
+        exportBtn.style.display = 'flex';
+        alert('导出PNG失败：' + err.message);
+    });
 }
 </script>
 
